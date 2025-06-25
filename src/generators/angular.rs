@@ -130,7 +130,7 @@ impl AngularGenerator {
         let url_params = self.get_url_params(path, operation)?;
         let query_params = self.get_query_params(operation)?;
         
-        method.push_str(&format!("    const url = subsToUrl('{}', {}, {});\n", path, url_params, query_params));
+        method.push_str(&format!("    const url = subsToUrl(\"{}\", {}, {});\n", path, url_params, query_params));
         
         // Generate HTTP call
         let request_body = if self.with_zod && operation.request_body.is_some() {
@@ -339,37 +339,42 @@ impl AngularGenerator {
         service.push_str("// Do not modify this file manually\n\n");
         
         // Imports
-        service.push_str("import { HttpClient } from '@angular/common/http';\n");
-        service.push_str("import { Injectable } from '@angular/core';\n");
-        service.push_str("import { Observable } from 'rxjs';\n");
+        service.push_str("import { HttpClient } from \"@angular/common/http\";\n");
+        service.push_str("import { Injectable } from \"@angular/core\";\n");
+        service.push_str("import { Observable } from \"rxjs\";\n");
         
         if self.with_zod {
-            service.push_str("import { map } from 'rxjs/operators';\n");
+            service.push_str("import { map } from \"rxjs/operators\";\n");
         }
         
-        service.push_str("import { subsToUrl } from './subs-to-url.func';\n");
+        service.push_str("import { subsToUrl } from \"./subs-to-url.func\";\n");
         
         if !service_data.imports.is_empty() {
             let mut imports: Vec<String> = service_data.imports.iter().cloned().collect();
             imports.sort();
             
             if self.with_zod {
-                // Import both types and schemas when using Zod
-                let mut all_imports = Vec::new();
+                // Import both types and schemas when using Zod in multi-line format
+                service.push_str("import {\n");
                 for import in &imports {
-                    all_imports.push(format!("{}Schema", import)); // Schema constant
-                    all_imports.push(import.clone()); // Type
+                    service.push_str(&format!("  {}Schema,\n", import));
+                    service.push_str(&format!("  type {},\n", import));
                 }
-                service.push_str(&format!("import {{ {} }} from './dto';\n", all_imports.join(", ")));
+                service.push_str("} from \"./dto\";\n");
             } else {
-                service.push_str(&format!("import {{ {} }} from './dto';\n", imports.join(", ")));
+                // Import only types in multi-line format
+                service.push_str("import {\n");
+                for import in &imports {
+                    service.push_str(&format!("  {},\n", import));
+                }
+                service.push_str("} from \"./dto\";\n");
             }
         }
         
         service.push_str("\n");
         
         // Service class
-        service.push_str("@Injectable({ providedIn: 'root' })\n");
+        service.push_str("@Injectable({ providedIn: \"root\" })\n");
         service.push_str(&format!("export class {} {{\n", class_name));
         service.push_str("  constructor(private http: HttpClient) {}\n\n");
         
@@ -393,12 +398,12 @@ impl AngularGenerator {
         index.push_str("// Generated index file for Angular services\n");
         index.push_str("// Do not modify this file manually\n\n");
         
-        index.push_str("export * from './dto';\n");
-        index.push_str("export * from './subs-to-url.func';\n");
+        index.push_str("export * from \"./dto\";\n");
+        index.push_str("export * from \"./subs-to-url.func\";\n");
         
         for tag in tags {
             let file_name = self.to_kebab_case(&format!("{}-api", tag));
-            index.push_str(&format!("export * from './{}';\n", file_name));
+            index.push_str(&format!("export * from \"./{}\";\n", file_name));
         }
         
         index.push_str("\n// FILE: index.ts\n");

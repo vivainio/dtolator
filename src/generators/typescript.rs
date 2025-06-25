@@ -38,46 +38,67 @@ impl TypeScriptGenerator {
             } => {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
-                    output.push_str(&format!("{}export type {} = ", self.indent(), name));
+                    output.push_str(&format!("export type {} =\n", name));
                     let enum_strings: Vec<String> = enum_vals.iter()
                         .filter_map(|v| v.as_str())
-                        .map(|s| format!("\"{}\"", s))
+                        .map(|s| format!("  | \"{}\"", s))
                         .collect();
-                    output.push_str(&enum_strings.join(" | "));
+                    output.push_str(&enum_strings.join("\n"));
                     output.push_str(";\n\n");
                     return Ok(output);
                 }
                 
                 // Handle composition types
                 if let Some(all_of_schemas) = all_of {
-                    output.push_str(&format!("{}export type {} = ", self.indent(), name));
+                    output.push_str(&format!("export type {} =\n", name));
                     let types: Result<Vec<String>, _> = all_of_schemas.iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
-                    output.push_str(&types?.join(" & "));
+                    let type_list = types?;
+                    for (i, type_str) in type_list.iter().enumerate() {
+                        if i == 0 {
+                            output.push_str(&format!("  {}", type_str));
+                        } else {
+                            output.push_str(&format!("\n  & {}", type_str));
+                        }
+                    }
                     output.push_str(";\n\n");
                     return Ok(output);
                 } else if let Some(one_of_schemas) = one_of {
-                    output.push_str(&format!("{}export type {} = ", self.indent(), name));
+                    output.push_str(&format!("export type {} =\n", name));
                     let types: Result<Vec<String>, _> = one_of_schemas.iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
-                    output.push_str(&types?.join(" | "));
+                    let type_list = types?;
+                    for (i, type_str) in type_list.iter().enumerate() {
+                        if i == 0 {
+                            output.push_str(&format!("  {}", type_str));
+                        } else {
+                            output.push_str(&format!("\n  | {}", type_str));
+                        }
+                    }
                     output.push_str(";\n\n");
                     return Ok(output);
                 } else if let Some(any_of_schemas) = any_of {
-                    output.push_str(&format!("{}export type {} = ", self.indent(), name));
+                    output.push_str(&format!("export type {} =\n", name));
                     let types: Result<Vec<String>, _> = any_of_schemas.iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
-                    output.push_str(&types?.join(" | "));
+                    let type_list = types?;
+                    for (i, type_str) in type_list.iter().enumerate() {
+                        if i == 0 {
+                            output.push_str(&format!("  {}", type_str));
+                        } else {
+                            output.push_str(&format!("\n  | {}", type_str));
+                        }
+                    }
                     output.push_str(";\n\n");
                     return Ok(output);
                 }
                 
                 // Handle object types
                 if schema_type.as_deref() == Some("object") || properties.is_some() {
-                    output.push_str(&format!("{}export interface {} {{\n", self.indent(), name));
+                    output.push_str(&format!("export interface {} {{\n", name));
                     
                     if let Some(props) = properties {
                         for (prop_name, prop_schema) in props {
@@ -87,22 +108,22 @@ impl TypeScriptGenerator {
                                 .unwrap_or(false);
                             
                             let optional_marker = if is_required { "" } else { "?" };
-                            output.push_str(&format!("{}  {}{}: {};\n", 
-                                self.indent(), prop_name, optional_marker, prop_type));
+                            output.push_str(&format!("  {}{}: {};\n", 
+                                prop_name, optional_marker, prop_type));
                         }
                     }
                     
-                    output.push_str(&format!("{}}}\n\n", self.indent()));
+                    output.push_str("}\n\n");
                 } else {
                     // Handle primitive type aliases
-                    output.push_str(&format!("{}export type {} = {};\n\n", 
-                        self.indent(), name, self.schema_to_typescript(schema)?));
+                    output.push_str(&format!("export type {} = {};\n\n", 
+                        name, self.schema_to_typescript(schema)?));
                 }
             }
             Schema::Reference { .. } => {
                 // For references, create a type alias
-                output.push_str(&format!("{}export type {} = {};\n\n", 
-                    self.indent(), name, self.schema_to_typescript(schema)?));
+                output.push_str(&format!("export type {} = {};\n\n", 
+                    name, self.schema_to_typescript(schema)?));
             }
         }
         
@@ -184,11 +205,15 @@ impl TypeScriptGenerator {
                                         .unwrap_or(false);
                                     
                                     let optional_marker = if is_required { "" } else { "?" };
-                                    object_props.push(format!("  {}{}: {}", 
+                                    object_props.push(format!("    {}{}: {}", 
                                         prop_name, optional_marker, prop_type));
                                 }
                                 
-                                ts_type = format!("{{\n{}\n}}", object_props.join(";\n"));
+                                if object_props.is_empty() {
+                                    ts_type = "Record<string, unknown>".to_string();
+                                } else {
+                                    ts_type = format!("{{\n{};\n  }}", object_props.join(";\n"));
+                                }
                             } else {
                                 ts_type = "Record<string, unknown>".to_string();
                             }

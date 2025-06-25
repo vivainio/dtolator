@@ -38,7 +38,7 @@ impl PydanticGenerator {
                             output.push_str(&format!("{}    {} = \"{}\"\n", self.indent(), enum_name, val_str));
                         }
                     }
-                    output.push_str("\n");
+                    output.push_str("\n\n");
                     return Ok(output);
                 }
                 
@@ -77,7 +77,7 @@ impl PydanticGenerator {
                             output.push_str(&format!("{}    # Inherits from {}\n", self.indent(), ref_name));
                         }
                     }
-                    output.push_str("\n");
+                    output.push_str("\n\n");
                     return Ok(output);
                 } else if let Some(one_of_schemas) = one_of {
                     // For oneOf, we'll create a Union type
@@ -316,16 +316,23 @@ impl Generator for PydanticGenerator {
         output.push_str("from enum import Enum\n");
         output.push_str("from typing import Any, Dict, List, Literal, Optional, Union\n");
         output.push_str("from uuid import UUID\n\n");
-        output.push_str("from pydantic import BaseModel, EmailStr, Field, HttpUrl\n\n");
+        output.push_str("from pydantic import BaseModel, EmailStr, Field, HttpUrl\n\n\n");
         
         if let Some(components) = &schema.components {
             if let Some(schemas) = &components.schemas {
+                let mut first = true;
                 for (name, schema_def) in schemas {
+                    if !first {
+                        output.push_str("\n\n");
+                    }
+                    first = false;
                     output.push_str(&self.generate_model(name, schema_def)?);
                 }
             }
         }
         
+        // Remove trailing newlines and add single newline
+        let output = output.trim_end().to_string() + "\n";
         Ok(output)
     }
 }

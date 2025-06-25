@@ -38,7 +38,7 @@ impl PythonDictGenerator {
                             output.push_str(&format!("{}    {} = \"{}\"\n", self.indent(), enum_name, val_str));
                         }
                     }
-                    output.push_str("\n");
+                    output.push_str("\n\n");
                     return Ok(output);
                 }
                 
@@ -84,7 +84,7 @@ impl PythonDictGenerator {
                                             self.indent(), field_name, field_type));
                                     }
                                 }
-                                output.push_str("\n");
+                                output.push_str("\n\n");
                                 
                                 // Create full TypedDict that inherits from required and adds optional fields
                                 output.push_str(&format!("{}class {}({}Required, total=False):\n", self.indent(), name, name));
@@ -228,18 +228,25 @@ impl Generator for PythonDictGenerator {
         output.push_str("from enum import Enum\n");
         output.push_str("from typing import Any, Dict, List, Literal, Optional, Union\n");
         output.push_str("from typing_extensions import TypedDict\n");
-        output.push_str("from uuid import UUID\n\n");
+        output.push_str("from uuid import UUID\n\n\n");
         
         // Generate TypedDict definitions
         if let Some(components) = &schema.components {
             if let Some(schemas) = &components.schemas {
+                let mut first = true;
                 for (name, schema) in schemas {
+                    if !first {
+                        output.push_str("\n\n");
+                    }
+                    first = false;
                     let model_output = self.generate_typed_dict(name, schema)?;
                     output.push_str(&model_output);
                 }
             }
         }
         
+        // Remove trailing newlines
+        let output = output.trim_end().to_string() + "\n";
         Ok(output)
     }
 }
