@@ -34,16 +34,6 @@ export const AddressSchema = z.object({
 
 export type Address = z.infer<typeof AddressSchema>;
 
-export const CreateUserRequestSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
-  age: z.number().min(0).max(150).int().nullable().optional(),
-  profile: UserProfileSchema,
-  address: AddressSchema.optional()
-});
-
-export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
-
 export const ApiResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),

@@ -2,21 +2,28 @@
 // Do not modify this file manually
 
 import {
-  type User,
   UserSchema,
-  type UserProfile,
   UserProfileSchema,
-  type Address,
   AddressSchema,
-  type CreateUserRequest,
-  CreateUserRequestSchema,
-  type ApiResponse,
   ApiResponseSchema,
 } from "./schema";
+import { z } from "zod";
 
-export type { User };
-export type { UserProfile };
-export type { Address };
-export type { CreateUserRequest };
-export type { ApiResponse };
+export interface CreateUserRequest {
+  email: string;
+  name: string;
+  age?: number | null;
+  profile: UserProfile;
+  address?: Address;
+}
+
+export type User = z.infer<typeof UserSchema>;
+export type UserProfile = z.infer<typeof UserProfileSchema>;
+export type Address = z.infer<typeof AddressSchema>;
+export type ApiResponse = z.infer<typeof ApiResponseSchema>;
+
+export { UserSchema };
+export { UserProfileSchema };
+export { AddressSchema };
+export { ApiResponseSchema };
 

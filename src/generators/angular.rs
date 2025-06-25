@@ -87,6 +87,8 @@ impl AngularGenerator {
             services.insert(tag.clone(), ServiceData {
                 imports: std::collections::HashSet::new(),
                 methods: Vec::new(),
+                response_types: std::collections::HashSet::new(),
+                request_types: std::collections::HashSet::new(),
             });
         }
         
@@ -110,22 +112,6 @@ impl AngularGenerator {
         let mut method = String::new();
         method.push_str(&format!("  {}({}): Observable<{}> {{\n", method_name, parameters, return_type));
         
-        // Add Zod validation for request body if enabled
-        if self.with_zod {
-            if let Some(request_body) = &operation.request_body {
-                if let Some(content) = &request_body.content {
-                    if let Some(media_type) = content.get("application/json") {
-                        if let Some(schema) = &media_type.schema {
-                            let schema_name = format!("{}Schema", self.get_schema_type_name(schema));
-                            method.push_str(&format!("    // Validate request body with Zod\n"));
-                            method.push_str(&format!("    const validatedDto = {}.parse(dto);\n", schema_name));
-                            method.push_str("\n");
-                        }
-                    }
-                }
-            }
-        }
-        
         // Generate URL building
         let url_params = self.get_url_params(path, operation)?;
         let query_params = self.get_query_params(operation)?;
@@ -133,11 +119,7 @@ impl AngularGenerator {
         method.push_str(&format!("    const url = subsToUrl(\"{}\", {}, {});\n", path, url_params, query_params));
         
         // Generate HTTP call
-        let request_body = if self.with_zod && operation.request_body.is_some() {
-            ", validatedDto".to_string()
-        } else {
-            self.get_request_body(operation)?
-        };
+        let request_body = self.get_request_body(operation)?;
         
         let http_call = match http_method {
             "GET" => format!("this.http.get<{}>(url)", return_type),
@@ -148,7 +130,7 @@ impl AngularGenerator {
             _ => format!("this.http.request<{}>('{}', {{ url }})", return_type, http_method),
         };
         
-        // Add Zod validation for response if enabled
+        // Add Zod validation for response if enabled (but not for requests)
         if self.with_zod {
             let response_schema_name = format!("{}Schema", return_type);
             method.push_str(&format!("    return {}\n", http_call));
@@ -286,14 +268,17 @@ impl AngularGenerator {
     }
     
     fn collect_imports(&self, operation: &Operation, service_data: &mut ServiceData) -> Result<()> {
-        // Collect response types
+        // Collect response types (always import both type and schema when using Zod)
         if let Some(responses) = &operation.responses {
             if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
                 if let Some(content) = &success_response.content {
                     if let Some(media_type) = content.get("application/json") {
                         if let Some(schema) = &media_type.schema {
                             if let Some(type_name) = self.extract_type_name(schema) {
-                                service_data.imports.insert(type_name);
+                                service_data.imports.insert(type_name.clone());
+                                if self.with_zod {
+                                    service_data.response_types.insert(type_name);
+                                }
                             }
                         }
                     }
@@ -301,13 +286,16 @@ impl AngularGenerator {
             }
         }
         
-        // Collect request body types
+        // Collect request body types (always import the TypeScript type, but don't import schema when using Zod)
         if let Some(request_body) = &operation.request_body {
             if let Some(content) = &request_body.content {
                 if let Some(media_type) = content.get("application/json") {
                     if let Some(schema) = &media_type.schema {
                         if let Some(type_name) = self.extract_type_name(schema) {
-                            service_data.imports.insert(type_name);
+                            service_data.imports.insert(type_name.clone());
+                            if self.with_zod {
+                                service_data.request_types.insert(type_name);
+                            }
                         }
                     }
                 }
@@ -354,11 +342,14 @@ impl AngularGenerator {
             imports.sort();
             
             if self.with_zod {
-                // Import both types and schemas when using Zod in multi-line format
+                // Import types and schemas from dto.ts (which has inferred types and re-exported schemas)
                 service.push_str("import {\n");
                 for import in &imports {
-                    service.push_str(&format!("  {}Schema,\n", import));
-                    service.push_str(&format!("  type {},\n", import));
+                    service.push_str(&format!("  {},\n", import));
+                    // Only import schemas for response types, not request types
+                    if service_data.response_types.contains(import) {
+                        service.push_str(&format!("  {}Schema,\n", import));
+                    }
                 }
                 service.push_str("} from \"./dto\";\n");
             } else {
@@ -495,4 +486,6 @@ impl AngularGenerator {
 struct ServiceData {
     imports: std::collections::HashSet<String>,
     methods: Vec<String>,
+    response_types: std::collections::HashSet<String>,
+    request_types: std::collections::HashSet<String>,
 } 

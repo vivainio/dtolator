@@ -7,12 +7,11 @@ import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  CreateUserRequestSchema,
-  type CreateUserRequest,
+  CreateUserRequest,
+  User,
   UserSchema,
-  type User,
+  UserListResponse,
   UserListResponseSchema,
-  type UserListResponse,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
@@ -28,11 +27,8 @@ export class UsersApi {
   }
 
   createNewUserAccount(dto: CreateUserRequest): Observable<User> {
-    // Validate request body with Zod
-    const validatedDto = CreateUserRequestSchema.parse(dto);
-
     const url = subsToUrl("/users", {}, {});
-    return this.http.post<User>(url, validatedDto)
+    return this.http.post<User>(url, dto)
       .pipe(
         map(response => UserSchema.parse(response))
       );

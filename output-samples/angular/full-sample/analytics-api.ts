@@ -7,10 +7,10 @@ import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { subsToUrl } from "./subs-to-url.func";
 import {
+  ProductAnalytics,
   ProductAnalyticsSchema,
-  type ProductAnalytics,
+  SalesAnalytics,
   SalesAnalyticsSchema,
-  type SalesAnalytics,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })

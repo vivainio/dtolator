@@ -139,27 +139,6 @@ export const PaymentMethodSchema = z.object({
 
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 
-export const CreateUserRequestSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(128).regex(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]")),
-  profile: UserProfileSchema,
-  preferences: UserPreferencesSchema.optional()
-});
-
-export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
-
-export const CreateOrderRequestSchema = z.object({
-  items: z.array(z.object({
-  productId: z.string().uuid(),
-  quantity: z.number().min(1).int()
-})),
-  shippingAddress: AddressSchema,
-  billingAddress: AddressSchema.optional(),
-  paymentMethod: PaymentMethodSchema.optional()
-});
-
-export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
-
 export const UserListResponseSchema = z.object({
   data: z.array(UserSchema),
   pagination: PaginationInfoSchema
@@ -207,23 +186,6 @@ export const ErrorResponseSchema = z.object({
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
-export const UpdateProductRequestSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional(),
-  price: PriceSchema.optional(),
-  category: ProductCategorySchema.optional(),
-  isActive: z.boolean().optional()
-});
-
-export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
-
-export const UpdateOrderStatusRequestSchema = z.object({
-  status: OrderStatusSchema,
-  trackingNumber: z.string().optional()
-});
-
-export type UpdateOrderStatusRequest = z.infer<typeof UpdateOrderStatusRequestSchema>;
-
 export const CategorySchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),
@@ -235,15 +197,6 @@ export const CategorySchema = z.object({
 
 export type Category = z.infer<typeof CategorySchema>;
 
-export const CreateCategoryRequestSchema = z.object({
-  name: z.string().min(1).max(100),
-  slug: z.string().regex(new RegExp("^[a-z0-9-]+$")),
-  description: z.string().max(500).optional(),
-  parentId: z.string().uuid().optional()
-});
-
-export type CreateCategoryRequest = z.infer<typeof CreateCategoryRequestSchema>;
-
 export const InventoryResponseSchema = z.object({
   data: z.array(z.object({
   productId: z.string().uuid(),
@@ -253,13 +206,6 @@ export const InventoryResponseSchema = z.object({
 });
 
 export type InventoryResponse = z.infer<typeof InventoryResponseSchema>;
-
-export const UpdateInventoryRequestSchema = z.object({
-  quantity: z.number().min(0).int(),
-  lowStockThreshold: z.number().min(0).int().optional()
-});
-
-export type UpdateInventoryRequest = z.infer<typeof UpdateInventoryRequestSchema>;
 
 export const SalesAnalyticsSchema = z.object({
   totalRevenue: z.number().min(0),

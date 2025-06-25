@@ -7,12 +7,11 @@ import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { subsToUrl } from "./subs-to-url.func";
 import {
+  ApiResponse,
   ApiResponseSchema,
-  type ApiResponse,
-  CreateUserRequestSchema,
-  type CreateUserRequest,
+  CreateUserRequest,
+  User,
   UserSchema,
-  type User,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
@@ -28,11 +27,8 @@ export class UsersApi {
   }
 
   createNewUser(dto: CreateUserRequest): Observable<ApiResponse> {
-    // Validate request body with Zod
-    const validatedDto = CreateUserRequestSchema.parse(dto);
-
     const url = subsToUrl("/users", {}, {});
-    return this.http.post<ApiResponse>(url, validatedDto)
+    return this.http.post<ApiResponse>(url, dto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
       );
@@ -47,11 +43,8 @@ export class UsersApi {
   }
 
   updateUserProfile(userId: number, dto: CreateUserRequest): Observable<ApiResponse> {
-    // Validate request body with Zod
-    const validatedDto = CreateUserRequestSchema.parse(dto);
-
     const url = subsToUrl("/users/{userId}", { userId: userId }, {});
-    return this.http.put<ApiResponse>(url, validatedDto)
+    return this.http.put<ApiResponse>(url, dto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
       );

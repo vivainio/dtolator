@@ -201,7 +201,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
         fs::write(&schema_path, zod_final)
             .with_context(|| format!("Failed to write schema.ts file: {}", schema_path.display()))?;
         
-        // Generate TypeScript interfaces that import from schema.ts
+        // Generate TypeScript interfaces that re-export from schema.ts
         let ts_output = generate_typescript_with_imports(schema)?;
         let ts_final = format_typescript(&ts_output);
         
@@ -211,7 +211,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
         // Generate only TypeScript interfaces
         let ts_generator = TypeScriptGenerator::new();
         let dto_output = ts_generator.generate(schema)?;
-                        let dto_final = format_typescript(&dto_output);
+        let dto_final = format_typescript(&dto_output);
         
         fs::write(&dto_path, dto_final)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
@@ -315,6 +315,67 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     Ok(())
 }
 
+fn collect_request_and_response_types(schema: &OpenApiSchema) -> (std::collections::HashSet<String>, std::collections::HashSet<String>) {
+    let mut request_types = std::collections::HashSet::new();
+    let mut response_types = std::collections::HashSet::new();
+    
+    if let Some(paths) = &schema.paths {
+        for (_path, path_item) in paths {
+            // Check all HTTP methods
+            let operations = [
+                &path_item.get,
+                &path_item.post,
+                &path_item.put,
+                &path_item.patch,
+                &path_item.delete,
+            ];
+            
+            for operation in operations.into_iter().flatten() {
+                // Collect request body types
+                if let Some(request_body) = &operation.request_body {
+                    if let Some(content) = &request_body.content {
+                        if let Some(media_type) = content.get("application/json") {
+                            if let Some(schema_ref) = &media_type.schema {
+                                if let Some(type_name) = extract_type_name(schema_ref) {
+                                    request_types.insert(type_name);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Collect response types
+                if let Some(responses) = &operation.responses {
+                    for (_status, response) in responses {
+                        if let Some(content) = &response.content {
+                            if let Some(media_type) = content.get("application/json") {
+                                if let Some(schema_ref) = &media_type.schema {
+                                    if let Some(type_name) = extract_type_name(schema_ref) {
+                                        response_types.insert(type_name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    (request_types, response_types)
+}
+
+fn extract_type_name(schema: &openapi::Schema) -> Option<String> {
+    match schema {
+        openapi::Schema::Reference { reference } => {
+            Some(reference.strip_prefix("#/components/schemas/")
+                .unwrap_or(reference)
+                .to_string())
+        }
+        _ => None,
+    }
+}
+
 fn generate_typescript_with_imports(schema: &OpenApiSchema) -> Result<String> {
     let mut output = String::new();
     
@@ -322,27 +383,102 @@ fn generate_typescript_with_imports(schema: &OpenApiSchema) -> Result<String> {
     output.push_str("// Generated TypeScript interfaces from OpenAPI schema\n");
     output.push_str("// Do not modify this file manually\n\n");
     
-    // Import all schema types from schema.ts
     if let Some(components) = &schema.components {
         if let Some(schemas) = &components.schemas {
             if !schemas.is_empty() {
                 let type_names: Vec<String> = schemas.keys().cloned().collect();
                 
-                // Generate multi-line imports
-                output.push_str("import {\n");
+                // Collect actual request and response types from OpenAPI paths
+                let (request_types_set, response_types_set) = collect_request_and_response_types(schema);
                 
-                let mut import_lines = Vec::new();
-                for name in &type_names {
-                    import_lines.push(format!("  type {},", name));
-                    import_lines.push(format!("  {}Schema,", name));
+                let request_types: Vec<String> = type_names.iter()
+                    .filter(|name| request_types_set.contains(*name))
+                    .cloned()
+                    .collect();
+                
+                let response_types: Vec<String> = type_names.iter()
+                    .filter(|name| !request_types_set.contains(*name))
+                    .cloned()
+                    .collect();
+                
+                // Import only response schemas from schema.ts
+                if !response_types.is_empty() {
+                    output.push_str("import {\n");
+                    
+                    let mut import_lines = Vec::new();
+                    for name in &response_types {
+                        import_lines.push(format!("  {}Schema,", name));
+                    }
+                    
+                    output.push_str(&import_lines.join("\n"));
+                    output.push_str("\n} from \"./schema\";\n");
+                    output.push_str("import { z } from \"zod\";\n\n");
                 }
                 
-                output.push_str(&import_lines.join("\n"));
-                output.push_str("\n} from \"./schema\";\n\n");
+                // Generate TypeScript interfaces for request types (direct interfaces, not z.infer)
+                if !request_types.is_empty() {
+                    let ts_generator = TypeScriptGenerator::new();
+                    let ts_output = ts_generator.generate(schema)?;
+                    
+                    // Extract only request type interfaces from the TypeScript output
+                    let ts_lines: Vec<&str> = ts_output.lines().collect();
+                    let mut i = 0;
+                    while i < ts_lines.len() {
+                        let line = ts_lines[i].trim();
+                        if line.starts_with("export interface ") || line.starts_with("export type ") {
+                            // Check if this is a request type
+                            let mut is_request_type = false;
+                            for request_type in &request_types {
+                                if line.contains(&format!("interface {}", request_type)) || 
+                                   line.contains(&format!("type {} ", request_type)) {
+                                    is_request_type = true;
+                                    break;
+                                }
+                            }
+                            
+                            if is_request_type {
+                                // Include this interface definition
+                                let mut brace_count = 0;
+                                let mut j = i;
+                                while j < ts_lines.len() {
+                                    let current_line = ts_lines[j];
+                                    output.push_str(current_line);
+                                    output.push_str("\n");
+                                    
+                                    // Count braces to know when interface ends
+                                    for ch in current_line.chars() {
+                                        match ch {
+                                            '{' => brace_count += 1,
+                                            '}' => brace_count -= 1,
+                                            _ => {}
+                                        }
+                                    }
+                                    
+                                    j += 1;
+                                    if brace_count == 0 && j > i {
+                                        break;
+                                    }
+                                }
+                                i = j;
+                            } else {
+                                i += 1;
+                            }
+                        } else {
+                            i += 1;
+                        }
+                    }
+                    output.push_str("\n");
+                }
                 
-                // Re-export only the types for convenience
-                for name in &type_names {
-                    output.push_str(&format!("export type {{ {} }};\n", name));
+                // Create and export inferred types from response schemas only
+                for name in &response_types {
+                    output.push_str(&format!("export type {} = z.infer<typeof {}Schema>;\n", name, name));
+                }
+                output.push_str("\n");
+                
+                // Re-export only response schemas
+                for name in &response_types {
+                    output.push_str(&format!("export {{ {}Schema }};\n", name));
                 }
                 output.push_str("\n");
             }

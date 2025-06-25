@@ -22,6 +22,67 @@ impl ZodGenerator {
         f(&generator)
     }
     
+    fn collect_request_and_response_types(&self, schema: &OpenApiSchema) -> (std::collections::HashSet<String>, std::collections::HashSet<String>) {
+        let mut request_types = std::collections::HashSet::new();
+        let mut response_types = std::collections::HashSet::new();
+        
+        if let Some(paths) = &schema.paths {
+            for (_path, path_item) in paths {
+                // Check all HTTP methods
+                let operations = [
+                    &path_item.get,
+                    &path_item.post,
+                    &path_item.put,
+                    &path_item.patch,
+                    &path_item.delete,
+                ];
+                
+                for operation in operations.into_iter().flatten() {
+                    // Collect request body types
+                    if let Some(request_body) = &operation.request_body {
+                        if let Some(content) = &request_body.content {
+                            if let Some(media_type) = content.get("application/json") {
+                                if let Some(schema_ref) = &media_type.schema {
+                                    if let Some(type_name) = self.extract_type_name(schema_ref) {
+                                        request_types.insert(type_name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Collect response types
+                    if let Some(responses) = &operation.responses {
+                        for (_status, response) in responses {
+                            if let Some(content) = &response.content {
+                                if let Some(media_type) = content.get("application/json") {
+                                    if let Some(schema_ref) = &media_type.schema {
+                                        if let Some(type_name) = self.extract_type_name(schema_ref) {
+                                            response_types.insert(type_name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        (request_types, response_types)
+    }
+    
+    fn extract_type_name(&self, schema: &crate::openapi::Schema) -> Option<String> {
+        match schema {
+            crate::openapi::Schema::Reference { reference } => {
+                Some(reference.strip_prefix("#/components/schemas/")
+                    .unwrap_or(reference)
+                    .to_string())
+            }
+            _ => None,
+        }
+    }
+    
     fn generate_schema(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
         
@@ -190,9 +251,16 @@ impl Generator for ZodGenerator {
         
         output.push_str("import { z } from 'zod';\n\n");
         
+        // Collect actual request and response types from OpenAPI paths
+        let (request_types, _response_types) = self.collect_request_and_response_types(schema);
+        
         if let Some(components) = &schema.components {
             if let Some(schemas) = &components.schemas {
                 for (name, schema_def) in schemas {
+                    // Skip request types - only generate schemas for response types
+                    if request_types.contains(name) {
+                        continue;
+                    }
                     output.push_str(&self.generate_schema(name, schema_def)?);
                 }
             }

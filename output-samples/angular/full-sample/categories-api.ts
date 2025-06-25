@@ -7,12 +7,11 @@ import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { subsToUrl } from "./subs-to-url.func";
 import {
+  Inventory,
   InventorySchema,
-  type Inventory,
+  InventoryResponse,
   InventoryResponseSchema,
-  type InventoryResponse,
-  UpdateInventoryRequestSchema,
-  type UpdateInventoryRequest,
+  UpdateInventoryRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
@@ -28,11 +27,8 @@ export class InventoryApi {
   }
 
   updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
-    // Validate request body with Zod
-    const validatedDto = UpdateInventoryRequestSchema.parse(dto);
-
     const url = subsToUrl("/inventory/{productId}", { productId: productId }, {});
-    return this.http.put<Inventory>(url, validatedDto)
+    return this.http.put<Inventory>(url, dto)
       .pipe(
         map(response => InventorySchema.parse(response))
       );

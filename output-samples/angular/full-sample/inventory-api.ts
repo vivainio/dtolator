@@ -7,12 +7,10 @@ import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  CreateOrderRequestSchema,
-  type CreateOrderRequest,
+  CreateOrderRequest,
+  Order,
   OrderSchema,
-  type Order,
-  UpdateOrderStatusRequestSchema,
-  type UpdateOrderStatusRequest,
+  UpdateOrderStatusRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
@@ -20,11 +18,8 @@ export class OrdersApi {
   constructor(private http: HttpClient) {}
 
   createNewOrder(dto: CreateOrderRequest): Observable<Order> {
-    // Validate request body with Zod
-    const validatedDto = CreateOrderRequestSchema.parse(dto);
-
     const url = subsToUrl("/orders", {}, {});
-    return this.http.post<Order>(url, validatedDto)
+    return this.http.post<Order>(url, dto)
       .pipe(
         map(response => OrderSchema.parse(response))
       );
@@ -39,11 +34,8 @@ export class OrdersApi {
   }
 
   updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest): Observable<Order> {
-    // Validate request body with Zod
-    const validatedDto = UpdateOrderStatusRequestSchema.parse(dto);
-
     const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
-    return this.http.patch<Order>(url, validatedDto)
+    return this.http.patch<Order>(url, dto)
       .pipe(
         map(response => OrderSchema.parse(response))
       );
