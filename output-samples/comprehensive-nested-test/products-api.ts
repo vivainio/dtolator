@@ -5,27 +5,25 @@ import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import {
-  CreateUserRequest,
-  CreateUserRequestSchema,
-  User,
-  UserListResponse,
-  UserListResponseSchema,
-  UserSchema,
-} from "./dto";
 import { subsToUrl } from "./subs-to-url.func";
+import {
+  CreateUserRequestSchema,
+  type CreateUserRequest,
+  UserSchema,
+  type User,
+  UserListResponseSchema,
+  type UserListResponse,
+} from "./dto";
 
 @Injectable({ providedIn: "root" })
 export class UsersApi {
   constructor(private http: HttpClient) {}
 
-  getAllUsersWithPagination(
-    queryParams?: { page?: number; limit?: number; },
-  ): Observable<UserListResponse> {
+  getAllUsersWithPagination(queryParams?: { page?: number, limit?: number }): Observable<UserListResponse> {
     const url = subsToUrl("/users", {}, queryParams || {});
     return this.http.get<UserListResponse>(url)
       .pipe(
-        map(response => UserListResponseSchema.parse(response)),
+        map(response => UserListResponseSchema.parse(response))
       );
   }
 
@@ -36,7 +34,7 @@ export class UsersApi {
     const url = subsToUrl("/users", {}, {});
     return this.http.post<User>(url, validatedDto)
       .pipe(
-        map(response => UserSchema.parse(response)),
+        map(response => UserSchema.parse(response))
       );
   }
 
@@ -44,7 +42,8 @@ export class UsersApi {
     const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return this.http.get<User>(url)
       .pipe(
-        map(response => UserSchema.parse(response)),
+        map(response => UserSchema.parse(response))
       );
   }
+
 }

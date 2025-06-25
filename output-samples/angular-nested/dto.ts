@@ -35,7 +35,11 @@ export interface NotificationSettings {
   marketing?: boolean;
 }
 
-export type UserRole = "customer" | "admin" | "moderator" | "vendor";
+export type UserRole =
+  | "customer"
+  | "admin"
+  | "moderator"
+  | "vendor";
 
 export interface Address {
   street: string;
@@ -152,9 +156,9 @@ export interface ProductListResponse {
   filters?: {
     categories?: ProductCategory[];
     priceRange?: {
-      min?: number;
-      max?: number;
-    };
+    min?: number;
+    max?: number;
+  };
   };
 }
 
@@ -172,9 +176,9 @@ export interface ErrorResponse {
     code: string;
     message: string;
     details?: {
-      field?: string;
-      message?: string;
-    }[];
+    field?: string;
+    message?: string;
+  }[];
     requestId?: string;
     timestamp?: string;
   };
@@ -249,3 +253,4 @@ export interface ProductAnalytics {
     threshold?: number;
   }[];
 }
+

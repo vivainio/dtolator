@@ -7,10 +7,12 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import TypedDict
 from uuid import UUID
 
+
 class UserRequired(TypedDict):
     id: str
     email: str
     profile: UserProfile
+
 
 class User(UserRequired, total=False):
     preferences: UserPreferences
@@ -19,9 +21,12 @@ class User(UserRequired, total=False):
     isActive: bool
     roles: List[UserRole]
 
+
+
 class UserProfileRequired(TypedDict):
     firstName: str
     lastName: str
+
 
 class UserProfile(UserProfileRequired, total=False):
     dateOfBirth: Optional[str]
@@ -29,11 +34,15 @@ class UserProfile(UserProfileRequired, total=False):
     avatar: ImageUrl
     address: Address
 
+
+
 class UserPreferences(TypedDict, total=False):
     language: Literal["en", "es", "fr", "de", "it"]
     currency: Literal["USD", "EUR", "GBP", "JPY"]
     notifications: NotificationSettings
     theme: Literal["light", "dark", "auto"]
+
+
 
 class NotificationSettings(TypedDict, total=False):
     email: bool
@@ -41,11 +50,16 @@ class NotificationSettings(TypedDict, total=False):
     sms: bool
     marketing: bool
 
+
+
 class UserRole(str, Enum):
     CUSTOMER = "customer"
     ADMIN = "admin"
     MODERATOR = "moderator"
     VENDOR = "vendor"
+
+
+
 
 class AddressRequired(TypedDict):
     street: str
@@ -53,23 +67,30 @@ class AddressRequired(TypedDict):
     country: str
     postalCode: str
 
+
 class Address(AddressRequired, total=False):
     street2: Optional[str]
     state: Optional[str]
 
+
+
 class ImageUrlRequired(TypedDict):
     url: str
+
 
 class ImageUrl(ImageUrlRequired, total=False):
     alt: str
     width: int
     height: int
 
+
+
 class ProductRequired(TypedDict):
     id: str
     name: str
     price: Price
     category: ProductCategory
+
 
 class Product(ProductRequired, total=False):
     description: Optional[str]
@@ -80,12 +101,17 @@ class Product(ProductRequired, total=False):
     isActive: bool
     createdAt: str
 
+
+
 class PriceRequired(TypedDict):
     amount: float
     currency: Literal["USD", "EUR", "GBP", "JPY"]
 
+
 class Price(PriceRequired, total=False):
     originalAmount: Optional[float]
+
+
 
 class ProductCategory(str, Enum):
     ELECTRONICS = "electronics"
@@ -96,12 +122,18 @@ class ProductCategory(str, Enum):
     BEAUTY = "beauty"
     AUTOMOTIVE = "automotive"
 
+
+
+
 class InventoryRequired(TypedDict):
     quantity: int
     status: Literal["in_stock", "low_stock", "out_of_stock", "discontinued"]
 
+
 class Inventory(InventoryRequired, total=False):
     lowStockThreshold: int
+
+
 
 class OrderRequired(TypedDict):
     id: str
@@ -109,6 +141,7 @@ class OrderRequired(TypedDict):
     items: List[OrderItem]
     total: Price
     status: OrderStatus
+
 
 class Order(OrderRequired, total=False):
     shippingAddress: Address
@@ -118,13 +151,18 @@ class Order(OrderRequired, total=False):
     estimatedDelivery: Optional[str]
     trackingNumber: Optional[str]
 
+
+
 class OrderItemRequired(TypedDict):
     productId: str
     quantity: int
     price: Price
 
+
 class OrderItem(OrderItemRequired, total=False):
     productSnapshot: Product
+
+
 
 class OrderStatus(str, Enum):
     PENDING = "pending"
@@ -135,39 +173,56 @@ class OrderStatus(str, Enum):
     CANCELLED = "cancelled"
     REFUNDED = "refunded"
 
+
+
+
 class PaymentMethodRequired(TypedDict):
     type: Literal["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"]
+
 
 class PaymentMethod(PaymentMethodRequired, total=False):
     last4: str
     brand: Literal["visa", "mastercard", "amex", "discover"]
+
+
 
 class CreateUserRequestRequired(TypedDict):
     email: str
     password: str
     profile: UserProfile
 
+
 class CreateUserRequest(CreateUserRequestRequired, total=False):
     preferences: UserPreferences
+
+
 
 class CreateOrderRequestRequired(TypedDict):
     items: List[Dict[str, Any]]
     shippingAddress: Address
 
+
 class CreateOrderRequest(CreateOrderRequestRequired, total=False):
     billingAddress: Address
     paymentMethod: PaymentMethod
+
+
 
 class UserListResponse(TypedDict):
     data: List[User]
     pagination: PaginationInfo
 
+
+
 class ProductListResponseRequired(TypedDict):
     data: List[Product]
     pagination: PaginationInfo
 
+
 class ProductListResponse(ProductListResponseRequired, total=False):
     filters: Dict[str, Any]
+
+
 
 class PaginationInfoRequired(TypedDict):
     page: int
@@ -175,12 +230,17 @@ class PaginationInfoRequired(TypedDict):
     total: int
     totalPages: int
 
+
 class PaginationInfo(PaginationInfoRequired, total=False):
     hasNext: bool
     hasPrev: bool
 
+
+
 class ErrorResponse(TypedDict):
     error: Dict[str, Any]
+
+
 
 class UpdateProductRequest(TypedDict, total=False):
     name: str
@@ -189,54 +249,73 @@ class UpdateProductRequest(TypedDict, total=False):
     category: ProductCategory
     isActive: bool
 
+
+
 class UpdateOrderStatusRequestRequired(TypedDict):
     status: OrderStatus
 
+
 class UpdateOrderStatusRequest(UpdateOrderStatusRequestRequired, total=False):
     trackingNumber: str
+
+
 
 class CategoryRequired(TypedDict):
     id: str
     name: str
     slug: str
 
+
 class Category(CategoryRequired, total=False):
     description: str
     parentId: Optional[str]
     isActive: bool
 
+
+
 class CreateCategoryRequestRequired(TypedDict):
     name: str
     slug: str
+
 
 class CreateCategoryRequest(CreateCategoryRequestRequired, total=False):
     description: str
     parentId: str
 
+
+
 class InventoryResponse(TypedDict):
     data: List[Dict[str, Any]]
+
+
 
 class UpdateInventoryRequestRequired(TypedDict):
     quantity: int
 
+
 class UpdateInventoryRequest(UpdateInventoryRequestRequired, total=False):
     lowStockThreshold: int
+
+
 
 class SalesAnalyticsRequired(TypedDict):
     totalRevenue: float
     totalOrders: int
     averageOrderValue: float
 
+
 class SalesAnalytics(SalesAnalyticsRequired, total=False):
     topProducts: List[Dict[str, Any]]
     period: Dict[str, Any]
+
+
 
 class ProductAnalyticsRequired(TypedDict):
     totalProducts: int
     activeProducts: int
 
+
 class ProductAnalytics(ProductAnalyticsRequired, total=False):
     categoryBreakdown: Dict[str, Any]
     lowStockProducts: List[Dict[str, Any]]
-
 

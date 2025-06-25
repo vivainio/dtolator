@@ -4,8 +4,12 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
-import { CreateOrderRequest, Order, UpdateOrderStatusRequest } from "./dto";
 import { subsToUrl } from "./subs-to-url.func";
+import {
+  CreateOrderRequest,
+  Order,
+  UpdateOrderStatusRequest,
+} from "./dto";
 
 @Injectable({ providedIn: "root" })
 export class OrdersApi {
@@ -21,11 +25,9 @@ export class OrdersApi {
     return this.http.get<Order>(url);
   }
 
-  updateOrderStatus(
-    orderId: string,
-    dto: UpdateOrderStatusRequest,
-  ): Observable<Order> {
+  updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest): Observable<Order> {
     const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
     return this.http.patch<Order>(url, dto);
   }
+
 }

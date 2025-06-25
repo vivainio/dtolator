@@ -1,19 +1,26 @@
 // Generated Angular service from OpenAPI schema
 // Do not modify this file manually
 
-import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { subsToUrl } from './subs-to-url.func';
-import { ApiResponseSchema, ApiResponse, CreateUserRequestSchema, CreateUserRequest, UserSchema, User } from './dto';
+import { HttpClient } from "@angular/common/http";
+import { Injectable } from "@angular/core";
+import { Observable } from "rxjs";
+import { map } from "rxjs/operators";
+import { subsToUrl } from "./subs-to-url.func";
+import {
+  ApiResponseSchema,
+  type ApiResponse,
+  CreateUserRequestSchema,
+  type CreateUserRequest,
+  UserSchema,
+  type User,
+} from "./dto";
 
-@Injectable({ providedIn: 'root' })
+@Injectable({ providedIn: "root" })
 export class UsersApi {
   constructor(private http: HttpClient) {}
 
   listAllUsers(): Observable<unknown[]> {
-    const url = subsToUrl('/users', {}, {});
+    const url = subsToUrl("/users", {}, {});
     return this.http.get<unknown[]>(url)
       .pipe(
         map(response => unknown[]Schema.parse(response))
@@ -24,7 +31,7 @@ export class UsersApi {
     // Validate request body with Zod
     const validatedDto = CreateUserRequestSchema.parse(dto);
 
-    const url = subsToUrl('/users', {}, {});
+    const url = subsToUrl("/users", {}, {});
     return this.http.post<ApiResponse>(url, validatedDto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -32,7 +39,7 @@ export class UsersApi {
   }
 
   getUserByID(userId: number): Observable<User> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return this.http.get<User>(url)
       .pipe(
         map(response => UserSchema.parse(response))
@@ -43,7 +50,7 @@ export class UsersApi {
     // Validate request body with Zod
     const validatedDto = CreateUserRequestSchema.parse(dto);
 
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return this.http.put<ApiResponse>(url, validatedDto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -51,7 +58,7 @@ export class UsersApi {
   }
 
   deleteUserAccount(userId: number): Observable<ApiResponse> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return this.http.delete<ApiResponse>(url)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -59,7 +66,7 @@ export class UsersApi {
   }
 
   activateUserAccount(userId: number): Observable<ApiResponse> {
-    const url = subsToUrl('/users/{userId}/activate', { userId: userId }, {});
+    const url = subsToUrl("/users/{userId}/activate", { userId: userId }, {});
     return this.http.post<ApiResponse>(url)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -67,7 +74,7 @@ export class UsersApi {
   }
 
   deactivateUserAccount(userId: number): Observable<ApiResponse> {
-    const url = subsToUrl('/users/{userId}/deactivate', { userId: userId }, {});
+    const url = subsToUrl("/users/{userId}/deactivate", { userId: userId }, {});
     return this.http.post<ApiResponse>(url)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
