@@ -28,11 +28,19 @@ import {
 } from "./schema";
 import { z } from "zod";
 
-export interface CreateUserRequest {
-  email: string;
-  password: string;
-  profile: UserProfile;
-  preferences?: UserPreferences;
+export interface CreateCategoryRequest {
+  name: string;
+  slug: string;
+  description?: string;
+  parentId?: string;
+}
+export interface UpdateInventoryRequest {
+  quantity: number;
+  lowStockThreshold?: number;
+}
+export interface UpdateOrderStatusRequest {
+  status: OrderStatus;
+  trackingNumber?: string;
 }
 export interface CreateOrderRequest {
   items: {
@@ -50,19 +58,11 @@ export interface UpdateProductRequest {
   category?: ProductCategory;
   isActive?: boolean;
 }
-export interface UpdateOrderStatusRequest {
-  status: OrderStatus;
-  trackingNumber?: string;
-}
-export interface CreateCategoryRequest {
-  name: string;
-  slug: string;
-  description?: string;
-  parentId?: string;
-}
-export interface UpdateInventoryRequest {
-  quantity: number;
-  lowStockThreshold?: number;
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  profile: UserProfile;
+  preferences?: UserPreferences;
 }
 
 export type User = z.infer<typeof UserSchema>;
