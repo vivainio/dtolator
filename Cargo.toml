@@ -1,0 +1,17 @@
+[package]
+name = "dtolator"
+version = "0.1.0"
+edition = "2021"
+description = "Convert OpenAPI schema JSON files to Zod schema definitions or TypeScript interfaces"
+license = "MIT"
+
+[[bin]]
+name = "dtolator"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+indexmap = { version = "2.0", features = ["serde"] } 
