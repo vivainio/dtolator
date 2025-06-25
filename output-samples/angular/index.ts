@@ -3,4 +3,4 @@
 
 export * from './dto';
 export * from './subs-to-url.func';
-export * from './default-api.service'; 
+export * from './default-api'; 

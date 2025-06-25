@@ -6,10 +6,10 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { subsToUrl } from './subs-to-url.func';
-import { CreateOrderRequestSchema, CreateOrderRequest, CreateUserRequestSchema, CreateUserRequest, OrderSchema, Order, ProductListResponseSchema, ProductListResponse, UserSchema, User, UserListResponseSchema, UserListResponse } from './dto';
+import { CreateUserRequestSchema, CreateUserRequest, UserSchema, User, UserListResponseSchema, UserListResponse } from './dto';
 
 @Injectable({ providedIn: 'root' })
-export class DefaultApiService {
+export class UsersApi {
   constructor(private http: HttpClient) {}
 
   getAllUsersWithPagination(queryParams?: { page?: number, limit?: number }): Observable<UserListResponse> {
@@ -36,25 +36,6 @@ export class DefaultApiService {
     return this.http.get<User>(url)
       .pipe(
         map(response => UserSchema.parse(response))
-      );
-  }
-
-  searchProductsWithFilters(queryParams?: { category?: unknown, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
-    const url = subsToUrl('/products', {}, queryParams || {});
-    return this.http.get<ProductListResponse>(url)
-      .pipe(
-        map(response => ProductListResponseSchema.parse(response))
-      );
-  }
-
-  createNewOrder(dto: CreateOrderRequest): Observable<Order> {
-    // Validate request body with Zod
-    const validatedDto = CreateOrderRequestSchema.parse(dto);
-
-    const url = subsToUrl('/orders', {}, {});
-    return this.http.post<Order>(url, validatedDto)
-      .pipe(
-        map(response => OrderSchema.parse(response))
       );
   }
 

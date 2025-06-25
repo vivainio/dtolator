@@ -329,8 +329,8 @@ impl AngularGenerator {
     }
     
     fn generate_service(&self, tag: &str, service_data: &ServiceData) -> Result<String> {
-        let class_name = format!("{}ApiService", tag);
-        let file_name = self.to_kebab_case(&format!("{}-api.service", tag));
+        let class_name = format!("{}Api", tag);
+        let file_name = self.to_kebab_case(&format!("{}-api", tag));
         
         let mut service = String::new();
         
@@ -397,7 +397,7 @@ impl AngularGenerator {
         index.push_str("export * from './subs-to-url.func';\n");
         
         for tag in tags {
-            let file_name = self.to_kebab_case(&format!("{}-api.service", tag));
+            let file_name = self.to_kebab_case(&format!("{}-api", tag));
             index.push_str(&format!("export * from './{}';\n", file_name));
         }
         
