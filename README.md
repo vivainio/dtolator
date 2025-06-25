@@ -270,60 +270,145 @@ const newUser = await api.call('POST /users', {
 // api.call('GET /users/{userId}', {});            // Error: Missing required params
 ```
 
-### 2. React Hooks Integration
+### 2. Angular API Service Integration
 
 ```typescript
-import { useState, useEffect } from 'react';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { ApiEndpoints, ExtractEndpointResponse, ExtractEndpointParams, ExtractEndpointRequest, ExtractEndpointQuery } from './api-endpoints';
 
-function useApiCall<K extends keyof ApiEndpoints>(
-  endpoint: K,
-  options: Parameters<TypedApiClient['call']>[1],
-  enabled = true
-) {
-  const [data, setData] = useState<ExtractEndpointResponse<K> | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+@Injectable({
+  providedIn: 'root'
+})
+export class TypedApiService {
+  private baseUrl = 'https://api.example.com/v2';
 
-  const execute = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const api = new TypedApiClient('https://api.example.com/v2');
-      const result = await api.call(endpoint, options);
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setLoading(false);
+  constructor(private http: HttpClient) {}
+
+  call<K extends keyof ApiEndpoints>(
+    endpoint: K,
+    options: (
+      ApiEndpoints[K] extends { request: infer R } ? { body: R } : {}
+    ) & (
+      ApiEndpoints[K] extends { params: infer P } ? { params: P } : {}
+    ) & (
+      ApiEndpoints[K] extends { query: infer Q } ? { query?: Q } : {}
+    )
+  ): Observable<ExtractEndpointResponse<K>> {
+    
+    const [method, pathTemplate] = endpoint.split(' ') as [string, string];
+    
+    // Replace path parameters
+    let url = pathTemplate;
+    if ('params' in options && options.params) {
+      Object.entries(options.params as Record<string, string>).forEach(([key, value]) => {
+        url = url.replace(`{${key}}`, encodeURIComponent(value));
+      });
     }
-  };
-
-  useEffect(() => {
-    if (enabled) execute();
-  }, [enabled]);
-
-  return { data, loading, error, refetch: execute };
+    
+    // Add query parameters
+    let httpParams = new HttpParams();
+    if ('query' in options && options.query) {
+      Object.entries(options.query as Record<string, any>).forEach(([key, value]) => {
+        if (value !== undefined) {
+          httpParams = httpParams.append(key, String(value));
+        }
+      });
+    }
+    
+    const fullUrl = `${this.baseUrl}${url}`;
+    const httpOptions = { params: httpParams };
+    
+    switch (method) {
+      case 'GET':
+        return this.http.get<ExtractEndpointResponse<K>>(fullUrl, httpOptions);
+      case 'POST':
+        return this.http.post<ExtractEndpointResponse<K>>(
+          fullUrl, 
+          'body' in options ? options.body : null, 
+          httpOptions
+        );
+      case 'PUT':
+        return this.http.put<ExtractEndpointResponse<K>>(
+          fullUrl, 
+          'body' in options ? options.body : null, 
+          httpOptions
+        );
+      case 'DELETE':
+        return this.http.delete<ExtractEndpointResponse<K>>(fullUrl, httpOptions);
+      case 'PATCH':
+        return this.http.patch<ExtractEndpointResponse<K>>(
+          fullUrl, 
+          'body' in options ? options.body : null, 
+          httpOptions
+        );
+      default:
+        throw new Error(`Unsupported HTTP method: ${method}`);
+    }
+  }
 }
 
-// React component using the hook
-function UserProfile({ userId }: { userId: string }) {
-  // Fully typed hook - knows this returns User data
-  const { data: user, loading, error } = useApiCall(
-    'GET /users/{userId}',
-    { params: { userId } }
-  );
+// Angular component using the service
+import { Component, OnInit, Input } from '@angular/core';
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!user) return <div>No user found</div>;
-
-  // TypeScript knows user.profile, user.email, etc. exist
-  return (
-    <div>
-      <h1>{user.profile.firstName} {user.profile.lastName}</h1>
-      <p>Email: {user.email}</p>
+@Component({
+  selector: 'app-user-profile',
+  template: `
+    <div *ngIf="loading">Loading...</div>
+    <div *ngIf="error" class="error">Error: {{ error }}</div>
+    <div *ngIf="user && !loading" class="user-profile">
+      <h1>{{ user.profile.firstName }} {{ user.profile.lastName }}</h1>
+      <p>Email: {{ user.email }}</p>
+      <p>Status: {{ user.status }}</p>
     </div>
-  );
+  `
+})
+export class UserProfileComponent implements OnInit {
+  @Input() userId!: string;
+  
+  user: ExtractEndpointResponse<'GET /users/{userId}'> | null = null;
+  loading = false;
+  error: string | null = null;
+
+  constructor(private apiService: TypedApiService) {}
+
+  ngOnInit() {
+    this.loadUser();
+  }
+
+  loadUser() {
+    this.loading = true;
+    this.error = null;
+    
+    // Fully typed API call - TypeScript knows userId is required
+    this.apiService.call('GET /users/{userId}', {
+      params: { userId: this.userId }
+    }).subscribe({
+      next: (user) => {
+        this.user = user; // TypeScript knows this is User type
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = err.message || 'Unknown error';
+        this.loading = false;
+      }
+    });
+  }
+
+  // Example of creating a new user
+  createUser(userData: ExtractEndpointRequest<'POST /users'>) {
+    return this.apiService.call('POST /users', {
+      body: userData // TypeScript ensures this matches CreateUserRequest
+    });
+  }
+
+  // Example of getting users list with query parameters
+  getUsers(page: number = 1, limit: number = 20) {
+    return this.apiService.call('GET /users', {
+      query: { page, limit } // TypeScript knows these are the correct query params
+    });
+  }
 }
 ```
 
