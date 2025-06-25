@@ -1,0 +1,228 @@
+use anyhow::Result;
+use crate::openapi::{OpenApiSchema, Operation, Parameter};
+use crate::generators::Generator;
+
+pub struct EndpointsGenerator {
+    include_query_params: bool,
+}
+
+impl EndpointsGenerator {
+    pub fn new() -> Self {
+        Self {
+            include_query_params: true,
+        }
+    }
+    
+    pub fn with_query_params(mut self, include: bool) -> Self {
+        self.include_query_params = include;
+        self
+    }
+}
+
+impl Generator for EndpointsGenerator {
+    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
+        let mut output = String::new();
+        
+        output.push_str("// Generated API endpoint types from OpenAPI schema\n");
+        output.push_str("// Do not modify this file manually\n\n");
+        
+        // Import the schema types
+        output.push_str("import {\n");
+        if let Some(components) = &schema.components {
+            if let Some(schemas) = &components.schemas {
+                let schema_names: Vec<&String> = schemas.keys().collect();
+                for (i, name) in schema_names.iter().enumerate() {
+                    output.push_str(&format!("  {}", name));
+                    if i < schema_names.len() - 1 {
+                        output.push_str(",\n");
+                    } else {
+                        output.push_str("\n");
+                    }
+                }
+            }
+        }
+        output.push_str("} from './types';\n\n");
+        
+        // Generate ApiEndpoints type
+        output.push_str("export type ApiEndpoints = {\n");
+        
+        if let Some(paths) = &schema.paths {
+            for (path, path_item) in paths {
+                // Handle different HTTP methods
+                if let Some(operation) = &path_item.get {
+                    output.push_str(&self.generate_endpoint("GET", path, operation)?);
+                }
+                if let Some(operation) = &path_item.post {
+                    output.push_str(&self.generate_endpoint("POST", path, operation)?);
+                }
+                if let Some(operation) = &path_item.put {
+                    output.push_str(&self.generate_endpoint("PUT", path, operation)?);
+                }
+                if let Some(operation) = &path_item.delete {
+                    output.push_str(&self.generate_endpoint("DELETE", path, operation)?);
+                }
+                if let Some(operation) = &path_item.patch {
+                    output.push_str(&self.generate_endpoint("PATCH", path, operation)?);
+                }
+            }
+        }
+        
+        output.push_str("};\n\n");
+        
+        // Generate helper types
+        output.push_str(self.generate_helper_types().as_str());
+        
+        Ok(output)
+    }
+}
+
+impl EndpointsGenerator {
+    fn generate_endpoint(&self, method: &str, path: &str, operation: &Operation) -> Result<String> {
+        let mut output = String::new();
+        
+        output.push_str(&format!("  \"{} {}\": {{\n", method, path));
+        
+        // Generate path parameters
+        let path_params = self.extract_path_params(path);
+        if !path_params.is_empty() {
+            output.push_str("    params: {\n");
+            for param in path_params {
+                output.push_str(&format!("      {}: string;\n", param));
+            }
+            output.push_str("    };\n");
+        }
+        
+        // Generate query parameters
+        if self.include_query_params {
+            if let Some(parameters) = &operation.parameters {
+                let query_params: Vec<&Parameter> = parameters.iter()
+                    .filter(|p| p.location == "query")
+                    .collect();
+                
+                if !query_params.is_empty() {
+                    output.push_str("    query?: {\n");
+                    for param in query_params {
+                        let param_type = self.get_parameter_type(param);
+                        let optional = if param.required.unwrap_or(false) { "" } else { "?" };
+                        output.push_str(&format!("      {}{}: {};\n", param.name, optional, param_type));
+                    }
+                    output.push_str("    };\n");
+                }
+            }
+        }
+        
+        // Generate request body for POST/PUT/PATCH
+        if matches!(method, "POST" | "PUT" | "PATCH") {
+            if let Some(request_body) = &operation.request_body {
+                if let Some(content) = &request_body.content {
+                    if let Some(media_type) = content.get("application/json") {
+                        if let Some(schema) = &media_type.schema {
+                            let type_name = self.get_schema_type_name(schema);
+                            output.push_str(&format!("    request: {};\n", type_name));
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Generate response type
+        if let Some(responses) = &operation.responses {
+            if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
+                if let Some(content) = &success_response.content {
+                    if let Some(media_type) = content.get("application/json") {
+                        if let Some(schema) = &media_type.schema {
+                            let type_name = self.get_schema_type_name(schema);
+                            output.push_str(&format!("    response: {};\n", type_name));
+                        }
+                    }
+                }
+            }
+        }
+        
+        output.push_str("  };\n");
+        
+        Ok(output)
+    }
+    
+    fn extract_path_params(&self, path: &str) -> Vec<String> {
+        let mut params = Vec::new();
+        let mut chars = path.chars().peekable();
+        
+        while let Some(ch) = chars.next() {
+            if ch == '{' {
+                let mut param = String::new();
+                while let Some(ch) = chars.next() {
+                    if ch == '}' {
+                        break;
+                    }
+                    param.push(ch);
+                }
+                if !param.is_empty() {
+                    params.push(param);
+                }
+            }
+        }
+        
+        params
+    }
+    
+    fn get_parameter_type(&self, parameter: &Parameter) -> String {
+        if let Some(schema) = &parameter.schema {
+            match schema.get_type() {
+                Some("string") => "string".to_string(),
+                Some("number") | Some("integer") => "number".to_string(),
+                Some("boolean") => "boolean".to_string(),
+                Some("array") => "string[]".to_string(), // Simplified
+                _ => "unknown".to_string(),
+            }
+        } else {
+            "unknown".to_string()
+        }
+    }
+    
+    fn get_schema_type_name(&self, schema: &crate::openapi::Schema) -> String {
+        match schema {
+            crate::openapi::Schema::Reference { reference } => {
+                reference.strip_prefix("#/components/schemas/")
+                    .unwrap_or(reference)
+                    .to_string()
+            }
+            crate::openapi::Schema::Object { schema_type, .. } => {
+                match schema_type.as_deref() {
+                    Some("string") => "string".to_string(),
+                    Some("number") | Some("integer") => "number".to_string(),
+                    Some("boolean") => "boolean".to_string(),
+                    Some("array") => "unknown[]".to_string(),
+                    Some("object") => "Record<string, unknown>".to_string(),
+                    _ => "unknown".to_string(),
+                }
+            }
+        }
+    }
+    
+    fn generate_helper_types(&self) -> String {
+        r#"// Helper types for API client usage
+export type ExtractEndpointParams<T extends keyof ApiEndpoints> = 
+  ApiEndpoints[T] extends { params: infer P } ? P : never;
+
+export type ExtractEndpointQuery<T extends keyof ApiEndpoints> = 
+  ApiEndpoints[T] extends { query: infer Q } ? Q : never;
+
+export type ExtractEndpointRequest<T extends keyof ApiEndpoints> = 
+  ApiEndpoints[T] extends { request: infer R } ? R : never;
+
+export type ExtractEndpointResponse<T extends keyof ApiEndpoints> = 
+  ApiEndpoints[T] extends { response: infer R } ? R : never;
+
+// Utility type to get all GET endpoints
+export type GetEndpoints = {
+  [K in keyof ApiEndpoints as K extends `GET ${string}` ? K : never]: ApiEndpoints[K]
+};
+
+// Utility type to get all POST endpoints  
+export type PostEndpoints = {
+  [K in keyof ApiEndpoints as K extends `POST ${string}` ? K : never]: ApiEndpoints[K]
+};
+"#.to_string()
+    }
+} 

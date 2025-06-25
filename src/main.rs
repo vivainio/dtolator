@@ -6,7 +6,7 @@ mod openapi;
 mod generators;
 
 use openapi::OpenApiSchema;
-use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, Generator};
+use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, Generator};
 
 #[derive(Parser)]
 #[command(name = "dtolator")]
@@ -25,6 +25,10 @@ struct Cli {
     #[arg(short, long)]
     typescript: bool,
     
+    /// Generate API endpoint types from OpenAPI paths
+    #[arg(short, long)]
+    endpoints: bool,
+    
     /// Pretty print the output
     #[arg(short, long)]
     pretty: bool,
@@ -41,7 +45,10 @@ fn main() -> Result<()> {
         .with_context(|| "Failed to parse OpenAPI schema JSON")?;
     
     // Generate output based on the selected format
-    let output = if cli.typescript {
+    let output = if cli.endpoints {
+        let generator = EndpointsGenerator::new();
+        generator.generate(&schema)?
+    } else if cli.typescript {
         let generator = TypeScriptGenerator::new();
         generator.generate(&schema)?
     } else {

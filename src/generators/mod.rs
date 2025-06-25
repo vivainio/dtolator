@@ -1,5 +1,6 @@
 pub mod zod;
 pub mod typescript;
+pub mod endpoints;
 
 use anyhow::Result;
 use crate::openapi::OpenApiSchema;
