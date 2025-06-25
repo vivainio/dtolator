@@ -614,4 +614,211 @@ See the "How to Use Generated ApiEndpoints" section above for detailed implement
 
 ## License
 
-MIT License - see LICENSE file for details. 
+MIT License - see LICENSE file for details.
+
+## Nested Objects Support
+
+dtolator provides excellent support for complex nested object structures in all output formats. Here are examples showing how nested objects are handled:
+
+### Complex Nested Schema Example
+
+From our `full-sample.json`, here's a complex nested structure:
+
+```json
+{
+  "User": {
+    "type": "object",
+    "required": ["id", "email", "profile"],
+    "properties": {
+      "id": { "type": "string", "format": "uuid" },
+      "email": { "type": "string", "format": "email" },
+      "profile": { "$ref": "#/components/schemas/UserProfile" },
+      "preferences": { "$ref": "#/components/schemas/UserPreferences" },
+      "roles": {
+        "type": "array",
+        "items": { "$ref": "#/components/schemas/UserRole" }
+      }
+    }
+  },
+  "UserProfile": {
+    "type": "object",
+    "required": ["firstName", "lastName"],
+    "properties": {
+      "firstName": { "type": "string" },
+      "lastName": { "type": "string" },
+      "address": { "$ref": "#/components/schemas/Address" },
+      "avatar": { "$ref": "#/components/schemas/ImageUrl" }
+    }
+  },
+  "UserPreferences": {
+    "type": "object",
+    "properties": {
+      "notifications": { "$ref": "#/components/schemas/NotificationSettings" },
+      "language": { "type": "string", "enum": ["en", "es", "fr"] }
+    }
+  }
+}
+```
+
+### Generated Output Examples
+
+#### 1. TypeScript Interfaces (Deep Nesting)
+
+```typescript
+export interface User {
+  id: string;
+  email: string;
+  profile: UserProfile;           // ← Nested object reference
+  preferences?: UserPreferences;  // ← Optional nested object
+  roles?: UserRole[];            // ← Array of nested objects
+}
+
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+  address?: Address;             // ← Deeply nested object
+  avatar?: ImageUrl;             // ← Another nested object
+}
+
+export interface UserPreferences {
+  notifications?: NotificationSettings; // ← Nested settings object
+  language?: "en" | "es" | "fr";
+}
+
+export interface Address {
+  street: string;
+  city: string;
+  country: string;
+  // ... more fields
+}
+```
+
+#### 2. Zod Schemas (With Cross-References)
+
+```typescript
+export const UserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  profile: UserProfileSchema,              // ← Schema reference
+  preferences: UserPreferencesSchema.optional(), // ← Optional nested validation
+  roles: z.array(UserRoleSchema).optional()      // ← Array validation with nested schema
+});
+
+export const UserProfileSchema = z.object({
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
+  address: AddressSchema.optional(),       // ← Nested validation
+  avatar: ImageUrlSchema.optional()        // ← Complex nested validation
+});
+
+export const AddressSchema = z.object({
+  street: z.string().min(1).max(100),
+  city: z.string().min(1).max(50),
+  country: z.string().regex(/^[A-Z]{2}$/), // ← Deep validation rules
+});
+```
+
+#### 3. Pydantic Models (With Validation)
+
+```python
+class User(BaseModel):
+    id: UUID
+    email: EmailStr
+    profile: UserProfile              # ← Nested model reference
+    preferences: Optional[UserPreferences] = None  # ← Optional nested model
+    roles: Optional[List[UserRole]] = None         # ← List of nested models
+
+class UserProfile(BaseModel):
+    firstName: str = Field(min_length=1, max_length=50)
+    lastName: str = Field(min_length=1, max_length=50)
+    address: Optional[Address] = None    # ← Deeply nested model
+    avatar: Optional[ImageUrl] = None    # ← Complex nested validation
+
+class Address(BaseModel):
+    street: str = Field(min_length=1, max_length=100)
+    city: str = Field(min_length=1, max_length=50)
+    country: str = Field(regex=r"^[A-Z]{2}$")  # ← Deep validation
+```
+
+#### 4. API Endpoints (Type-Safe Nested Objects)
+
+```typescript
+export type ApiEndpoints = {
+  "POST /users": {
+    request: CreateUserRequest;    // ← Request with nested objects
+    response: User;               // ← Response with nested objects
+  };
+  "GET /users/{userId}": {
+    params: { userId: string };
+    response: User;               // ← Complex nested response
+  };
+};
+
+// Usage with full type safety for nested objects:
+const newUser = await api.call('POST /users', {
+  body: {
+    email: 'john@example.com',
+    password: 'SecurePass123!',
+    profile: {                    // ← Nested object in request
+      firstName: 'John',
+      lastName: 'Doe',
+      address: {                  // ← Deeply nested object
+        street: '123 Main St',
+        city: 'Boston',
+        country: 'US'
+      }
+    },
+    preferences: {                // ← Optional nested object
+      language: 'en',
+      notifications: {            // ← Deeply nested settings
+        email: true,
+        push: false
+      }
+    }
+  }
+});
+// newUser.profile.address.city is fully typed! ✅
+```
+
+#### 5. Angular Services (Nested Object Support)
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class UserService {
+  createUser(userData: CreateUserRequest): Observable<User> {
+    // userData.profile.address.street is fully typed ✅
+    // userData.preferences.notifications.email is fully typed ✅
+    return this.http.post<User>('/users', userData);
+  }
+
+  getUser(userId: string): Observable<User> {
+    return this.http.get<User>(`/users/${userId}`);
+    // Response: user.profile.address.city is fully typed ✅
+  }
+}
+```
+
+### Key Nested Object Features
+
+✅ **Deep Nesting**: Objects can be nested to any depth  
+✅ **Cross-References**: `$ref` links between schemas work perfectly  
+✅ **Array Nesting**: Arrays of nested objects are fully supported  
+✅ **Optional Nesting**: Optional nested objects with proper null handling  
+✅ **Validation Preservation**: All nested validation rules are maintained  
+✅ **Circular References**: Handled safely (e.g., Product containing ProductSnapshot)  
+✅ **Type Safety**: Full IntelliSense and compile-time checking for nested properties  
+
+### Testing Nested Objects
+
+```bash
+# Test with simple nested objects
+dtolator -i simple-sample.json --typescript
+
+# Test with complex deep nesting
+dtolator -i full-sample.json --zod
+
+# Generate complete type-safe setup with nesting
+dtolator -i full-sample.json --angular -o ./output-dir
+```
+
+The generated code maintains complete type safety and validation for all nested structures, making it easy to work with complex API responses and requests in your applications. 
