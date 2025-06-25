@@ -206,28 +206,18 @@ impl Generator for DotNetGenerator {
         output.push_str("using System.Collections.Generic;\n");
         output.push_str("using System.Text.Json.Serialization;\n\n");
         
-        // Add namespace
-        output.push_str("namespace GeneratedApiModels\n{\n");
+        // Add file-scoped namespace
+        output.push_str("namespace GeneratedApiModels;\n\n");
         
         // Generate class definitions
         if let Some(components) = &schema.components {
             if let Some(schemas) = &components.schemas {
                 for (name, schema) in schemas {
                     let class_output = self.generate_class(name, schema)?;
-                    // Indent the class content
-                    for line in class_output.lines() {
-                        if !line.trim().is_empty() {
-                            output.push_str("    ");
-                        }
-                        output.push_str(line);
-                        output.push_str("\n");
-                    }
+                    output.push_str(&class_output);
                 }
             }
         }
-        
-        // Close namespace
-        output.push_str("}\n");
         
         Ok(output)
     }

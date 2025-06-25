@@ -258,49 +258,48 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace GeneratedApiModels
-{
-    public class User
-    {
-        [JsonPropertyName("id")]
-        public int Id { get; set; }
-        
-        [JsonPropertyName("email")]
-        public string Email { get; set; }
-        
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
-        
-        [JsonPropertyName("age")]
-        public int? Age { get; set; }
-        
-        [JsonPropertyName("isActive")]
-        public bool? IsActive { get; set; }
-        
-        [JsonPropertyName("tags")]
-        public List<string> Tags { get; set; }
-        
-        [JsonPropertyName("status")]
-        public string Status { get; set; }
-        
-        [JsonPropertyName("profile")]
-        public UserProfile Profile { get; set; }
-        
-        [JsonPropertyName("address")]
-        public Address Address { get; set; }
-    }
+namespace GeneratedApiModels;
 
-    public enum UserStatus
-    {
-        [JsonPropertyName("active")]
-        Active,
-        
-        [JsonPropertyName("inactive")]
-        Inactive,
-        
-        [JsonPropertyName("pending")]
-        Pending
-    }
+public class User
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    
+    [JsonPropertyName("email")]
+    public string Email { get; set; }
+    
+    [JsonPropertyName("name")]
+    public string Name { get; set; }
+    
+    [JsonPropertyName("age")]
+    public int? Age { get; set; }
+    
+    [JsonPropertyName("isActive")]
+    public bool? IsActive { get; set; }
+    
+    [JsonPropertyName("tags")]
+    public List<string> Tags { get; set; }
+    
+    [JsonPropertyName("status")]
+    public string Status { get; set; }
+    
+    [JsonPropertyName("profile")]
+    public UserProfile Profile { get; set; }
+    
+    [JsonPropertyName("address")]
+    public Address Address { get; set; }
+}
+
+public enum UserStatus
+{
+    [JsonPropertyName("active")]
+    Active,
+    
+    [JsonPropertyName("inactive")]
+    Inactive,
+    
+    [JsonPropertyName("pending")]
+    Pending
 }
 ```
 
@@ -885,73 +884,72 @@ class Address(AddressRequired, total=False):
 #### 5. C# Classes (System.Text.Json Serialization)
 
 ```csharp
-namespace GeneratedApiModels
+namespace GeneratedApiModels;
+
+public class User
 {
-    public class User
-    {
-        [JsonPropertyName("id")]
-        public Guid Id { get; set; }
-        
-        [JsonPropertyName("email")]
-        public string Email { get; set; }
-        
-        [JsonPropertyName("profile")]
-        public UserProfile Profile { get; set; }          // ← Nested class reference
-        
-        [JsonPropertyName("preferences")]
-        public UserPreferences Preferences { get; set; }   // ← Optional nested class
-        
-        [JsonPropertyName("roles")]
-        public List<UserRole> Roles { get; set; }         // ← List of nested enums
-    }
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+    
+    [JsonPropertyName("email")]
+    public string Email { get; set; }
+    
+    [JsonPropertyName("profile")]
+    public UserProfile Profile { get; set; }          // ← Nested class reference
+    
+    [JsonPropertyName("preferences")]
+    public UserPreferences Preferences { get; set; }   // ← Optional nested class
+    
+    [JsonPropertyName("roles")]
+    public List<UserRole> Roles { get; set; }         // ← List of nested enums
+}
 
-    public class UserProfile
-    {
-        [JsonPropertyName("firstName")]
-        public string FirstName { get; set; }              // ← camelCase → PascalCase
-        
-        [JsonPropertyName("lastName")]
-        public string LastName { get; set; }
-        
-        [JsonPropertyName("address")]
-        public Address Address { get; set; }               // ← Deeply nested class
-        
-        [JsonPropertyName("avatar")]
-        public ImageUrl Avatar { get; set; }               // ← Complex nested class
-    }
+public class UserProfile
+{
+    [JsonPropertyName("firstName")]
+    public string FirstName { get; set; }              // ← camelCase → PascalCase
+    
+    [JsonPropertyName("lastName")]
+    public string LastName { get; set; }
+    
+    [JsonPropertyName("address")]
+    public Address Address { get; set; }               // ← Deeply nested class
+    
+    [JsonPropertyName("avatar")]
+    public ImageUrl Avatar { get; set; }               // ← Complex nested class
+}
 
-    public class UserPreferences
-    {
-        [JsonPropertyName("notifications")]
-        public NotificationSettings Notifications { get; set; }  // ← Nested settings class
-        
-        [JsonPropertyName("language")]
-        public string Language { get; set; }               // ← Enum as string
-    }
+public class UserPreferences
+{
+    [JsonPropertyName("notifications")]
+    public NotificationSettings Notifications { get; set; }  // ← Nested settings class
+    
+    [JsonPropertyName("language")]
+    public string Language { get; set; }               // ← Enum as string
+}
 
-    public class Address
-    {
-        [JsonPropertyName("street")]
-        public string Street { get; set; }
-        
-        [JsonPropertyName("city")]
-        public string City { get; set; }
-        
-        [JsonPropertyName("country")]
-        public string Country { get; set; }                // ← Clean C# properties
-    }
+public class Address
+{
+    [JsonPropertyName("street")]
+    public string Street { get; set; }
+    
+    [JsonPropertyName("city")]
+    public string City { get; set; }
+    
+    [JsonPropertyName("country")]
+    public string Country { get; set; }                // ← Clean C# properties
+}
 
-    public enum UserRole
-    {
-        [JsonPropertyName("customer")]
-        Customer,                                           // ← JSON-friendly enum values
-        
-        [JsonPropertyName("admin")]
-        Admin,
-        
-        [JsonPropertyName("moderator")]
-        Moderator
-    }
+public enum UserRole
+{
+    [JsonPropertyName("customer")]
+    Customer,                                           // ← JSON-friendly enum values
+    
+    [JsonPropertyName("admin")]
+    Admin,
+    
+    [JsonPropertyName("moderator")]
+    Moderator
 }
 ```
 
