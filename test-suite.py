@@ -16,6 +16,7 @@ Usage:
     python test-suite.py                # Build and run all tests
     python test-suite.py --no-build     # Run tests without building (faster for development)
     python test-suite.py --refresh      # Regenerate expected output files (updates output-samples)
+    python test-suite.py --typecheck    # Enable TypeScript type checking on generated .ts files
     python test-suite.py --help         # Show help information
 
 Test Cases:
@@ -32,6 +33,12 @@ Test Cases:
 Each test runs the dtolator command with appropriate flags and compares the output
 with the expected files in the output-samples directory. Any differences are
 reported with detailed diff information.
+
+TypeScript Type Checking:
+When --typecheck is enabled, generated TypeScript files are validated using the
+TypeScript compiler. A temporary Node.js project is created with the required
+dependencies (TypeScript, Zod, Angular) and tsc --noEmit is run to check for
+type errors without generating output files.
 """
 
 import os
@@ -39,6 +46,7 @@ import subprocess
 import tempfile
 import difflib
 import shutil
+import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import sys
@@ -75,11 +83,11 @@ def run_command(cmd: List[str], cwd: Optional[str] = None) -> Tuple[bool, str, s
             capture_output=True, 
             text=True, 
             cwd=cwd,
-            timeout=30
+            timeout=60  # Increased timeout for npm operations
         )
         return result.returncode == 0, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
-        return False, "", "Command timed out after 30 seconds"
+        return False, "", "Command timed out after 60 seconds"
     except Exception as e:
         return False, "", str(e)
 
@@ -177,6 +185,16 @@ class TestSuite:
         self.failed_tests = 0
         self.test_details = []
         self.refresh_mode = False
+        self.enable_typescript_check = False  # New: TypeScript checking flag
+        
+        # TypeScript test cases that should be type-checked
+        self.typescript_test_cases = {
+            "Angular Full Sample",
+            "Angular Simple Sample", 
+            "Angular Nested Test",
+            "Comprehensive Nested Test",
+            "Nested Test"
+        }
         
         # Define all test cases based on the output-samples directory structure
         self.test_cases = [
@@ -248,6 +266,211 @@ class TestSuite:
                 expected_dir="output-samples/python-typed-dict-full"
             ),
         ]
+    
+    def check_npm_availability(self) -> bool:
+        """
+        Check if npm is available in the system
+        """
+        # Try both npm and npm.cmd (for Windows)
+        npm_commands = ["npm", "npm.cmd"]
+        
+        for npm_cmd in npm_commands:
+            try:
+                success, stdout, stderr = run_command([npm_cmd, "--version"])
+                if success:
+                    return True
+            except Exception:
+                continue
+        
+        return False
+    
+    def setup_typescript_environment(self, temp_dir: Path, is_angular: bool = False) -> bool:
+        """
+        Setup a minimal TypeScript environment for type checking in a temporary directory
+        """
+        # Check if npm is available
+        if not self.check_npm_availability():
+            print_colored(f"   ❌ npm is not available. Please install Node.js and npm to enable TypeScript checking.", Colors.RED)
+            print_colored(f"   💡 Download from: https://nodejs.org/", Colors.YELLOW)
+            return False
+        
+        try:
+            # Create package.json with required dependencies
+            package_json = {
+                "name": "dtolator-typecheck",
+                "version": "1.0.0",
+                "private": True,
+                "dependencies": {
+                    "typescript": "^5.3.0",
+                    "zod": "^3.22.0"
+                }
+            }
+            
+            if is_angular:
+                package_json["dependencies"].update({
+                    "@angular/core": "^17.0.0",
+                    "@angular/common": "^17.0.0", 
+                    "rxjs": "^7.8.0"
+                })
+            
+            # Write package.json
+            package_json_path = temp_dir / "package.json"
+            with open(package_json_path, 'w', encoding='utf-8') as f:
+                json.dump(package_json, f, indent=2)
+            
+            # Create tsconfig.json for type checking
+            tsconfig = {
+                "compilerOptions": {
+                    "target": "ES2020",
+                    "module": "ESNext",
+                    "moduleResolution": "node",
+                    "strict": True,
+                    "noEmit": True,  # Type check only, don't generate files
+                    "skipLibCheck": True,
+                    "esModuleInterop": True,
+                    "allowSyntheticDefaultImports": True,
+                    "forceConsistentCasingInFileNames": True,
+                    "declaration": False,
+                    "declarationMap": False,
+                    "sourceMap": False
+                },
+                "include": ["**/*.ts"],
+                "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]
+            }
+            
+            if is_angular:
+                tsconfig["compilerOptions"].update({
+                    "experimentalDecorators": True,
+                    "emitDecoratorMetadata": True
+                })
+            
+            # Write tsconfig.json
+            tsconfig_path = temp_dir / "tsconfig.json"
+            with open(tsconfig_path, 'w', encoding='utf-8') as f:
+                json.dump(tsconfig, f, indent=2)
+            
+            # Install dependencies using npm
+            print_colored(f"   📦 Installing TypeScript dependencies...", Colors.BLUE)
+            
+            # Try npm.cmd first (Windows), then npm
+            npm_cmd = "npm.cmd" if os.name == 'nt' else "npm"
+            success, stdout, stderr = run_command([npm_cmd, "install", "--silent"], cwd=str(temp_dir))
+            
+            if not success:
+                print_colored(f"   ❌ Failed to install dependencies: {stderr}", Colors.RED)
+                return False
+                
+            print_colored(f"   ✅ Dependencies installed successfully", Colors.GREEN)
+            return True
+            
+        except Exception as e:
+            print_colored(f"   ❌ Error setting up TypeScript environment: {str(e)}", Colors.RED)
+            return False
+    
+    def format_typescript_errors(self, tsc_output: str) -> str:
+        """
+        Format TypeScript compiler errors for better readability
+        """
+        if not tsc_output.strip():
+            return "No detailed error information available"
+            
+        lines = tsc_output.split('\n')
+        formatted_errors = []
+        error_count = 0
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # TypeScript error format: file.ts(line,col): error TSxxxx: message
+            if '.ts(' in line and 'error TS' in line:
+                formatted_errors.append(f"   🚨 {line}")
+                error_count += 1
+            elif line and not line.startswith('npm') and not 'Found' in line:
+                # Additional context lines
+                formatted_errors.append(f"      {line}")
+        
+        if error_count > 0:
+            summary = f"\n   📊 Total TypeScript errors: {error_count}\n"
+            return summary + '\n'.join(formatted_errors)
+        else:
+            return '\n'.join(formatted_errors) if formatted_errors else "TypeScript compilation failed with unknown errors"
+    
+    def execute_typescript_check(self, project_dir: Path) -> Tuple[bool, str]:
+        """
+        Execute TypeScript type checking using tsc --noEmit
+        """
+        try:
+            # Use npx.cmd on Windows, npx on other systems
+            npx_cmd = "npx.cmd" if os.name == 'nt' else "npx"
+            tsc_cmd = [npx_cmd, "tsc", "--noEmit", "--pretty"]
+            
+            success, stdout, stderr = run_command(tsc_cmd, cwd=str(project_dir))
+            
+            if success:
+                return True, "No type errors found"
+            else:
+                # TypeScript errors are usually in stderr, but sometimes in stdout
+                error_output = stderr if stderr.strip() else stdout
+                formatted_errors = self.format_typescript_errors(error_output)
+                return False, formatted_errors
+                
+        except Exception as e:
+            return False, f"Error running TypeScript compiler: {str(e)}"
+    
+    def run_typescript_typecheck(self, test_case: TestCase, output_dir: Path) -> bool:
+        """
+        Run TypeScript type checking on generated .ts files
+        """
+        # Only run for test cases that generate TypeScript files
+        if test_case.name not in self.typescript_test_cases:
+            return True  # Skip non-TypeScript tests
+        
+        # Check if there are any .ts files to type check
+        ts_files = list(output_dir.glob("**/*.ts"))
+        if not ts_files:
+            print_colored(f"   ⚠️  No TypeScript files found to check", Colors.YELLOW)
+            return True
+        
+        print_colored(f"   🔍 Found {len(ts_files)} TypeScript files to check", Colors.BLUE)
+        
+        # Create temporary directory for TypeScript project
+        with tempfile.TemporaryDirectory() as temp_dir_str:
+            temp_dir = Path(temp_dir_str)
+            
+            # Determine if this is an Angular project
+            is_angular = "--angular" in test_case.command_args
+            
+            # Setup TypeScript environment
+            if not self.setup_typescript_environment(temp_dir, is_angular):
+                self.test_details.append(f"{test_case.name}: Failed to setup TypeScript environment")
+                return False
+            
+            # Copy generated TypeScript files to temp directory
+            try:
+                for ts_file in ts_files:
+                    rel_path = ts_file.relative_to(output_dir)
+                    dest_path = temp_dir / rel_path
+                    dest_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(ts_file, dest_path)
+            except Exception as e:
+                print_colored(f"   ❌ Error copying TypeScript files: {str(e)}", Colors.RED)
+                self.test_details.append(f"{test_case.name}: Failed to copy TypeScript files")
+                return False
+            
+            # Run TypeScript type checking
+            print_colored(f"   🔧 Running TypeScript type check...", Colors.BLUE)
+            success, error_message = self.execute_typescript_check(temp_dir)
+            
+            if success:
+                print_colored(f"   ✅ TypeScript type check passed", Colors.GREEN)
+                return True
+            else:
+                print_colored(f"   ❌ TypeScript type check failed", Colors.RED)
+                print_colored(error_message, Colors.YELLOW)
+                self.test_details.append(f"{test_case.name}: TypeScript type errors found")
+                return False
     
     def build_project(self) -> bool:
         """Build the dtolator project"""
@@ -329,6 +552,12 @@ class TestSuite:
                     
                     if matches:
                         print_colored("✅ Output matches expected", Colors.GREEN)
+                        
+                        # Run TypeScript type checking if enabled
+                        if self.enable_typescript_check and not self.refresh_mode:
+                            if not self.run_typescript_typecheck(test_case, output_dir):
+                                return False
+                        
                         return True
                     else:
                         print_colored("❌ Output differs from expected", Colors.RED)
@@ -400,6 +629,10 @@ class TestSuite:
                         
                         if stdout.strip() == expected_content.strip():
                             print_colored("✅ Output matches expected", Colors.GREEN)
+                            
+                            # Note: TypeScript checking not applicable for single file outputs to directory
+                            # because we don't have the output_dir structure needed
+                            
                             return True
                         else:
                             print_colored("❌ Output differs from expected", Colors.RED)
@@ -482,6 +715,7 @@ class TestSuite:
                             
                             if stdout.strip() == expected_content.strip():
                                 print_colored("✅ Output matches expected", Colors.GREEN)
+                                # TypeScript checking not applicable for stdout-based tests
                                 return True
                             else:
                                 print_colored("❌ Output differs from expected", Colors.RED)
@@ -505,6 +739,7 @@ class TestSuite:
                             return False
                     else:
                         print_colored("✅ Command executed successfully", Colors.GREEN)
+                        # TypeScript checking not applicable for stdout-based tests
                         return True
     
     def run_all_tests(self) -> bool:
@@ -580,61 +815,80 @@ def main():
     """Main entry point"""
     test_suite = TestSuite()
     
-    # Handle command line arguments
-    if len(sys.argv) > 1:
-        if sys.argv[1] in ['-h', '--help']:
-            print("dtolator Test Suite")
-            print("Usage: python test-suite.py [options]")
-            print("Options:")
-            print("  -h, --help    Show this help message")
-            print("  --no-build    Skip building the project (use existing binary)")
-            print("  --refresh     Regenerate expected output files (updates output-samples)")
-            return
-        elif sys.argv[1] == '--no-build':
-            # Skip build and run tests directly
-            if not test_suite.dtolator_binary.exists():
-                print_colored(f"❌ dtolator binary not found at: {test_suite.dtolator_binary}", Colors.RED)
-                print_colored("Please build the project first with: cargo build --release", Colors.YELLOW)
-                sys.exit(1)
-            
-            print_header("Running dtolator Test Suite (skipping build)")
-            
-            for test_case in test_suite.test_cases:
-                if test_suite.run_single_test(test_case):
-                    test_suite.passed_tests += 1
-                else:
-                    test_suite.failed_tests += 1
-            
-            test_suite.print_summary()
-            sys.exit(0 if test_suite.failed_tests == 0 else 1)
-        elif sys.argv[1] == '--refresh':
-            # Refresh mode: regenerate expected outputs
-            test_suite.refresh_mode = True
-            
-            # Build first
-            if not test_suite.build_project():
-                sys.exit(1)
-            
-            if not test_suite.dtolator_binary.exists():
-                print_colored(f"❌ dtolator binary not found at: {test_suite.dtolator_binary}", Colors.RED)
-                sys.exit(1)
-            
-            print_colored(f"Using dtolator binary: {test_suite.dtolator_binary}", Colors.BLUE)
-            print_colored("⚠️  WARNING: This will overwrite existing files in output-samples/", Colors.YELLOW + Colors.BOLD)
-            
-            # Run each test case in refresh mode
-            for test_case in test_suite.test_cases:
-                if test_suite.run_single_test(test_case):
-                    test_suite.passed_tests += 1
-                else:
-                    test_suite.failed_tests += 1
-            
-            test_suite.print_summary()
-            sys.exit(0 if test_suite.failed_tests == 0 else 1)
+    # Parse command line arguments
+    args = sys.argv[1:] if len(sys.argv) > 1 else []
     
-    # Run all tests (including build)
-    success = test_suite.run_all_tests()
-    sys.exit(0 if success else 1)
+    # Handle help first
+    if '-h' in args or '--help' in args:
+        print("dtolator Test Suite")
+        print("Usage: python test-suite.py [options]")
+        print("Options:")
+        print("  -h, --help    Show this help message")
+        print("  --no-build    Skip building the project (use existing binary)")
+        print("  --refresh     Regenerate expected output files (updates output-samples)")
+        print("  --typecheck   Enable TypeScript type checking on generated .ts files")
+        print("")
+        print("Examples:")
+        print("  python test-suite.py                    # Run all tests with build")
+        print("  python test-suite.py --typecheck        # Run tests with TypeScript checking")
+        print("  python test-suite.py --no-build --typecheck  # Skip build, run with TypeScript checking")
+        print("  python test-suite.py --refresh          # Update expected output files")
+        return
+    
+    # Parse flags
+    no_build = '--no-build' in args
+    refresh_mode = '--refresh' in args
+    typecheck_enabled = '--typecheck' in args
+    
+    # Set flags on test suite
+    test_suite.refresh_mode = refresh_mode
+    test_suite.enable_typescript_check = typecheck_enabled
+    
+    # Check TypeScript checking prerequisites
+    if typecheck_enabled:
+        if not test_suite.check_npm_availability():
+            print_colored("❌ TypeScript checking requires npm to be installed", Colors.RED)
+            print_colored("💡 Please install Node.js and npm from: https://nodejs.org/", Colors.YELLOW)
+            print_colored("🔄 Disabling TypeScript checking for this run", Colors.YELLOW)
+            test_suite.enable_typescript_check = False
+            typecheck_enabled = False
+    
+    # Build project unless --no-build is specified
+    if not no_build:
+        if not test_suite.build_project():
+            sys.exit(1)
+    
+    # Check if dtolator binary exists
+    if not test_suite.dtolator_binary.exists():
+        print_colored(f"❌ dtolator binary not found at: {test_suite.dtolator_binary}", Colors.RED)
+        if no_build:
+            print_colored("Please build the project first with: cargo build --release", Colors.YELLOW)
+        sys.exit(1)
+    
+    # Print mode information
+    if refresh_mode:
+        print_header("Refreshing dtolator Test Expected Outputs")
+        print_colored("⚠️  WARNING: This will overwrite existing files in output-samples/", Colors.YELLOW + Colors.BOLD)
+    elif typecheck_enabled:
+        print_header("Running dtolator Test Suite with TypeScript Checking")
+        print_colored("🧪 TypeScript type checking enabled for generated .ts files", Colors.YELLOW + Colors.BOLD)
+    elif no_build:
+        print_header("Running dtolator Test Suite (skipping build)")
+    else:
+        print_header("Running dtolator Test Suite")
+    
+    print_colored(f"Using dtolator binary: {test_suite.dtolator_binary}", Colors.BLUE)
+    
+    # Run all test cases
+    for test_case in test_suite.test_cases:
+        if test_suite.run_single_test(test_case):
+            test_suite.passed_tests += 1
+        else:
+            test_suite.failed_tests += 1
+    
+    # Print summary and exit
+    test_suite.print_summary()
+    sys.exit(0 if test_suite.failed_tests == 0 else 1)
 
 if __name__ == "__main__":
     main()
