@@ -1,11 +1,12 @@
 # dtolator
 
-**dtolator** (Data Type Translator) is a Rust command-line tool that converts OpenAPI schema JSON files to either Zod schema definitions, TypeScript interfaces, or API endpoint types.
+**dtolator** (Data Type Translator) is a Rust command-line tool that converts OpenAPI schema JSON files to Zod schema definitions, TypeScript interfaces, Pydantic BaseModel classes, or API endpoint types.
 
 ## Features
 
 - ✅ Convert OpenAPI 3.x schemas to Zod schemas with validation
 - ✅ Convert OpenAPI 3.x schemas to TypeScript interfaces
+- ✅ Convert OpenAPI 3.x schemas to Pydantic BaseModel classes
 - ✅ Generate API endpoint types for type-safe client development
 - ✅ Support for complex types (objects, arrays, enums, unions)
 - ✅ Support for OpenAPI composition keywords (`allOf`, `oneOf`, `anyOf`)
@@ -31,37 +32,70 @@ The binary will be available at `target/release/dtolator`.
 
 ### Basic Usage
 
-Generate Zod schemas (default):
+Generate Zod schemas to stdout (default):
 ```bash
-dtolator -i schema.json -o output.ts
+dtolator -i schema.json
 ```
 
-Generate TypeScript interfaces:
-```bash
-dtolator -i schema.json -o output.ts --typescript
-```
-
-Generate API endpoint types:
-```bash
-dtolator -i schema.json -o endpoints.ts --endpoints
-```
-
-Output to stdout:
+Generate TypeScript interfaces to stdout:
 ```bash
 dtolator -i schema.json --typescript
+```
+
+Generate API endpoint types to stdout:
+```bash
+dtolator -i schema.json --endpoints
+```
+
+Generate Angular API services to stdout:
+```bash
+dtolator -i schema.json --angular
+```
+
+Generate TypeScript interfaces to directory:
+```bash
+dtolator -i schema.json -o ./output
+```
+
+Generate Zod schemas + TypeScript interfaces to directory:
+```bash
+dtolator -i schema.json -o ./output --zod
+```
+
+Generate Angular API services to directory:
+```bash
+dtolator -i schema.json -o ./output --angular
+```
+
+Generate Angular API services with Zod validation to directory:
+```bash
+dtolator -i schema.json -o ./output --angular --zod
+```
+
+Generate Pydantic models to stdout:
+```bash
+dtolator -i schema.json --pydantic
+```
+
+Generate Pydantic models to directory:
+```bash
+dtolator -i schema.json -o ./output --pydantic
 ```
 
 ### Command Line Options
 
 ```
-Convert OpenAPI schema JSON files to Zod schema definitions, TypeScript interfaces, or API endpoint types
+Convert OpenAPI schema JSON files to Zod schema definitions or TypeScript interfaces
 
 Usage: dtolator [OPTIONS] --input <INPUT>
 
 Options:
   -i, --input <INPUT>      Input OpenAPI schema JSON file
-  -o, --output <OUTPUT>    Output file path
-  -t, --typescript         Generate TypeScript interfaces instead of Zod schemas
+  -o, --output <OUTPUT>    Output directory path (if specified, writes dto.ts and optionally schema.ts files)
+  -t, --typescript         Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
+  -z, --zod                Generate Zod schemas (creates schema.ts and makes dto.ts import from it)
+  -a, --angular            Generate Angular API services (creates multiple service files and utilities)
+      --pydantic           Generate Pydantic BaseModel classes for Python
   -e, --endpoints          Generate API endpoint types from OpenAPI paths
   -p, --pretty             Pretty print the output
   -h, --help               Print help
@@ -142,6 +176,26 @@ export interface User {
   name: string;
   status?: "active" | "inactive" | "pending";
 }
+```
+
+### Generated Pydantic Models
+
+```python
+# Generated Pydantic models from OpenAPI schema
+# Do not modify this file manually
+
+from datetime import date, datetime
+from enum import Enum
+from typing import Any, Dict, List, Literal, Optional, Union
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field, HttpUrl
+
+class User(BaseModel):
+    id: int
+    email: EmailStr
+    name: str = Field(min_length=1, max_length=100)
+    status: Optional[Literal["active", "inactive", "pending"]] = None
 ```
 
 ### Generated API Endpoints

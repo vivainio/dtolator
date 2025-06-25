@@ -7,7 +7,7 @@ mod openapi;
 mod generators;
 
 use openapi::OpenApiSchema;
-use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, Generator};
+use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, Generator};
 
 #[derive(Parser)]
 #[command(name = "dtolator")]
@@ -33,6 +33,10 @@ struct Cli {
     /// Generate Angular API services (creates multiple service files and utilities)
     #[arg(short, long)]
     angular: bool,
+    
+    /// Generate Pydantic BaseModel classes for Python
+    #[arg(long)]
+    pydantic: bool,
     
     /// Generate API endpoint types from OpenAPI paths
     #[arg(short, long)]
@@ -62,6 +66,18 @@ fn main() -> Result<()> {
             if cli.angular {
                 // Generate Angular services with multiple files
                 generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod)?;
+            } else if cli.pydantic {
+                // Generate Pydantic models to a Python file
+                let pydantic_generator = PydanticGenerator::new();
+                let pydantic_output = pydantic_generator.generate(&schema)?;
+                let pydantic_final = if cli.pretty { format_output(&pydantic_output) } else { pydantic_output };
+                
+                let models_path = output_dir.join("models.py");
+                fs::write(&models_path, pydantic_final)
+                    .with_context(|| format!("Failed to write models.py file: {}", models_path.display()))?;
+                
+                println!("Generated files:");
+                println!("  - {}", models_path.display());
             } else if cli.zod {
                 // Generate both dto.ts (with imports) and schema.ts
                 
@@ -109,6 +125,9 @@ fn main() -> Result<()> {
                 generator.generate(&schema)?
             } else if cli.angular {
                 let generator = AngularGenerator::new();
+                generator.generate(&schema)?
+            } else if cli.pydantic {
+                let generator = PydanticGenerator::new();
                 generator.generate(&schema)?
             } else {
                 let generator = ZodGenerator::new();
