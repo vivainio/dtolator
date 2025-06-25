@@ -182,3 +182,61 @@ class PaginationInfo(PaginationInfoRequired, total=False):
 class ErrorResponse(TypedDict):
     error: Dict[str, Any]
 
+class UpdateProductRequest(TypedDict, total=False):
+    name: str
+    description: str
+    price: Price
+    category: ProductCategory
+    isActive: bool
+
+class UpdateOrderStatusRequestRequired(TypedDict):
+    status: OrderStatus
+
+class UpdateOrderStatusRequest(UpdateOrderStatusRequestRequired, total=False):
+    trackingNumber: str
+
+class CategoryRequired(TypedDict):
+    id: str
+    name: str
+    slug: str
+
+class Category(CategoryRequired, total=False):
+    description: str
+    parentId: Optional[str]
+    isActive: bool
+
+class CreateCategoryRequestRequired(TypedDict):
+    name: str
+    slug: str
+
+class CreateCategoryRequest(CreateCategoryRequestRequired, total=False):
+    description: str
+    parentId: str
+
+class InventoryResponse(TypedDict):
+    data: List[Dict[str, Any]]
+
+class UpdateInventoryRequestRequired(TypedDict):
+    quantity: int
+
+class UpdateInventoryRequest(UpdateInventoryRequestRequired, total=False):
+    lowStockThreshold: int
+
+class SalesAnalyticsRequired(TypedDict):
+    totalRevenue: float
+    totalOrders: int
+    averageOrderValue: float
+
+class SalesAnalytics(SalesAnalyticsRequired, total=False):
+    topProducts: List[Dict[str, Any]]
+    period: Dict[str, Any]
+
+class ProductAnalyticsRequired(TypedDict):
+    totalProducts: int
+    activeProducts: int
+
+class ProductAnalytics(ProductAnalyticsRequired, total=False):
+    categoryBreakdown: Dict[str, Any]
+    lowStockProducts: List[Dict[str, Any]]
+
+

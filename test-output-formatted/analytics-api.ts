@@ -4,13 +4,7 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
-import { map } from "rxjs/operators";
-import {
-  ProductAnalytics,
-  ProductAnalyticsSchema,
-  SalesAnalytics,
-  SalesAnalyticsSchema,
-} from "./dto";
+import { ProductAnalytics, SalesAnalytics } from "./dto";
 import { subsToUrl } from "./subs-to-url.func";
 
 @Injectable({ providedIn: "root" })
@@ -21,17 +15,11 @@ export class AnalyticsApi {
     queryParams?: { startDate?: string; endDate?: string; },
   ): Observable<SalesAnalytics> {
     const url = subsToUrl("/analytics/sales", {}, queryParams || {});
-    return this.http.get<SalesAnalytics>(url)
-      .pipe(
-        map(response => SalesAnalyticsSchema.parse(response)),
-      );
+    return this.http.get<SalesAnalytics>(url);
   }
 
   getProductAnalytics(): Observable<ProductAnalytics> {
     const url = subsToUrl("/analytics/products", {}, {});
-    return this.http.get<ProductAnalytics>(url)
-      .pipe(
-        map(response => ProductAnalyticsSchema.parse(response)),
-      );
+    return this.http.get<ProductAnalytics>(url);
   }
 }

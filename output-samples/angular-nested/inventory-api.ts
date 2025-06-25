@@ -4,15 +4,7 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
-import { map } from "rxjs/operators";
-import {
-  CreateOrderRequest,
-  CreateOrderRequestSchema,
-  Order,
-  OrderSchema,
-  UpdateOrderStatusRequest,
-  UpdateOrderStatusRequestSchema,
-} from "./dto";
+import { CreateOrderRequest, Order, UpdateOrderStatusRequest } from "./dto";
 import { subsToUrl } from "./subs-to-url.func";
 
 @Injectable({ providedIn: "root" })
@@ -20,35 +12,20 @@ export class OrdersApi {
   constructor(private http: HttpClient) {}
 
   createNewOrder(dto: CreateOrderRequest): Observable<Order> {
-    // Validate request body with Zod
-    const validatedDto = CreateOrderRequestSchema.parse(dto);
-
     const url = subsToUrl("/orders", {}, {});
-    return this.http.post<Order>(url, validatedDto)
-      .pipe(
-        map(response => OrderSchema.parse(response)),
-      );
+    return this.http.post<Order>(url, dto);
   }
 
   getOrderByID(orderId: string): Observable<Order> {
     const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
-    return this.http.get<Order>(url)
-      .pipe(
-        map(response => OrderSchema.parse(response)),
-      );
+    return this.http.get<Order>(url);
   }
 
   updateOrderStatus(
     orderId: string,
     dto: UpdateOrderStatusRequest,
   ): Observable<Order> {
-    // Validate request body with Zod
-    const validatedDto = UpdateOrderStatusRequestSchema.parse(dto);
-
     const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
-    return this.http.patch<Order>(url, validatedDto)
-      .pipe(
-        map(response => OrderSchema.parse(response)),
-      );
+    return this.http.patch<Order>(url, dto);
   }
 }

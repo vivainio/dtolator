@@ -207,3 +207,89 @@ export const ErrorResponseSchema = z.object({
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
+export const UpdateProductRequestSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).optional(),
+  price: PriceSchema.optional(),
+  category: ProductCategorySchema.optional(),
+  isActive: z.boolean().optional()
+});
+
+export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
+
+export const UpdateOrderStatusRequestSchema = z.object({
+  status: OrderStatusSchema,
+  trackingNumber: z.string().optional()
+});
+
+export type UpdateOrderStatusRequest = z.infer<typeof UpdateOrderStatusRequestSchema>;
+
+export const CategorySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  slug: z.string().regex(new RegExp("^[a-z0-9-]+$")),
+  description: z.string().max(500).optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  isActive: z.boolean().optional()
+});
+
+export type Category = z.infer<typeof CategorySchema>;
+
+export const CreateCategoryRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+  slug: z.string().regex(new RegExp("^[a-z0-9-]+$")),
+  description: z.string().max(500).optional(),
+  parentId: z.string().uuid().optional()
+});
+
+export type CreateCategoryRequest = z.infer<typeof CreateCategoryRequestSchema>;
+
+export const InventoryResponseSchema = z.object({
+  data: z.array(z.object({
+  productId: z.string().uuid(),
+  productName: z.string().optional(),
+  inventory: InventorySchema
+}))
+});
+
+export type InventoryResponse = z.infer<typeof InventoryResponseSchema>;
+
+export const UpdateInventoryRequestSchema = z.object({
+  quantity: z.number().min(0).int(),
+  lowStockThreshold: z.number().min(0).int().optional()
+});
+
+export type UpdateInventoryRequest = z.infer<typeof UpdateInventoryRequestSchema>;
+
+export const SalesAnalyticsSchema = z.object({
+  totalRevenue: z.number().min(0),
+  totalOrders: z.number().min(0).int(),
+  averageOrderValue: z.number().min(0),
+  topProducts: z.array(z.object({
+  productId: z.string().uuid().optional(),
+  productName: z.string().optional(),
+  revenue: z.number().optional(),
+  unitsSold: z.number().int().optional()
+})).optional(),
+  period: z.object({
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional()
+}).optional()
+});
+
+export type SalesAnalytics = z.infer<typeof SalesAnalyticsSchema>;
+
+export const ProductAnalyticsSchema = z.object({
+  totalProducts: z.number().min(0).int(),
+  activeProducts: z.number().min(0).int(),
+  categoryBreakdown: z.object({}).optional(),
+  lowStockProducts: z.array(z.object({
+  productId: z.string().uuid().optional(),
+  productName: z.string().optional(),
+  currentStock: z.number().int().optional(),
+  threshold: z.number().int().optional()
+})).optional()
+});
+
+export type ProductAnalytics = z.infer<typeof ProductAnalyticsSchema>;
+

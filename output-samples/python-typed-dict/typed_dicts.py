@@ -54,3 +54,4 @@ class ApiResponse(ApiResponseRequired, total=False):
     message: str
     data: User
 
+

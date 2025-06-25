@@ -1,33 +1,37 @@
 // Generated utility function for URL building
 // Do not modify this file manually
 
-import { environment } from '@env/environment';
+import { environment } from "@env/environment";
 
 export function subsToUrl(
   url: string,
-  params?: { [key: string]: string | number | boolean | null | undefined },
-  queryParams?: { [key: string]: string | number | boolean | null | undefined }
+  params?: { [key: string]: string | number | boolean | null | undefined; },
+  queryParams?: {
+    [key: string]: string | number | boolean | null | undefined;
+  },
 ): string {
   if (params) {
     for (const key in params) {
       if (params.hasOwnProperty(key)) {
-        const regex = new RegExp(':' + key + '($|/)');
-        url = url.replace(regex, params[key] + '$1');
+        const regex = new RegExp(":" + key + "($|/)");
+        url = url.replace(regex, params[key] + "$1");
       }
     }
   }
-  
+
   if (queryParams) {
     const qs = Object.keys(queryParams)
-      .filter((key) => queryParams[key] !== null && queryParams[key] !== undefined)
+      .filter((key) =>
+        queryParams[key] !== null && queryParams[key] !== undefined
+      )
       .map((key) => {
         const value = encodeURIComponent(queryParams[key]!);
         return `${key}=${value}`;
       })
-      .join('&');
-      
+      .join("&");
+
     if (qs.length > 0) {
-      url += '?' + qs;
+      url += "?" + qs;
     }
   }
 

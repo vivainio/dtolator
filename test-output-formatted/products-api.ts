@@ -4,15 +4,7 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
-import { map } from "rxjs/operators";
-import {
-  CreateUserRequest,
-  CreateUserRequestSchema,
-  User,
-  UserListResponse,
-  UserListResponseSchema,
-  UserSchema,
-} from "./dto";
+import { CreateUserRequest, User, UserListResponse } from "./dto";
 import { subsToUrl } from "./subs-to-url.func";
 
 @Injectable({ providedIn: "root" })
@@ -23,28 +15,16 @@ export class UsersApi {
     queryParams?: { page?: number; limit?: number; },
   ): Observable<UserListResponse> {
     const url = subsToUrl("/users", {}, queryParams || {});
-    return this.http.get<UserListResponse>(url)
-      .pipe(
-        map(response => UserListResponseSchema.parse(response)),
-      );
+    return this.http.get<UserListResponse>(url);
   }
 
   createNewUserAccount(dto: CreateUserRequest): Observable<User> {
-    // Validate request body with Zod
-    const validatedDto = CreateUserRequestSchema.parse(dto);
-
     const url = subsToUrl("/users", {}, {});
-    return this.http.post<User>(url, validatedDto)
-      .pipe(
-        map(response => UserSchema.parse(response)),
-      );
+    return this.http.post<User>(url, dto);
   }
 
   getUserProfileByID(userId: string): Observable<User> {
     const url = subsToUrl("/users/{userId}", { userId: userId }, {});
-    return this.http.get<User>(url)
-      .pipe(
-        map(response => UserSchema.parse(response)),
-      );
+    return this.http.get<User>(url);
   }
 }

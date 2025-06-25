@@ -1,7 +1,8 @@
 use clap::Parser;
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::fs;
+use dprint_plugin_typescript::{configuration::ConfigurationBuilder, format_text};
 
 mod openapi;
 mod generators;
@@ -124,7 +125,7 @@ fn main() -> Result<()> {
                 
                 // Generate TypeScript interfaces that import from schema.ts
                 let ts_output = generate_typescript_with_imports(&schema)?;
-                let ts_final = if cli.pretty { format_output(&ts_output) } else { ts_output };
+                let ts_final = format_typescript(&ts_output).unwrap_or(ts_output);
                 
                 let dto_path = output_dir.join("dto.ts");
                 fs::write(&dto_path, ts_final)
@@ -137,7 +138,7 @@ fn main() -> Result<()> {
                 // Generate only dto.ts with TypeScript interfaces
                 let ts_generator = TypeScriptGenerator::new();
                 let ts_output = ts_generator.generate(&schema)?;
-                let ts_final = if cli.pretty { format_output(&ts_output) } else { ts_output };
+                let ts_final = format_typescript(&ts_output).unwrap_or(ts_output);
                 
                 let dto_path = output_dir.join("dto.ts");
                 fs::write(&dto_path, ts_final)
@@ -205,7 +206,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
         
         // Generate TypeScript interfaces that import from schema.ts
         let ts_output = generate_typescript_with_imports(schema)?;
-        let ts_final = if pretty { format_output(&ts_output) } else { ts_output };
+        let ts_final = format_typescript(&ts_output).unwrap_or(ts_output);
         
         fs::write(&dto_path, ts_final)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
@@ -213,7 +214,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
         // Generate only TypeScript interfaces
         let ts_generator = TypeScriptGenerator::new();
         let dto_output = ts_generator.generate(schema)?;
-        let dto_final = if pretty { format_output(&dto_output) } else { dto_output };
+        let dto_final = format_typescript(&dto_output).unwrap_or(dto_output);
         
         fs::write(&dto_path, dto_final)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
@@ -221,8 +222,9 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     
     // Generate subs-to-url utility function
     let subs_to_url_content = generate_subs_to_url_func();
+    let subs_to_url_formatted = format_typescript(&subs_to_url_content).unwrap_or(subs_to_url_content);
     let subs_path = output_dir.join("subs-to-url.func.ts");
-    fs::write(&subs_path, subs_to_url_content)
+    fs::write(&subs_path, subs_to_url_formatted)
         .with_context(|| format!("Failed to write subs-to-url.func.ts file: {}", subs_path.display()))?;
     
     // Parse and split the Angular generator output into individual service files
@@ -238,7 +240,13 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
             // If we were collecting content for a previous file, write it now
             if !current_file.is_empty() && !current_content.is_empty() {
                 let service_path = output_dir.join(&current_file);
-                let final_content = if pretty { format_output(&current_content) } else { current_content.clone() };
+                let final_content = if current_file.ends_with(".ts") {
+                    format_typescript(&current_content).unwrap_or(current_content.clone())
+                } else if pretty {
+                    format_output(&current_content)
+                } else {
+                    current_content.clone()
+                };
                 fs::write(&service_path, final_content)
                     .with_context(|| format!("Failed to write {} file: {}", current_file, service_path.display()))?;
                 files_generated.push(service_path.display().to_string());
@@ -260,7 +268,13 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     // Write the last file if there is one
     if !current_file.is_empty() && !current_content.is_empty() {
         let service_path = output_dir.join(&current_file);
-        let final_content = if pretty { format_output(&current_content) } else { current_content };
+        let final_content = if current_file.ends_with(".ts") {
+            format_typescript(&current_content).unwrap_or(current_content)
+        } else if pretty {
+            format_output(&current_content)
+        } else {
+            current_content
+        };
         fs::write(&service_path, final_content)
             .with_context(|| format!("Failed to write {} file: {}", current_file, service_path.display()))?;
         files_generated.push(service_path.display().to_string());
@@ -276,7 +290,13 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
                 if let Some(newline_pos) = first_marker.find('\n') {
                     let first_file_name = &first_marker[..newline_pos];
                     let service_path = output_dir.join(first_file_name);
-                    let final_content = if pretty { format_output(first_service_content) } else { first_service_content.to_string() };
+                    let final_content = if first_file_name.ends_with(".ts") {
+                        format_typescript(first_service_content).unwrap_or_else(|_| first_service_content.to_string())
+                    } else if pretty {
+                        format_output(first_service_content)
+                    } else {
+                        first_service_content.to_string()
+                    };
                     fs::write(&service_path, final_content)
                         .with_context(|| format!("Failed to write {} file: {}", first_file_name, service_path.display()))?;
                     
@@ -377,6 +397,30 @@ export function subsToUrl(
 }
 
 fn format_output(output: &str) -> String {
-    // Basic formatting - could be enhanced with a proper formatter
-    output.to_string()
+    format_typescript(output).unwrap_or_else(|_| output.to_string())
+}
+
+fn format_typescript(code: &str) -> Result<String> {
+    // Configure dprint with prettier-compatible settings
+    let config = ConfigurationBuilder::new()
+        .line_width(80)
+        .indent_width(2)
+        .use_tabs(false)
+        .semi_colons(dprint_plugin_typescript::configuration::SemiColons::Always)
+        .quote_style(dprint_plugin_typescript::configuration::QuoteStyle::AlwaysDouble)
+        .trailing_commas(dprint_plugin_typescript::configuration::TrailingCommas::OnlyMultiLine)
+        .brace_position(dprint_plugin_typescript::configuration::BracePosition::SameLine)
+        .next_control_flow_position(dprint_plugin_typescript::configuration::NextControlFlowPosition::SameLine)
+        .operator_position(dprint_plugin_typescript::configuration::OperatorPosition::NextLine)
+        .build();
+
+    let file_path = Path::new("file.ts");
+    match format_text(file_path, Some("ts"), code.to_string(), &config) {
+        Ok(Some(formatted)) => Ok(formatted),
+        Ok(None) => Ok(code.to_string()), // No formatting needed
+        Err(e) => {
+            eprintln!("Warning: Failed to format TypeScript code: {}", e);
+            Ok(code.to_string()) // Return original code if formatting fails
+        }
+    }
 } 

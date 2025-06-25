@@ -1,7 +1,66 @@
 // Generated TypeScript interfaces from OpenAPI schema
 // Do not modify this file manually
 
-import { UserSchema, type User, UserProfileSchema, type UserProfile, UserPreferencesSchema, type UserPreferences, NotificationSettingsSchema, type NotificationSettings, UserRoleSchema, type UserRole, AddressSchema, type Address, ImageUrlSchema, type ImageUrl, ProductSchema, type Product, PriceSchema, type Price, ProductCategorySchema, type ProductCategory, InventorySchema, type Inventory, OrderSchema, type Order, OrderItemSchema, type OrderItem, OrderStatusSchema, type OrderStatus, PaymentMethodSchema, type PaymentMethod, CreateUserRequestSchema, type CreateUserRequest, CreateOrderRequestSchema, type CreateOrderRequest, UserListResponseSchema, type UserListResponse, ProductListResponseSchema, type ProductListResponse, PaginationInfoSchema, type PaginationInfo, ErrorResponseSchema, type ErrorResponse } from './schema';
+import {
+  type Address,
+  AddressSchema,
+  type Category,
+  CategorySchema,
+  type CreateCategoryRequest,
+  CreateCategoryRequestSchema,
+  type CreateOrderRequest,
+  CreateOrderRequestSchema,
+  type CreateUserRequest,
+  CreateUserRequestSchema,
+  type ErrorResponse,
+  ErrorResponseSchema,
+  type ImageUrl,
+  ImageUrlSchema,
+  type Inventory,
+  type InventoryResponse,
+  InventoryResponseSchema,
+  InventorySchema,
+  type NotificationSettings,
+  NotificationSettingsSchema,
+  type Order,
+  type OrderItem,
+  OrderItemSchema,
+  OrderSchema,
+  type OrderStatus,
+  OrderStatusSchema,
+  type PaginationInfo,
+  PaginationInfoSchema,
+  type PaymentMethod,
+  PaymentMethodSchema,
+  type Price,
+  PriceSchema,
+  type Product,
+  type ProductAnalytics,
+  ProductAnalyticsSchema,
+  type ProductCategory,
+  ProductCategorySchema,
+  type ProductListResponse,
+  ProductListResponseSchema,
+  ProductSchema,
+  type SalesAnalytics,
+  SalesAnalyticsSchema,
+  type UpdateInventoryRequest,
+  UpdateInventoryRequestSchema,
+  type UpdateOrderStatusRequest,
+  UpdateOrderStatusRequestSchema,
+  type UpdateProductRequest,
+  UpdateProductRequestSchema,
+  type User,
+  type UserListResponse,
+  UserListResponseSchema,
+  type UserPreferences,
+  UserPreferencesSchema,
+  type UserProfile,
+  UserProfileSchema,
+  type UserRole,
+  UserRoleSchema,
+  UserSchema,
+} from "./schema";
 
 export type { User };
 export type { UserProfile };
@@ -24,4 +83,11 @@ export type { UserListResponse };
 export type { ProductListResponse };
 export type { PaginationInfo };
 export type { ErrorResponse };
-
+export type { UpdateProductRequest };
+export type { UpdateOrderStatusRequest };
+export type { Category };
+export type { CreateCategoryRequest };
+export type { InventoryResponse };
+export type { UpdateInventoryRequest };
+export type { SalesAnalytics };
+export type { ProductAnalytics };

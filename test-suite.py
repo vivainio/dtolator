@@ -164,7 +164,10 @@ class TestSuite:
     
     def __init__(self):
         self.project_root = Path.cwd()
-        self.dtolator_binary = self.project_root / "target" / "release" / "dtolator.exe"
+        # Try MSVC target first (for Windows), then default
+        self.dtolator_binary = self.project_root / "target" / "x86_64-pc-windows-msvc" / "release" / "dtolator.exe"
+        if not self.dtolator_binary.exists():
+            self.dtolator_binary = self.project_root / "target" / "release" / "dtolator.exe"
         if not self.dtolator_binary.exists():
             # Try without .exe for non-Windows systems
             self.dtolator_binary = self.project_root / "target" / "release" / "dtolator"
@@ -251,7 +254,12 @@ class TestSuite:
         print_header("Building dtolator")
         
         print_colored("Building project with cargo...", Colors.BLUE)
-        success, stdout, stderr = run_command(["cargo", "build", "--release"])
+        # Try MSVC target first on Windows, fallback to default
+        success, stdout, stderr = run_command(["cargo", "build", "--release", "--target", "x86_64-pc-windows-msvc"])
+        
+        if not success and "target" in stderr.lower():
+            print_colored("MSVC target not available, trying default target...", Colors.YELLOW)
+            success, stdout, stderr = run_command(["cargo", "build", "--release"])
         
         if success:
             print_colored("✅ Build successful", Colors.GREEN)

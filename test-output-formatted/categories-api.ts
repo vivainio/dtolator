@@ -4,15 +4,7 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
-import { map } from "rxjs/operators";
-import {
-  Inventory,
-  InventoryResponse,
-  InventoryResponseSchema,
-  InventorySchema,
-  UpdateInventoryRequest,
-  UpdateInventoryRequestSchema,
-} from "./dto";
+import { Inventory, InventoryResponse, UpdateInventoryRequest } from "./dto";
 import { subsToUrl } from "./subs-to-url.func";
 
 @Injectable({ providedIn: "root" })
@@ -23,27 +15,18 @@ export class InventoryApi {
     queryParams?: { lowStock?: boolean; },
   ): Observable<InventoryResponse> {
     const url = subsToUrl("/inventory", {}, queryParams || {});
-    return this.http.get<InventoryResponse>(url)
-      .pipe(
-        map(response => InventoryResponseSchema.parse(response)),
-      );
+    return this.http.get<InventoryResponse>(url);
   }
 
   updateProductInventory(
     productId: string,
     dto: UpdateInventoryRequest,
   ): Observable<Inventory> {
-    // Validate request body with Zod
-    const validatedDto = UpdateInventoryRequestSchema.parse(dto);
-
     const url = subsToUrl(
       "/inventory/{productId}",
       { productId: productId },
       {},
     );
-    return this.http.put<Inventory>(url, validatedDto)
-      .pipe(
-        map(response => InventorySchema.parse(response)),
-      );
+    return this.http.put<Inventory>(url, dto);
   }
 }
