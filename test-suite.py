@@ -349,6 +349,32 @@ class TestSuite:
             with open(tsconfig_path, 'w', encoding='utf-8') as f:
                 json.dump(tsconfig, f, indent=2)
             
+            # Create mock environment file for Angular projects
+            if is_angular:
+                env_dir = temp_dir / "src" / "environments"
+                env_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Create environment.ts mock
+                env_content = """// Mock environment file for TypeScript checking
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:3000/api'
+};
+"""
+                env_file = env_dir / "environment.ts"
+                with open(env_file, 'w', encoding='utf-8') as f:
+                    f.write(env_content)
+                
+                # Update tsconfig to include path mapping for @env/environment
+                tsconfig["compilerOptions"]["baseUrl"] = "."
+                tsconfig["compilerOptions"]["paths"] = {
+                    "@env/environment": ["src/environments/environment"]
+                }
+                
+                # Rewrite tsconfig.json with path mapping
+                with open(tsconfig_path, 'w', encoding='utf-8') as f:
+                    json.dump(tsconfig, f, indent=2)
+            
             # Install dependencies using npm
             print_colored(f"   📦 Installing TypeScript dependencies...", Colors.BLUE)
             

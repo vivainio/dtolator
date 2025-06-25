@@ -5,10 +5,12 @@ import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
+import { z } from "zod";
 import { subsToUrl } from "./subs-to-url.func";
 import {
   Product,
   ProductSchema,
+  ProductCategory,
   ProductListResponse,
   ProductListResponseSchema,
   UpdateProductRequest,
@@ -18,7 +20,7 @@ import {
 export class ProductsApi {
   constructor(private http: HttpClient) {}
 
-  searchProductsWithFilters(queryParams?: { category?: unknown, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
+  searchProductsWithFilters(queryParams?: { category?: ProductCategory, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
     const url = subsToUrl("/products", {}, queryParams || {});
     return this.http.get<ProductListResponse>(url)
       .pipe(

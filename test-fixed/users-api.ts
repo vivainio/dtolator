@@ -5,7 +5,6 @@ import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import { z } from "zod";
 import { subsToUrl } from "./subs-to-url.func";
 import {
   ApiResponse,
@@ -61,7 +60,7 @@ export class UsersApi {
 
   activateUserAccount(userId: number): Observable<ApiResponse> {
     const url = subsToUrl("/users/{userId}/activate", { userId: userId }, {});
-    return this.http.post<ApiResponse>(url, null)
+    return this.http.post<ApiResponse>(url)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
       );
@@ -69,7 +68,7 @@ export class UsersApi {
 
   deactivateUserAccount(userId: number): Observable<ApiResponse> {
     const url = subsToUrl("/users/{userId}/deactivate", { userId: userId }, {});
-    return this.http.post<ApiResponse>(url, null)
+    return this.http.post<ApiResponse>(url)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
       );

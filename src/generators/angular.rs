@@ -123,10 +123,28 @@ impl AngularGenerator {
         
         let http_call = match http_method {
             "GET" => format!("this.http.get<{}>(url)", return_type),
-            "POST" => format!("this.http.post<{}>(url{})", return_type, request_body),
-            "PUT" => format!("this.http.put<{}>(url{})", return_type, request_body),
+            "POST" => {
+                if request_body.is_empty() {
+                    format!("this.http.post<{}>(url, null)", return_type)
+                } else {
+                    format!("this.http.post<{}>(url{})", return_type, request_body)
+                }
+            },
+            "PUT" => {
+                if request_body.is_empty() {
+                    format!("this.http.put<{}>(url, null)", return_type)
+                } else {
+                    format!("this.http.put<{}>(url{})", return_type, request_body)
+                }
+            },
             "DELETE" => format!("this.http.delete<{}>(url)", return_type),
-            "PATCH" => format!("this.http.patch<{}>(url{})", return_type, request_body),
+            "PATCH" => {
+                if request_body.is_empty() {
+                    format!("this.http.patch<{}>(url, null)", return_type)
+                } else {
+                    format!("this.http.patch<{}>(url{})", return_type, request_body)
+                }
+            },
             _ => format!("this.http.request<{}>('{}', {{ url }})", return_type, http_method),
         };
         
@@ -320,6 +338,17 @@ impl AngularGenerator {
             }
         }
         
+        // Collect parameter types (for query, path, and header parameters)
+        if let Some(parameters) = &operation.parameters {
+            for parameter in parameters {
+                if let Some(schema) = &parameter.schema {
+                    if let Some(type_name) = self.extract_type_name(schema) {
+                        service_data.imports.insert(type_name);
+                    }
+                }
+            }
+        }
+        
         Ok(())
     }
     
@@ -351,6 +380,7 @@ impl AngularGenerator {
         
         if self.with_zod {
             service.push_str("import { map } from \"rxjs/operators\";\n");
+            service.push_str("import { z } from \"zod\";\n");
         }
         
         service.push_str("import { subsToUrl } from \"./subs-to-url.func\";\n");
@@ -445,13 +475,8 @@ impl AngularGenerator {
     
     fn get_parameter_type(&self, parameter: &Parameter) -> String {
         if let Some(schema) = &parameter.schema {
-            match schema.get_type() {
-                Some("string") => "string".to_string(),
-                Some("number") | Some("integer") => "number".to_string(),
-                Some("boolean") => "boolean".to_string(),
-                Some("array") => "string[]".to_string(),
-                _ => "unknown".to_string(),
-            }
+            // Use the same logic as get_schema_type_name to handle references properly
+            self.get_schema_type_name(schema)
         } else {
             "unknown".to_string()
         }
@@ -464,12 +489,19 @@ impl AngularGenerator {
                     .unwrap_or(reference)
                     .to_string()
             }
-            crate::openapi::Schema::Object { schema_type, .. } => {
+            crate::openapi::Schema::Object { schema_type, items, .. } => {
                 match schema_type.as_deref() {
                     Some("string") => "string".to_string(),
                     Some("number") | Some("integer") => "number".to_string(),
                     Some("boolean") => "boolean".to_string(),
-                    Some("array") => "unknown[]".to_string(),
+                    Some("array") => {
+                        if let Some(items_schema) = items {
+                            let item_type = self.get_schema_type_name(items_schema);
+                            format!("{}[]", item_type)
+                        } else {
+                            "unknown[]".to_string()
+                        }
+                    },
                     Some("object") => "Record<string, unknown>".to_string(),
                     _ => "unknown".to_string(),
                 }
