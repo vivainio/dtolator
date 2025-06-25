@@ -31,7 +31,7 @@
   "paths": {
     "/users": {
       "get": {
-        "summary": "List users",
+        "summary": "Get All Users With Pagination",
         "description": "Retrieve a paginated list of users",
         "parameters": [
           {
@@ -80,7 +80,7 @@
         }
       },
       "post": {
-        "summary": "Create user",
+        "summary": "Create New User Account",
         "description": "Create a new user account",
         "requestBody": {
           "required": true,
@@ -118,7 +118,7 @@
     },
     "/users/{userId}": {
       "get": {
-        "summary": "Get user by ID",
+        "summary": "Get User Profile By ID",
         "parameters": [
           {
             "name": "userId",
@@ -156,7 +156,7 @@
     },
     "/products": {
       "get": {
-        "summary": "List products",
+        "summary": "Search Products With Filters",
         "parameters": [
           {
             "name": "category",
@@ -198,7 +198,7 @@
     },
     "/orders": {
       "post": {
-        "summary": "Create order",
+        "summary": "Create New Order",
         "requestBody": {
           "required": true,
           "content": {
