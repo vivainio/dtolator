@@ -25,12 +25,13 @@ impl ZodGenerator {
     fn generate_schema(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
         
-        output.push_str(&format!("{}export const {} = ", self.indent(), name));
+        let schema_name = format!("{}Schema", name);
+        output.push_str(&format!("{}export const {} = ", self.indent(), schema_name));
         output.push_str(&self.schema_to_zod(schema)?);
         output.push_str(";\n\n");
         
         output.push_str(&format!("{}export type {} = z.infer<typeof {}>;\n\n", 
-            self.indent(), name, name));
+            self.indent(), name, schema_name));
         
         Ok(output)
     }
@@ -40,7 +41,7 @@ impl ZodGenerator {
             Schema::Reference { reference } => {
                 let ref_name = reference.strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);
-                Ok(ref_name.to_string())
+                Ok(format!("{}Schema", ref_name))
             }
             Schema::Object { 
                 schema_type, 
