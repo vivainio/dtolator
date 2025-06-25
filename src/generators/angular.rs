@@ -132,10 +132,28 @@ impl AngularGenerator {
         
         // Add Zod validation for response if enabled (but not for requests)
         if self.with_zod {
-            let response_schema_name = format!("{}Schema", return_type);
+            let response_schema_name = if return_type == "unknown[]" {
+                // For unknown arrays, we can't validate the schema, so just skip validation
+                format!("z.array(z.unknown())")
+            } else if return_type.ends_with("[]") {
+                // For typed arrays, create array schema
+                let base_type = &return_type[..return_type.len() - 2];
+                format!("z.array({}Schema)", base_type)
+            } else {
+                // For single types, use the standard schema
+                format!("{}Schema", return_type)
+            };
+            
             method.push_str(&format!("    return {}\n", http_call));
             method.push_str("      .pipe(\n");
-            method.push_str(&format!("        map(response => {}.parse(response))\n", response_schema_name));
+            
+            if return_type == "unknown[]" {
+                // For unknown arrays, just cast to the expected type without validation
+                method.push_str(&format!("        map(response => response as {})\n", return_type));
+            } else {
+                method.push_str(&format!("        map(response => {}.parse(response))\n", response_schema_name));
+            }
+            
             method.push_str("      );\n");
         } else {
             method.push_str(&format!("    return {};\n", http_call));
