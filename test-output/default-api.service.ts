@@ -1,0 +1,61 @@
+// Generated Angular service from OpenAPI schema
+// Do not modify this file manually
+
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { subsToUrl } from './subs-to-url.func';
+import { CreateOrderRequestSchema, CreateOrderRequest, CreateUserRequestSchema, CreateUserRequest, OrderSchema, Order, ProductListResponseSchema, ProductListResponse, UserSchema, User, UserListResponseSchema, UserListResponse } from './dto';
+
+@Injectable({ providedIn: 'root' })
+export class DefaultApiService {
+  constructor(private http: HttpClient) {}
+
+  getAllUsersWithPagination(queryParams?: { page?: number, limit?: number }): Observable<UserListResponse> {
+    const url = subsToUrl('/users', {}, queryParams || {});
+    return this.http.get<UserListResponse>(url)
+      .pipe(
+        map(response => UserListResponseSchema.parse(response))
+      );
+  }
+
+  createNewUserAccount(dto: CreateUserRequest): Observable<User> {
+    // Validate request body with Zod
+    const validatedDto = CreateUserRequestSchema.parse(dto);
+
+    const url = subsToUrl('/users', {}, {});
+    return this.http.post<User>(url, validatedDto)
+      .pipe(
+        map(response => UserSchema.parse(response))
+      );
+  }
+
+  getUserProfileByID(userId: string): Observable<User> {
+    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    return this.http.get<User>(url)
+      .pipe(
+        map(response => UserSchema.parse(response))
+      );
+  }
+
+  searchProductsWithFilters(queryParams?: { category?: unknown, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
+    const url = subsToUrl('/products', {}, queryParams || {});
+    return this.http.get<ProductListResponse>(url)
+      .pipe(
+        map(response => ProductListResponseSchema.parse(response))
+      );
+  }
+
+  createNewOrder(dto: CreateOrderRequest): Observable<Order> {
+    // Validate request body with Zod
+    const validatedDto = CreateOrderRequestSchema.parse(dto);
+
+    const url = subsToUrl('/orders', {}, {});
+    return this.http.post<Order>(url, validatedDto)
+      .pipe(
+        map(response => OrderSchema.parse(response))
+      );
+  }
+
+}

@@ -7,7 +7,7 @@ mod openapi;
 mod generators;
 
 use openapi::OpenApiSchema;
-use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, python_dict::PythonDictGenerator, Generator};
+use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, python_dict::PythonDictGenerator, dotnet::DotNetGenerator, Generator};
 
 #[derive(Parser)]
 #[command(name = "dtolator")]
@@ -41,6 +41,10 @@ struct Cli {
     /// Generate Python TypedDict definitions
     #[arg(long)]
     python_dict: bool,
+    
+    /// Generate C# classes with System.Text.Json serialization
+    #[arg(long)]
+    dotnet: bool,
     
     /// Generate API endpoint types from OpenAPI paths
     #[arg(short, long)]
@@ -94,6 +98,18 @@ fn main() -> Result<()> {
                 
                 println!("Generated files:");
                 println!("  - {}", typed_dicts_path.display());
+            } else if cli.dotnet {
+                // Generate C# classes to a C# file
+                let dotnet_generator = DotNetGenerator::new();
+                let dotnet_output = dotnet_generator.generate(&schema)?;
+                let dotnet_final = if cli.pretty { format_output(&dotnet_output) } else { dotnet_output };
+                
+                let models_path = output_dir.join("Models.cs");
+                fs::write(&models_path, dotnet_final)
+                    .with_context(|| format!("Failed to write Models.cs file: {}", models_path.display()))?;
+                
+                println!("Generated files:");
+                println!("  - {}", models_path.display());
             } else if cli.zod {
                 // Generate both dto.ts (with imports) and schema.ts
                 
@@ -147,6 +163,9 @@ fn main() -> Result<()> {
                 generator.generate(&schema)?
             } else if cli.python_dict {
                 let generator = PythonDictGenerator::new();
+                generator.generate(&schema)?
+            } else if cli.dotnet {
+                let generator = DotNetGenerator::new();
                 generator.generate(&schema)?
             } else {
                 let generator = ZodGenerator::new();

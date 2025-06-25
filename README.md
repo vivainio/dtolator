@@ -8,6 +8,7 @@
 - ✅ Convert OpenAPI 3.x schemas to TypeScript interfaces
 - ✅ Convert OpenAPI 3.x schemas to Pydantic BaseModel classes
 - ✅ Convert OpenAPI 3.x schemas to Python TypedDict definitions
+- ✅ Convert OpenAPI 3.x schemas to C# classes with System.Text.Json serialization
 - ✅ Generate API endpoint types for type-safe client development
 - ✅ Support for complex types (objects, arrays, enums, unions)
 - ✅ Support for OpenAPI composition keywords (`allOf`, `oneOf`, `anyOf`)
@@ -93,6 +94,16 @@ Generate Python TypedDict definitions to directory:
 dtolator -i schema.json -o ./output --python-dict
 ```
 
+Generate C# classes to stdout:
+```bash
+dtolator -i schema.json --dotnet
+```
+
+Generate C# classes to directory:
+```bash
+dtolator -i schema.json -o ./output --dotnet
+```
+
 ### Command Line Options
 
 ```
@@ -108,6 +119,7 @@ Options:
   -a, --angular            Generate Angular API services (creates multiple service files and utilities)
       --pydantic           Generate Pydantic BaseModel classes for Python
       --python-dict        Generate Python TypedDict definitions
+      --dotnet             Generate C# classes with System.Text.Json serialization
   -e, --endpoints          Generate API endpoint types from OpenAPI paths
   -p, --pretty             Pretty print the output
   -h, --help               Print help
@@ -234,6 +246,62 @@ class User(UserRequired, total=False):
     status: Literal["active", "inactive", "pending"]
     profile: UserProfile
     address: Address
+```
+
+### Generated C# Classes
+
+```csharp
+// Generated C# classes from OpenAPI schema
+// Do not modify this file manually
+
+using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace GeneratedApiModels
+{
+    public class User
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+        
+        [JsonPropertyName("email")]
+        public string Email { get; set; }
+        
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+        
+        [JsonPropertyName("age")]
+        public int? Age { get; set; }
+        
+        [JsonPropertyName("isActive")]
+        public bool? IsActive { get; set; }
+        
+        [JsonPropertyName("tags")]
+        public List<string> Tags { get; set; }
+        
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+        
+        [JsonPropertyName("profile")]
+        public UserProfile Profile { get; set; }
+        
+        [JsonPropertyName("address")]
+        public Address Address { get; set; }
+    }
+
+    public enum UserStatus
+    {
+        [JsonPropertyName("active")]
+        Active,
+        
+        [JsonPropertyName("inactive")]
+        Inactive,
+        
+        [JsonPropertyName("pending")]
+        Pending
+    }
+}
 ```
 
 ### Generated API Endpoints
@@ -617,6 +685,9 @@ cargo build --release
 # Test with Python TypedDict generation
 ./target/release/dtolator -i simple-sample.json --python-dict
 
+# Test with C# classes generation
+./target/release/dtolator -i simple-sample.json --dotnet
+
 # Generate complete type-safe API client setup
 ./target/release/dtolator -i full-sample.json --typescript -o types.ts
 ./target/release/dtolator -i full-sample.json --endpoints -o api-endpoints.ts
@@ -811,7 +882,80 @@ class Address(AddressRequired, total=False):
     postalCode: Optional[str]
 ```
 
-#### 5. API Endpoints (Type-Safe Nested Objects)
+#### 5. C# Classes (System.Text.Json Serialization)
+
+```csharp
+namespace GeneratedApiModels
+{
+    public class User
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+        
+        [JsonPropertyName("email")]
+        public string Email { get; set; }
+        
+        [JsonPropertyName("profile")]
+        public UserProfile Profile { get; set; }          // ← Nested class reference
+        
+        [JsonPropertyName("preferences")]
+        public UserPreferences Preferences { get; set; }   // ← Optional nested class
+        
+        [JsonPropertyName("roles")]
+        public List<UserRole> Roles { get; set; }         // ← List of nested enums
+    }
+
+    public class UserProfile
+    {
+        [JsonPropertyName("firstName")]
+        public string FirstName { get; set; }              // ← camelCase → PascalCase
+        
+        [JsonPropertyName("lastName")]
+        public string LastName { get; set; }
+        
+        [JsonPropertyName("address")]
+        public Address Address { get; set; }               // ← Deeply nested class
+        
+        [JsonPropertyName("avatar")]
+        public ImageUrl Avatar { get; set; }               // ← Complex nested class
+    }
+
+    public class UserPreferences
+    {
+        [JsonPropertyName("notifications")]
+        public NotificationSettings Notifications { get; set; }  // ← Nested settings class
+        
+        [JsonPropertyName("language")]
+        public string Language { get; set; }               // ← Enum as string
+    }
+
+    public class Address
+    {
+        [JsonPropertyName("street")]
+        public string Street { get; set; }
+        
+        [JsonPropertyName("city")]
+        public string City { get; set; }
+        
+        [JsonPropertyName("country")]
+        public string Country { get; set; }                // ← Clean C# properties
+    }
+
+    public enum UserRole
+    {
+        [JsonPropertyName("customer")]
+        Customer,                                           // ← JSON-friendly enum values
+        
+        [JsonPropertyName("admin")]
+        Admin,
+        
+        [JsonPropertyName("moderator")]
+        Moderator
+    }
+}
+```
+
+#### 6. API Endpoints (Type-Safe Nested Objects)
 
 ```typescript
 export type ApiEndpoints = {
@@ -851,7 +995,7 @@ const newUser = await api.call('POST /users', {
 // newUser.profile.address.city is fully typed! ✅
 ```
 
-#### 6. Angular Services (Nested Object Support)
+#### 7. Angular Services (Nested Object Support)
 
 ```typescript
 @Injectable({ providedIn: 'root' })
