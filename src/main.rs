@@ -7,7 +7,7 @@ mod openapi;
 mod generators;
 
 use openapi::OpenApiSchema;
-use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, Generator};
+use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, python_dict::PythonDictGenerator, Generator};
 
 #[derive(Parser)]
 #[command(name = "dtolator")]
@@ -37,6 +37,10 @@ struct Cli {
     /// Generate Pydantic BaseModel classes for Python
     #[arg(long)]
     pydantic: bool,
+    
+    /// Generate Python TypedDict definitions
+    #[arg(long)]
+    python_dict: bool,
     
     /// Generate API endpoint types from OpenAPI paths
     #[arg(short, long)]
@@ -78,6 +82,18 @@ fn main() -> Result<()> {
                 
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
+            } else if cli.python_dict {
+                // Generate Python TypedDict definitions to a Python file
+                let python_dict_generator = PythonDictGenerator::new();
+                let python_dict_output = python_dict_generator.generate(&schema)?;
+                let python_dict_final = if cli.pretty { format_output(&python_dict_output) } else { python_dict_output };
+                
+                let typed_dicts_path = output_dir.join("typed_dicts.py");
+                fs::write(&typed_dicts_path, python_dict_final)
+                    .with_context(|| format!("Failed to write typed_dicts.py file: {}", typed_dicts_path.display()))?;
+                
+                println!("Generated files:");
+                println!("  - {}", typed_dicts_path.display());
             } else if cli.zod {
                 // Generate both dto.ts (with imports) and schema.ts
                 
@@ -128,6 +144,9 @@ fn main() -> Result<()> {
                 generator.generate(&schema)?
             } else if cli.pydantic {
                 let generator = PydanticGenerator::new();
+                generator.generate(&schema)?
+            } else if cli.python_dict {
+                let generator = PythonDictGenerator::new();
                 generator.generate(&schema)?
             } else {
                 let generator = ZodGenerator::new();

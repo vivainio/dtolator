@@ -7,6 +7,7 @@
 - ✅ Convert OpenAPI 3.x schemas to Zod schemas with validation
 - ✅ Convert OpenAPI 3.x schemas to TypeScript interfaces
 - ✅ Convert OpenAPI 3.x schemas to Pydantic BaseModel classes
+- ✅ Convert OpenAPI 3.x schemas to Python TypedDict definitions
 - ✅ Generate API endpoint types for type-safe client development
 - ✅ Support for complex types (objects, arrays, enums, unions)
 - ✅ Support for OpenAPI composition keywords (`allOf`, `oneOf`, `anyOf`)
@@ -82,6 +83,16 @@ Generate Pydantic models to directory:
 dtolator -i schema.json -o ./output --pydantic
 ```
 
+Generate Python TypedDict definitions to stdout:
+```bash
+dtolator -i schema.json --python-dict
+```
+
+Generate Python TypedDict definitions to directory:
+```bash
+dtolator -i schema.json -o ./output --python-dict
+```
+
 ### Command Line Options
 
 ```
@@ -96,6 +107,7 @@ Options:
   -z, --zod                Generate Zod schemas (creates schema.ts and makes dto.ts import from it)
   -a, --angular            Generate Angular API services (creates multiple service files and utilities)
       --pydantic           Generate Pydantic BaseModel classes for Python
+      --python-dict        Generate Python TypedDict definitions
   -e, --endpoints          Generate API endpoint types from OpenAPI paths
   -p, --pretty             Pretty print the output
   -h, --help               Print help
@@ -196,6 +208,32 @@ class User(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1, max_length=100)
     status: Optional[Literal["active", "inactive", "pending"]] = None
+```
+
+### Generated Python TypedDict Definitions
+
+```python
+# Generated Python TypedDict definitions from OpenAPI schema
+# Do not modify this file manually
+
+from datetime import date, datetime
+from enum import Enum
+from typing import Any, Dict, List, Literal, Optional, Union
+from typing_extensions import TypedDict
+from uuid import UUID
+
+class UserRequired(TypedDict):
+    id: int
+    email: str
+    name: str
+
+class User(UserRequired, total=False):
+    age: int
+    isActive: bool
+    tags: List[str]
+    status: Literal["active", "inactive", "pending"]
+    profile: UserProfile
+    address: Address
 ```
 
 ### Generated API Endpoints
@@ -576,6 +614,9 @@ cargo build --release
 # Test with API endpoints generation
 ./target/release/dtolator -i full-sample.json --endpoints
 
+# Test with Python TypedDict generation
+./target/release/dtolator -i simple-sample.json --python-dict
+
 # Generate complete type-safe API client setup
 ./target/release/dtolator -i full-sample.json --typescript -o types.ts
 ./target/release/dtolator -i full-sample.json --endpoints -o api-endpoints.ts
@@ -740,7 +781,37 @@ class Address(BaseModel):
     country: str = Field(regex=r"^[A-Z]{2}$")  # ← Deep validation
 ```
 
-#### 4. API Endpoints (Type-Safe Nested Objects)
+#### 4. Python TypedDict (Lightweight Type Hints)
+
+```python
+class UserRequired(TypedDict):
+    id: str
+    email: str
+    profile: UserProfile              # ← Nested TypedDict reference
+
+class User(UserRequired, total=False):
+    preferences: UserPreferences      # ← Optional nested TypedDict
+    roles: List[UserRole]             # ← List of nested types
+
+class UserProfileRequired(TypedDict):
+    firstName: str
+    lastName: str
+
+class UserProfile(UserProfileRequired, total=False):
+    address: Address                  # ← Deeply nested TypedDict
+    avatar: ImageUrl                  # ← Complex nested structure
+
+class AddressRequired(TypedDict):
+    street: str
+    city: str
+    country: str                      # ← Clean type definitions
+
+class Address(AddressRequired, total=False):
+    state: Optional[str]
+    postalCode: Optional[str]
+```
+
+#### 5. API Endpoints (Type-Safe Nested Objects)
 
 ```typescript
 export type ApiEndpoints = {
@@ -780,7 +851,7 @@ const newUser = await api.call('POST /users', {
 // newUser.profile.address.city is fully typed! ✅
 ```
 
-#### 5. Angular Services (Nested Object Support)
+#### 6. Angular Services (Nested Object Support)
 
 ```typescript
 @Injectable({ providedIn: 'root' })

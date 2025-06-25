@@ -1,0 +1,184 @@
+# Generated Python TypedDict definitions from OpenAPI schema
+# Do not modify this file manually
+
+from datetime import date, datetime
+from enum import Enum
+from typing import Any, Dict, List, Literal, Optional, Union
+from typing_extensions import TypedDict
+from uuid import UUID
+
+class UserRequired(TypedDict):
+    id: str
+    email: str
+    profile: UserProfile
+
+class User(UserRequired, total=False):
+    preferences: UserPreferences
+    createdAt: str
+    updatedAt: str
+    isActive: bool
+    roles: List[UserRole]
+
+class UserProfileRequired(TypedDict):
+    firstName: str
+    lastName: str
+
+class UserProfile(UserProfileRequired, total=False):
+    dateOfBirth: Optional[str]
+    phoneNumber: Optional[str]
+    avatar: ImageUrl
+    address: Address
+
+class UserPreferences(TypedDict, total=False):
+    language: Literal["en", "es", "fr", "de", "it"]
+    currency: Literal["USD", "EUR", "GBP", "JPY"]
+    notifications: NotificationSettings
+    theme: Literal["light", "dark", "auto"]
+
+class NotificationSettings(TypedDict, total=False):
+    email: bool
+    push: bool
+    sms: bool
+    marketing: bool
+
+class UserRole(str, Enum):
+    CUSTOMER = "customer"
+    ADMIN = "admin"
+    MODERATOR = "moderator"
+    VENDOR = "vendor"
+
+class AddressRequired(TypedDict):
+    street: str
+    city: str
+    country: str
+    postalCode: str
+
+class Address(AddressRequired, total=False):
+    street2: Optional[str]
+    state: Optional[str]
+
+class ImageUrlRequired(TypedDict):
+    url: str
+
+class ImageUrl(ImageUrlRequired, total=False):
+    alt: str
+    width: int
+    height: int
+
+class ProductRequired(TypedDict):
+    id: str
+    name: str
+    price: Price
+    category: ProductCategory
+
+class Product(ProductRequired, total=False):
+    description: Optional[str]
+    tags: List[str]
+    images: List[ImageUrl]
+    inventory: Inventory
+    specifications: Dict[str, Any]
+    isActive: bool
+    createdAt: str
+
+class PriceRequired(TypedDict):
+    amount: float
+    currency: Literal["USD", "EUR", "GBP", "JPY"]
+
+class Price(PriceRequired, total=False):
+    originalAmount: Optional[float]
+
+class ProductCategory(str, Enum):
+    ELECTRONICS = "electronics"
+    CLOTHING = "clothing"
+    HOME = "home"
+    BOOKS = "books"
+    SPORTS = "sports"
+    BEAUTY = "beauty"
+    AUTOMOTIVE = "automotive"
+
+class InventoryRequired(TypedDict):
+    quantity: int
+    status: Literal["in_stock", "low_stock", "out_of_stock", "discontinued"]
+
+class Inventory(InventoryRequired, total=False):
+    lowStockThreshold: int
+
+class OrderRequired(TypedDict):
+    id: str
+    userId: str
+    items: List[OrderItem]
+    total: Price
+    status: OrderStatus
+
+class Order(OrderRequired, total=False):
+    shippingAddress: Address
+    billingAddress: Address
+    paymentMethod: PaymentMethod
+    orderDate: str
+    estimatedDelivery: Optional[str]
+    trackingNumber: Optional[str]
+
+class OrderItemRequired(TypedDict):
+    productId: str
+    quantity: int
+    price: Price
+
+class OrderItem(OrderItemRequired, total=False):
+    productSnapshot: Product
+
+class OrderStatus(str, Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    PROCESSING = "processing"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+class PaymentMethodRequired(TypedDict):
+    type: Literal["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"]
+
+class PaymentMethod(PaymentMethodRequired, total=False):
+    last4: str
+    brand: Literal["visa", "mastercard", "amex", "discover"]
+
+class CreateUserRequestRequired(TypedDict):
+    email: str
+    password: str
+    profile: UserProfile
+
+class CreateUserRequest(CreateUserRequestRequired, total=False):
+    preferences: UserPreferences
+
+class CreateOrderRequestRequired(TypedDict):
+    items: List[Dict[str, Any]]
+    shippingAddress: Address
+
+class CreateOrderRequest(CreateOrderRequestRequired, total=False):
+    billingAddress: Address
+    paymentMethod: PaymentMethod
+
+class UserListResponse(TypedDict):
+    data: List[User]
+    pagination: PaginationInfo
+
+class ProductListResponseRequired(TypedDict):
+    data: List[Product]
+    pagination: PaginationInfo
+
+class ProductListResponse(ProductListResponseRequired, total=False):
+    filters: Dict[str, Any]
+
+class PaginationInfoRequired(TypedDict):
+    page: int
+    limit: int
+    total: int
+    totalPages: int
+
+class PaginationInfo(PaginationInfoRequired, total=False):
+    hasNext: bool
+    hasPrev: bool
+
+class ErrorResponse(TypedDict):
+    error: Dict[str, Any]
+
