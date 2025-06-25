@@ -34,6 +34,7 @@ pub struct PathItem {
 pub struct Operation {
     pub summary: Option<String>,
     pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub parameters: Option<Vec<Parameter>>,
     #[serde(rename = "requestBody")]
     pub request_body: Option<RequestBody>,
