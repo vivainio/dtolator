@@ -178,6 +178,216 @@ export type ExtractEndpointParams<T extends keyof ApiEndpoints> =
 
 export type ExtractEndpointResponse<T extends keyof ApiEndpoints> = 
   ApiEndpoints[T] extends { response: infer R } ? R : never;
+
+export type ExtractEndpointRequest<T extends keyof ApiEndpoints> = 
+  ApiEndpoints[T] extends { request: infer R } ? R : never;
+
+export type ExtractEndpointQuery<T extends keyof ApiEndpoints> = 
+  ApiEndpoints[T] extends { query: infer Q } ? Q : never;
+```
+
+## How to Use Generated ApiEndpoints
+
+The generated `ApiEndpoints` type provides complete type safety for your API calls. Here are practical examples:
+
+### 1. Type-Safe Fetch Wrapper
+
+```typescript
+import { ApiEndpoints, ExtractEndpointResponse, ExtractEndpointParams } from './api-endpoints';
+
+class TypedApiClient {
+  constructor(private baseUrl: string) {}
+
+  async call<K extends keyof ApiEndpoints>(
+    endpoint: K,
+    options: (
+      ApiEndpoints[K] extends { request: infer R } ? { body: R } : {}
+    ) & (
+      ApiEndpoints[K] extends { params: infer P } ? { params: P } : {}
+    ) & (
+      ApiEndpoints[K] extends { query: infer Q } ? { query?: Q } : {}
+    )
+  ): Promise<ExtractEndpointResponse<K>> {
+    
+    const [method, pathTemplate] = endpoint.split(' ') as [string, string];
+    
+    // Replace path parameters
+    let url = pathTemplate;
+    if ('params' in options && options.params) {
+      Object.entries(options.params as Record<string, string>).forEach(([key, value]) => {
+        url = url.replace(`{${key}}`, encodeURIComponent(value));
+      });
+    }
+    
+    // Add query parameters
+    if ('query' in options && options.query) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.query as Record<string, any>).forEach(([key, value]) => {
+        if (value !== undefined) searchParams.append(key, String(value));
+      });
+      if (searchParams.toString()) url += `?${searchParams.toString()}`;
+    }
+    
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: 'body' in options ? JSON.stringify(options.body) : undefined,
+    });
+    
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+}
+
+// Usage examples with full type safety:
+const api = new TypedApiClient('https://api.example.com/v2');
+
+// ✅ GET /users with query parameters (fully typed)
+const users = await api.call('GET /users', {
+  query: { page: 1, limit: 20 }  // TypeScript knows these are the right query params
+});
+// users is automatically typed as UserListResponse
+
+// ✅ GET /users/{userId} with path parameters (fully typed)
+const user = await api.call('GET /users/{userId}', {
+  params: { userId: '123' }  // TypeScript knows userId is required
+});
+// user is automatically typed as User
+
+// ✅ POST /users with request body (fully typed)
+const newUser = await api.call('POST /users', {
+  body: {  // TypeScript knows this should be CreateUserRequest
+    email: 'john@example.com',
+    password: 'SecurePass123!',
+    profile: { firstName: 'John', lastName: 'Doe' }
+  }
+});
+// newUser is automatically typed as User
+
+// ❌ TypeScript will catch these errors:
+// api.call('GET /users', { body: {} });           // Error: GET doesn't accept body
+// api.call('POST /users', {});                    // Error: POST requires body
+// api.call('GET /users/{userId}', {});            // Error: Missing required params
+```
+
+### 2. React Hooks Integration
+
+```typescript
+import { useState, useEffect } from 'react';
+
+function useApiCall<K extends keyof ApiEndpoints>(
+  endpoint: K,
+  options: Parameters<TypedApiClient['call']>[1],
+  enabled = true
+) {
+  const [data, setData] = useState<ExtractEndpointResponse<K> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const execute = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const api = new TypedApiClient('https://api.example.com/v2');
+      const result = await api.call(endpoint, options);
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (enabled) execute();
+  }, [enabled]);
+
+  return { data, loading, error, refetch: execute };
+}
+
+// React component using the hook
+function UserProfile({ userId }: { userId: string }) {
+  // Fully typed hook - knows this returns User data
+  const { data: user, loading, error } = useApiCall(
+    'GET /users/{userId}',
+    { params: { userId } }
+  );
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!user) return <div>No user found</div>;
+
+  // TypeScript knows user.profile, user.email, etc. exist
+  return (
+    <div>
+      <h1>{user.profile.firstName} {user.profile.lastName}</h1>
+      <p>Email: {user.email}</p>
+    </div>
+  );
+}
+```
+
+### 3. Type Utilities for Advanced Usage
+
+```typescript
+// Extract specific types from endpoints
+type UserParams = ExtractEndpointParams<'GET /users/{userId}'>;
+// Result: { userId: string }
+
+type UserResponse = ExtractEndpointResponse<'GET /users/{userId}'>;
+// Result: User
+
+type CreateUserBody = ExtractEndpointRequest<'POST /users'>;
+// Result: CreateUserRequest
+
+type UsersQuery = ExtractEndpointQuery<'GET /users'>;
+// Result: { page?: number; limit?: number } | never
+
+// Filter endpoints by HTTP method
+type GetEndpoints = {
+  [K in keyof ApiEndpoints as K extends `GET ${string}` ? K : never]: ApiEndpoints[K]
+};
+
+type PostEndpoints = {
+  [K in keyof ApiEndpoints as K extends `POST ${string}` ? K : never]: ApiEndpoints[K]
+};
+```
+
+### 4. Testing with Mock Data
+
+```typescript
+// Type-safe mock API client for testing
+class MockApiClient {
+  private mocks = new Map<keyof ApiEndpoints, any>();
+
+  mock<K extends keyof ApiEndpoints>(
+    endpoint: K,
+    response: ExtractEndpointResponse<K>
+  ) {
+    this.mocks.set(endpoint, response);
+    return this;
+  }
+
+  async call<K extends keyof ApiEndpoints>(
+    endpoint: K,
+    options: any
+  ): Promise<ExtractEndpointResponse<K>> {
+    const mockResponse = this.mocks.get(endpoint);
+    if (!mockResponse) throw new Error(`No mock for ${endpoint}`);
+    return mockResponse;
+  }
+}
+
+// Test example
+const mockApi = new MockApiClient()
+  .mock('GET /users/{userId}', {
+    id: '123',
+    email: 'test@example.com',
+    profile: { firstName: 'Test', lastName: 'User' }
+  });
+
+const user = await mockApi.call('GET /users/{userId}', { params: { userId: '123' } });
+// user is fully typed as User
 ```
 
 ## Supported OpenAPI Features
@@ -233,48 +443,27 @@ cargo build --release
 ./target/release/dtolator -i full-sample.json -o schemas.ts  # Zod schemas
 ```
 
-### Real-world Workflow
+### Complete Project Setup
 
-For a complete type-safe API setup, generate all three outputs:
+For a production-ready type-safe API setup, generate all three outputs:
 
 ```bash
 # 1. Generate TypeScript interfaces for data types
 dtolator -i your-api.json --typescript -o src/types/api-types.ts
 
-# 2. Generate API endpoint definitions
+# 2. Generate API endpoint definitions  
 dtolator -i your-api.json --endpoints -o src/types/api-endpoints.ts
 
 # 3. Generate Zod schemas for runtime validation
 dtolator -i your-api.json -o src/schemas/api-schemas.ts
 ```
 
-Then use them in your application:
+This gives you:
+- **TypeScript interfaces** for compile-time type checking
+- **API endpoint types** for type-safe API calls  
+- **Zod schemas** for runtime validation
 
-```typescript
-// Import generated types
-import { User, Product } from './types/api-types';
-import { ApiEndpoints } from './types/api-endpoints';
-import { User as UserSchema } from './schemas/api-schemas';
-
-// Type-safe API client
-async function getUser(id: string): Promise<User> {
-  const response = await fetch(`/api/users/${id}`);
-  const data = await response.json();
-  
-  // Runtime validation with Zod
-  return UserSchema.parse(data);
-}
-
-// Type-safe API call using endpoint types
-class ApiClient {
-  async call<K extends keyof ApiEndpoints>(
-    endpoint: K,
-    options: /* endpoint-specific options */
-  ): Promise</* endpoint-specific response */> {
-    // Implementation with full type safety
-  }
-}
-```
+See the "How to Use Generated ApiEndpoints" section above for detailed implementation examples.
 
 ## Contributing
 
