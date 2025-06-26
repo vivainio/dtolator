@@ -41,7 +41,7 @@ impl DotNetGenerator {
                 description,
                 ..
             } => {
-                // Handle enum types
+                // Handle enum types - keep as enums, not records
                 if let Some(enum_vals) = enum_values {
                     if let Some(desc) = description {
                         output.push_str(&format!("{}/// <summary>\n", self.indent()));
@@ -65,14 +65,14 @@ impl DotNetGenerator {
                     return Ok(output);
                 }
                 
-                // Handle object types
+                // Handle object types - generate records instead of classes
                 if schema_type.as_deref() == Some("object") || properties.is_some() {
                     if let Some(desc) = description {
                         output.push_str(&format!("{}/// <summary>\n", self.indent()));
                         output.push_str(&format!("{}/// {}\n", self.indent(), desc));
                         output.push_str(&format!("{}/// </summary>\n", self.indent()));
                     }
-                    output.push_str(&format!("{}public class {}\n", self.indent(), name));
+                    output.push_str(&format!("{}public record {}\n", self.indent(), name));
                     output.push_str(&format!("{}{{\n", self.indent()));
                     
                     if let Some(props) = properties {
@@ -87,19 +87,26 @@ impl DotNetGenerator {
                             // Add JsonPropertyName attribute for camelCase conversion
                             output.push_str(&format!("{}    [JsonPropertyName(\"{}\")]\n", self.indent(), prop_name));
                             
-                            // Make nullable if not required
-                            let final_type = if !is_required && !cs_type.ends_with('?') && !cs_type.starts_with("List<") {
-                                if self.is_value_type(&cs_type) {
-                                    format!("{}?", cs_type)
+                            // Handle required vs optional properties
+                            if is_required {
+                                // Required properties use the 'required' modifier
+                                output.push_str(&format!("{}    public required {} {} {{ get; set; }}\n", 
+                                    self.indent(), cs_type, pascal_prop_name));
+                            } else {
+                                // Non-required properties are nullable
+                                let nullable_type = if !cs_type.ends_with('?') && !cs_type.starts_with("List<") {
+                                    if self.is_value_type(&cs_type) {
+                                        format!("{}?", cs_type)
+                                    } else {
+                                        format!("{}?", cs_type)
+                                    }
                                 } else {
                                     cs_type
-                                }
-                            } else {
-                                cs_type
-                            };
-                            
-                            output.push_str(&format!("{}    public {} {} {{ get; set; }}\n", 
-                                self.indent(), final_type, pascal_prop_name));
+                                };
+                                
+                                output.push_str(&format!("{}    public {} {} {{ get; set; }}\n", 
+                                    self.indent(), nullable_type, pascal_prop_name));
+                            }
                         }
                     }
                     
@@ -198,7 +205,7 @@ impl Generator for DotNetGenerator {
         let mut output = String::new();
         
         // Add file header
-        output.push_str("// Generated C# classes from OpenAPI schema\n");
+        output.push_str("// Generated C# records from OpenAPI schema\n");
         output.push_str("// Do not modify this file manually\n\n");
         
         // Add using statements
