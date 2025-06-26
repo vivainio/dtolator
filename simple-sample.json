@@ -258,7 +258,8 @@
           "address": {
             "$ref": "#/components/schemas/Address"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "UserProfile": {
         "type": "object",
@@ -321,7 +322,8 @@
             "maxLength": 10,
             "nullable": true
           }
-        }
+        },
+        "additionalProperties": false
       },
       "CreateUserRequest": {
         "type": "object",
@@ -348,7 +350,8 @@
           "address": {
             "$ref": "#/components/schemas/Address"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "ApiResponse": {
         "type": "object",

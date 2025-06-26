@@ -572,7 +572,8 @@
               "$ref": "#/components/schemas/UserRole"
             }
           }
-        }
+        },
+        "additionalProperties": false
       },
       "UserProfile": {
         "type": "object",
@@ -688,7 +689,8 @@
             "minLength": 3,
             "maxLength": 10
           }
-        }
+        },
+        "additionalProperties": false
       },
       "ImageUrl": {
         "type": "object",
