@@ -39,6 +39,10 @@ When --typecheck is enabled, generated TypeScript files are validated using the
 TypeScript compiler. A temporary Node.js project is created with the required
 dependencies (TypeScript, Zod, Angular) and tsc --noEmit is run to check for
 type errors without generating output files.
+
+NOTE: Environment imports have been removed from generated Angular services.
+The generated code now requires (window as any).API_URL to be set globally
+instead of importing from @env/environment.
 """
 
 import os
@@ -381,29 +385,30 @@ class TestSuite:
             with open(tsconfig_path, 'w', encoding='utf-8') as f:
                 json.dump(tsconfig, f, indent=2)
             
-            # Create mock environment file for Angular projects
+            # Set up global API_URL for Angular projects (since environment imports were removed)
             if is_angular:
-                env_dir = temp_dir / "src" / "environments"
-                env_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Create environment.ts mock
-                env_content = """// Mock environment file for TypeScript checking
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:3000/api'
-};
+                # Create a global setup file that sets API_URL
+                global_setup_content = """// Global setup for API_URL (environment imports removed)
+// This file is automatically loaded to set up the required API_URL
+declare global {
+  interface Window {
+    API_URL: string;
+  }
+}
+
+// Set up API_URL for testing
+(window as any).API_URL = 'http://localhost:3000/api';
+
+export {};
 """
-                env_file = env_dir / "environment.ts"
-                with open(env_file, 'w', encoding='utf-8') as f:
-                    f.write(env_content)
+                global_setup_file = temp_dir / "global-setup.ts"
+                with open(global_setup_file, 'w', encoding='utf-8') as f:
+                    f.write(global_setup_content)
                 
-                # Update tsconfig to include path mapping for @env/environment
-                tsconfig["compilerOptions"]["baseUrl"] = "."
-                tsconfig["compilerOptions"]["paths"] = {
-                    "@env/environment": ["src/environments/environment"]
-                }
+                # No path mapping needed since environment imports were removed
+                # Generated code now uses injected API_URL instead
                 
-                # Rewrite tsconfig.json with path mapping
+                # Rewrite tsconfig.json
                 with open(tsconfig_path, 'w', encoding='utf-8') as f:
                     json.dump(tsconfig, f, indent=2)
             

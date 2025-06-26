@@ -1,8 +1,6 @@
 // Generated utility function for URL building
 // Do not modify this file manually
 
-import { environment } from "@env/environment";
-
 export function subsToUrl(
   url: string,
   params?: { [key: string]: string | number | boolean | null | undefined; },
@@ -35,10 +33,12 @@ export function subsToUrl(
     }
   }
 
-  const injectedConfig = (window as any).API_CONFIG;
-  if (injectedConfig) {
-    return injectedConfig.BACKEND_API_URL + url;
+  const injectedApiConfig = (window as any).API_URL;
+  if (!injectedApiConfig) {
+    throw new Error(
+      'API_URL is not configured. Please set (window as any).API_URL to your backend API base URL. Example: (window as any).API_URL = "https://api.example.com";'
+    );
   }
 
-  return environment.apiUrl + url;
+  return injectedApiConfig + url;
 }
