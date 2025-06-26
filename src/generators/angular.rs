@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 pub struct AngularGenerator {
     base_url: String,
     with_zod: bool,
+    debug: bool,
 }
 
 impl AngularGenerator {
@@ -13,6 +14,7 @@ impl AngularGenerator {
         Self {
             base_url: "environment.apiUrl".to_string(),
             with_zod: false,
+            debug: false,
         }
     }
     
@@ -25,29 +27,67 @@ impl AngularGenerator {
         self.with_zod = with_zod;
         self
     }
+    
+    pub fn with_debug(mut self, debug: bool) -> Self {
+        self.debug = debug;
+        self
+    }
 }
 
 impl Generator for AngularGenerator {
     fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
         let mut services = BTreeMap::new();
         
+        if self.debug {
+            println!("🔍 [DEBUG] Angular Generator: Starting endpoint processing");
+        }
+        
         // Group endpoints by tag
         if let Some(paths) = &schema.paths {
             for (path, path_item) in paths {
+                if self.debug {
+                    println!("🔍 [DEBUG] Processing path: {}", path);
+                }
+                
                 // Handle different HTTP methods
                 if let Some(operation) = &path_item.get {
+                    if self.debug {
+                        let default_tag = "Default".to_string();
+                        let tag = operation.tags.as_ref().and_then(|tags| tags.first()).unwrap_or(&default_tag);
+                        println!("🔍 [DEBUG] GET {} -> tag: {}", path, tag);
+                    }
                     self.add_operation_to_services(&mut services, "GET", path, operation)?;
                 }
                 if let Some(operation) = &path_item.post {
+                    if self.debug {
+                        let default_tag = "Default".to_string();
+                        let tag = operation.tags.as_ref().and_then(|tags| tags.first()).unwrap_or(&default_tag);
+                        println!("🔍 [DEBUG] POST {} -> tag: {}", path, tag);
+                    }
                     self.add_operation_to_services(&mut services, "POST", path, operation)?;
                 }
                 if let Some(operation) = &path_item.put {
+                    if self.debug {
+                        let default_tag = "Default".to_string();
+                        let tag = operation.tags.as_ref().and_then(|tags| tags.first()).unwrap_or(&default_tag);
+                        println!("🔍 [DEBUG] PUT {} -> tag: {}", path, tag);
+                    }
                     self.add_operation_to_services(&mut services, "PUT", path, operation)?;
                 }
                 if let Some(operation) = &path_item.delete {
+                    if self.debug {
+                        let default_tag = "Default".to_string();
+                        let tag = operation.tags.as_ref().and_then(|tags| tags.first()).unwrap_or(&default_tag);
+                        println!("🔍 [DEBUG] DELETE {} -> tag: {}", path, tag);
+                    }
                     self.add_operation_to_services(&mut services, "DELETE", path, operation)?;
                 }
                 if let Some(operation) = &path_item.patch {
+                    if self.debug {
+                        let default_tag = "Default".to_string();
+                        let tag = operation.tags.as_ref().and_then(|tags| tags.first()).unwrap_or(&default_tag);
+                        println!("🔍 [DEBUG] PATCH {} -> tag: {}", path, tag);
+                    }
                     self.add_operation_to_services(&mut services, "PATCH", path, operation)?;
                 }
             }
@@ -56,9 +96,19 @@ impl Generator for AngularGenerator {
         // Collect tags for index generation
         let tags: Vec<String> = services.keys().cloned().collect();
         
+        if self.debug {
+            println!("🔍 [DEBUG] Found {} services: {:?}", services.len(), tags);
+            for (tag, service_data) in &services {
+                println!("🔍 [DEBUG] Service '{}' has {} methods", tag, service_data.methods.len());
+            }
+        }
+        
         // Generate all services
         let mut output = String::new();
         for (tag, service_data) in services {
+            if self.debug {
+                println!("🔍 [DEBUG] Generating service for tag: {}", tag);
+            }
             output.push_str(&self.generate_service(&tag, &service_data)?);
             output.push_str("\n\n");
         }
@@ -369,6 +419,9 @@ impl AngularGenerator {
         
         let mut service = String::new();
         
+        // Add file marker BEFORE the content for proper splitting
+        service.push_str(&format!("// FILE: {}.ts\n", file_name));
+        
         // Header comment
         service.push_str("// Generated Angular service from OpenAPI schema\n");
         service.push_str("// Do not modify this file manually\n\n");
@@ -425,14 +478,14 @@ impl AngularGenerator {
         
         service.push_str("}\n");
         
-        // Add file marker for output splitting
-        service.push_str(&format!("\n// FILE: {}.ts\n", file_name));
-        
         Ok(service)
     }
     
     fn generate_index(&self, tags: &Vec<&String>) -> Result<String> {
         let mut index = String::new();
+        
+        // Add file marker BEFORE the content for proper splitting
+        index.push_str("// FILE: index.ts\n");
         
         index.push_str("// Generated index file for Angular services\n");
         index.push_str("// Do not modify this file manually\n\n");
@@ -444,8 +497,6 @@ impl AngularGenerator {
             let file_name = self.to_kebab_case(&format!("{}-api", tag));
             index.push_str(&format!("export * from \"./{}\";\n", file_name));
         }
-        
-        index.push_str("\n// FILE: index.ts\n");
         
         Ok(index)
     }

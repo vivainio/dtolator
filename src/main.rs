@@ -51,6 +51,10 @@ struct Cli {
     /// Pretty print the output
     #[arg(short, long)]
     pretty: bool,
+    
+    /// Enable debug output
+    #[arg(long)]
+    debug: bool,
 }
 
 fn main() -> Result<()> {
@@ -69,9 +73,9 @@ fn main() -> Result<()> {
             fs::create_dir_all(&output_dir)
                 .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
             
-            if cli.angular {
-                // Generate Angular services with multiple files
-                generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod)?;
+                if cli.angular {
+        // Generate Angular services with multiple files
+        generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod, cli.debug)?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
                 let pydantic_generator = PydanticGenerator::new();
@@ -184,8 +188,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, pretty: bool, with_zod: bool) -> Result<()> {
-    let angular_generator = AngularGenerator::new().with_zod_validation(with_zod);
+fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, pretty: bool, with_zod: bool, debug: bool) -> Result<()> {
+    let angular_generator = AngularGenerator::new().with_zod_validation(with_zod).with_debug(debug);
     let output = angular_generator.generate(schema)?;
     
     // Also generate DTOs and utility function
@@ -227,15 +231,34 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     // Parse and split the Angular generator output into individual service files
     let mut files_generated = vec![dto_path.display().to_string(), subs_path.display().to_string()];
     
+    if debug {
+        println!("🔍 [DEBUG] Raw Angular generator output:");
+        println!("--- START OUTPUT ---");
+        println!("{}", output);
+        println!("--- END OUTPUT ---");
+    }
+    
     // Split by the FILE markers and match content to files
     let mut current_content = String::new();
     let mut current_file = String::new();
     let mut in_file_section = false;
     
     for line in output.lines() {
+        if debug {
+            println!("🔍 [DEBUG] Processing line: {}", line);
+        }
+        
         if line.starts_with("// FILE: ") {
+            if debug {
+                println!("🔍 [DEBUG] Found FILE marker: {}", line);
+            }
+            
             // If we were collecting content for a previous file, write it now
             if !current_file.is_empty() && !current_content.is_empty() {
+                if debug {
+                    println!("🔍 [DEBUG] Writing previous file: {} ({} chars)", current_file, current_content.len());
+                }
+                
                 let service_path = output_dir.join(&current_file);
                 let final_content = if current_file.ends_with(".ts") {
                     format_typescript(&current_content)
@@ -253,12 +276,20 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
             current_file = line[9..].to_string(); // Remove "// FILE: "
             current_content.clear();
             in_file_section = true;
+            
+            if debug {
+                println!("🔍 [DEBUG] Started collecting for file: {}", current_file);
+            }
         } else if in_file_section {
             // If we haven't hit a FILE marker yet, this line belongs to the current file
             if !current_content.is_empty() {
                 current_content.push('\n');
             }
             current_content.push_str(line);
+            
+            if debug {
+                println!("🔍 [DEBUG] Added line to {}: {}", current_file, line);
+            }
         }
     }
     
