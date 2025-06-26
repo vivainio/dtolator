@@ -70,6 +70,13 @@ pub struct MediaType {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
+pub enum AdditionalProperties {
+    Boolean(bool),
+    Schema(Box<Schema>),
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
 pub enum Schema {
     Reference {
         #[serde(rename = "$ref")]
@@ -81,7 +88,7 @@ pub enum Schema {
         properties: Option<IndexMap<String, Schema>>,
         required: Option<Vec<String>>,
         #[serde(rename = "additionalProperties")]
-        additional_properties: Option<Box<Schema>>,
+        additional_properties: Option<AdditionalProperties>,
         items: Option<Box<Schema>>,
         #[serde(rename = "enum")]
         enum_values: Option<Vec<serde_json::Value>>,
