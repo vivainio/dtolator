@@ -18,6 +18,14 @@ import {
 export class AnalyticsApi {
   constructor(private http: HttpClient) {}
 
+  /**
+   * Get Sales Analytics
+   *
+   * @param queryParams - Query parameters object
+   * @param queryParams.startDate - optional parameter of type string
+   * @param queryParams.endDate - optional parameter of type string
+   * @returns Observable<SalesAnalytics> - Sales analytics data
+   */
   getSalesAnalytics(queryParams?: { startDate?: string, endDate?: string }): Observable<SalesAnalytics> {
     const url = subsToUrl("/analytics/sales", {}, queryParams || {});
     return this.http.get<SalesAnalytics>(url)
@@ -26,6 +34,11 @@ export class AnalyticsApi {
       );
   }
 
+  /**
+   * Get Product Analytics
+   *
+   * @returns Observable<ProductAnalytics> - Product analytics data
+   */
   getProductAnalytics(): Observable<ProductAnalytics> {
     const url = subsToUrl("/analytics/products", {}, {});
     return this.http.get<ProductAnalytics>(url)

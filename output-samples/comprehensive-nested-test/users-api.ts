@@ -19,6 +19,16 @@ import {
 export class UsersApi {
   constructor(private http: HttpClient) {}
 
+  /**
+   * Get All Users With Pagination
+   *
+   * Retrieve a paginated list of users
+   *
+   * @param queryParams - Query parameters object
+   * @param queryParams.page - optional parameter of type number
+   * @param queryParams.limit - optional parameter of type number
+   * @returns Observable<UserListResponse> - Successful response
+   */
   getAllUsersWithPagination(queryParams?: { page?: number, limit?: number }): Observable<UserListResponse> {
     const url = subsToUrl("/users", {}, queryParams || {});
     return this.http.get<UserListResponse>(url)
@@ -27,6 +37,14 @@ export class UsersApi {
       );
   }
 
+  /**
+   * Create New User Account
+   *
+   * Create a new user account
+   *
+   * @param dto - Request body of type CreateUserRequest
+   * @returns Observable<User> - User created successfully
+   */
   createNewUserAccount(dto: CreateUserRequest): Observable<User> {
     const url = subsToUrl("/users", {}, {});
     return this.http.post<User>(url, dto)
@@ -35,6 +53,12 @@ export class UsersApi {
       );
   }
 
+  /**
+   * Get User Profile By ID
+   *
+   * @param userId - Path parameter of type string
+   * @returns Observable<User> - User found
+   */
   getUserProfileByID(userId: string): Observable<User> {
     const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return this.http.get<User>(url)

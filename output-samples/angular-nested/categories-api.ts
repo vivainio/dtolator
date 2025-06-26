@@ -14,11 +14,22 @@ import {
 export class CategoriesApi {
   constructor(private http: HttpClient) {}
 
+  /**
+   * Get All Product Categories
+   *
+   * @returns Observable<Category[]> - Categories list
+   */
   getAllProductCategories(): Observable<Category[]> {
     const url = subsToUrl("/categories", {}, {});
     return this.http.get<Category[]>(url);
   }
 
+  /**
+   * Create New Category
+   *
+   * @param dto - Request body of type CreateCategoryRequest
+   * @returns Observable<Category> - Category created
+   */
   createNewCategory(dto: CreateCategoryRequest): Observable<Category> {
     const url = subsToUrl("/categories", {}, {});
     return this.http.post<Category>(url, dto);

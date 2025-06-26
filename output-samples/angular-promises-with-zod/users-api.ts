@@ -19,6 +19,13 @@ import {
 export class UsersApi {
   constructor(private http: HttpClient) {}
 
+  /**
+   * List All Users
+   *
+   * Retrieve a list of all users in the system
+   *
+   * @returns Promise<User[]> - Successful response
+   */
   listAllUsers(): Promise<User[]> {
     const url = subsToUrl("/users", {}, {});
     return lastValueFrom(this.http.get<User[]>(url)
@@ -27,6 +34,14 @@ export class UsersApi {
       ));
   }
 
+  /**
+   * Create New User
+   *
+   * Create a new user account
+   *
+   * @param dto - Request body of type CreateUserRequest
+   * @returns Promise<ApiResponse> - User created successfully
+   */
   createNewUser(dto: CreateUserRequest): Promise<ApiResponse> {
     const url = subsToUrl("/users", {}, {});
     return lastValueFrom(this.http.post<ApiResponse>(url, dto)
@@ -35,6 +50,14 @@ export class UsersApi {
       ));
   }
 
+  /**
+   * Get User By ID
+   *
+   * Retrieve a specific user by their ID
+   *
+   * @param userId - Path parameter of type number
+   * @returns Promise<User> - User found
+   */
   getUserByID(userId: number): Promise<User> {
     const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return lastValueFrom(this.http.get<User>(url)
@@ -43,6 +66,15 @@ export class UsersApi {
       ));
   }
 
+  /**
+   * Update User Profile
+   *
+   * Update an existing user's information
+   *
+   * @param userId - Path parameter of type number
+   * @param dto - Request body of type CreateUserRequest
+   * @returns Promise<ApiResponse> - User updated successfully
+   */
   updateUserProfile(userId: number, dto: CreateUserRequest): Promise<ApiResponse> {
     const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return lastValueFrom(this.http.put<ApiResponse>(url, dto)
@@ -51,6 +83,14 @@ export class UsersApi {
       ));
   }
 
+  /**
+   * Delete User Account
+   *
+   * Permanently delete a user account
+   *
+   * @param userId - Path parameter of type number
+   * @returns Promise<ApiResponse> - User deleted successfully
+   */
   deleteUserAccount(userId: number): Promise<ApiResponse> {
     const url = subsToUrl("/users/{userId}", { userId: userId }, {});
     return lastValueFrom(this.http.delete<ApiResponse>(url)
@@ -59,6 +99,14 @@ export class UsersApi {
       ));
   }
 
+  /**
+   * Activate User Account
+   *
+   * Activate a user's account status
+   *
+   * @param userId - Path parameter of type number
+   * @returns Promise<ApiResponse> - User activated successfully
+   */
   activateUserAccount(userId: number): Promise<ApiResponse> {
     const url = subsToUrl("/users/{userId}/activate", { userId: userId }, {});
     return lastValueFrom(this.http.post<ApiResponse>(url, null)
@@ -67,6 +115,14 @@ export class UsersApi {
       ));
   }
 
+  /**
+   * Deactivate User Account
+   *
+   * Deactivate a user's account status
+   *
+   * @param userId - Path parameter of type number
+   * @returns Promise<ApiResponse> - User deactivated successfully
+   */
   deactivateUserAccount(userId: number): Promise<ApiResponse> {
     const url = subsToUrl("/users/{userId}/deactivate", { userId: userId }, {});
     return lastValueFrom(this.http.post<ApiResponse>(url, null)

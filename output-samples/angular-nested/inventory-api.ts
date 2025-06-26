@@ -15,11 +15,25 @@ import {
 export class InventoryApi {
   constructor(private http: HttpClient) {}
 
+  /**
+   * Get Inventory Levels
+   *
+   * @param queryParams - Query parameters object
+   * @param queryParams.lowStock - optional parameter of type boolean
+   * @returns Observable<InventoryResponse> - Inventory levels
+   */
   getInventoryLevels(queryParams?: { lowStock?: boolean }): Observable<InventoryResponse> {
     const url = subsToUrl("/inventory", {}, queryParams || {});
     return this.http.get<InventoryResponse>(url);
   }
 
+  /**
+   * Update Product Inventory
+   *
+   * @param productId - Path parameter of type string
+   * @param dto - Request body of type UpdateInventoryRequest
+   * @returns Observable<Inventory> - Inventory updated
+   */
   updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
     const url = subsToUrl("/inventory/{productId}", { productId: productId }, {});
     return this.http.put<Inventory>(url, dto);

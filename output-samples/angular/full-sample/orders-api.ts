@@ -18,6 +18,12 @@ import {
 export class OrdersApi {
   constructor(private http: HttpClient) {}
 
+  /**
+   * Create New Order
+   *
+   * @param dto - Request body of type CreateOrderRequest
+   * @returns Observable<Order> - Order created
+   */
   createNewOrder(dto: CreateOrderRequest): Observable<Order> {
     const url = subsToUrl("/orders", {}, {});
     return this.http.post<Order>(url, dto)
@@ -26,6 +32,12 @@ export class OrdersApi {
       );
   }
 
+  /**
+   * Get Order By ID
+   *
+   * @param orderId - Path parameter of type string
+   * @returns Observable<Order> - Order found
+   */
   getOrderByID(orderId: string): Observable<Order> {
     const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
     return this.http.get<Order>(url)
@@ -34,6 +46,13 @@ export class OrdersApi {
       );
   }
 
+  /**
+   * Update Order Status
+   *
+   * @param orderId - Path parameter of type string
+   * @param dto - Request body of type UpdateOrderStatusRequest
+   * @returns Observable<Order> - Order status updated
+   */
   updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest): Observable<Order> {
     const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
     return this.http.patch<Order>(url, dto)

@@ -174,6 +174,10 @@ impl AngularGenerator {
         let return_type = self.get_return_type(operation)?;
         
         let mut method = String::new();
+        
+        // Generate TSDoc comment
+        method.push_str(&self.generate_tsdoc_comment(http_method, path, operation, &return_type)?);
+        
         // For void types or when promises flag is set, return Promise instead of Observable
         if return_type == "void" || self.promises {
             method.push_str(&format!("  {}({}): Promise<{}> {{\n", method_name, parameters, return_type));
@@ -634,6 +638,92 @@ impl AngularGenerator {
     
     fn to_kebab_case(&self, input: &str) -> String {
         input.replace("_", "-").to_lowercase()
+    }
+    
+    fn generate_tsdoc_comment(&self, http_method: &str, path: &str, operation: &Operation, return_type: &str) -> Result<String> {
+        let mut comment = String::new();
+        comment.push_str("  /**\n");
+        
+        // Add summary as the main description
+        if let Some(summary) = &operation.summary {
+            comment.push_str(&format!("   * {}\n", summary));
+        } else {
+            comment.push_str(&format!("   * {} {}\n", http_method.to_uppercase(), path));
+        }
+        
+        // Add detailed description if available
+        if let Some(description) = &operation.description {
+            comment.push_str("   *\n");
+            comment.push_str(&format!("   * {}\n", description));
+        }
+        
+        comment.push_str("   *\n");
+        
+        // Document path parameters
+        if let Some(parameters) = &operation.parameters {
+            let path_params: Vec<&Parameter> = parameters.iter()
+                .filter(|p| p.location == "path")
+                .collect();
+            
+            for param in path_params {
+                let param_name = self.to_camel_case(&param.name);
+                let param_type = self.get_parameter_type(param);
+                comment.push_str(&format!("   * @param {} - Path parameter of type {}\n", param_name, param_type));
+            }
+        }
+        
+        // Document query parameters
+        if let Some(parameters) = &operation.parameters {
+            let query_params: Vec<&Parameter> = parameters.iter()
+                .filter(|p| p.location == "query")
+                .collect();
+            
+            if !query_params.is_empty() {
+                comment.push_str("   * @param queryParams - Query parameters object\n");
+                for param in query_params {
+                    let required = if param.required.unwrap_or(false) { "required" } else { "optional" };
+                    let param_type = self.get_parameter_type(param);
+                    comment.push_str(&format!("   * @param queryParams.{} - {} parameter of type {}\n", param.name, required, param_type));
+                }
+            }
+        }
+        
+        // Document request body
+        if let Some(request_body) = &operation.request_body {
+            if let Some(content) = &request_body.content {
+                if let Some(media_type) = content.get("application/json") {
+                    if let Some(schema) = &media_type.schema {
+                        let type_name = self.get_schema_type_name(schema);
+                        let description = request_body.description.as_ref()
+                            .map(|d| format!(" - {}", d))
+                            .unwrap_or_default();
+                        comment.push_str(&format!("   * @param dto - Request body of type {}{}\n", type_name, description));
+                    }
+                }
+            }
+        }
+        
+        // Document return type
+        let return_wrapper = if return_type == "void" || self.promises {
+            "Promise"
+        } else {
+            "Observable"
+        };
+        
+        if let Some(responses) = &operation.responses {
+            if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
+                let response_desc = &success_response.description;
+                comment.push_str(&format!("   * @returns {}<{}> - {}\n", return_wrapper, return_type, response_desc));
+            } else {
+                comment.push_str(&format!("   * @returns {}<{}>\n", return_wrapper, return_type));
+            }
+        } else {
+            comment.push_str(&format!("   * @returns {}<{}>\n", return_wrapper, return_type));
+        }
+        
+        comment.push_str("   */\n");
+        
+        Ok(comment)
     }
 }
 
