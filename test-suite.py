@@ -193,7 +193,9 @@ class TestSuite:
             "Angular Simple Sample", 
             "Angular Nested Test",
             "Comprehensive Nested Test",
-            "Nested Test"
+            "Nested Test",
+            "Crash Angular with Zod",
+            "Crash Angular without Zod"
         }
         
         # Define all test cases based on the output-samples directory structure
@@ -264,6 +266,20 @@ class TestSuite:
                 input_file="full-sample.json",
                 command_args=["--python-dict"],
                 expected_dir="output-samples/python-typed-dict-full"
+            ),
+            
+            # Crash schema tests - Testing void validation fixes
+            TestCase(
+                name="Crash Angular with Zod",
+                input_file="crash-schema.json",
+                command_args=["--angular", "--zod"],
+                expected_dir="output-samples/crash-angular-with-zod"
+            ),
+            TestCase(
+                name="Crash Angular without Zod",
+                input_file="crash-schema.json",
+                command_args=["--angular"],
+                expected_dir="output-samples/crash-angular-no-zod"
             ),
         ]
     

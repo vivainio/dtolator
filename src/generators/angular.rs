@@ -139,10 +139,17 @@ impl AngularGenerator {
                 methods: Vec::new(),
                 response_types: std::collections::HashSet::new(),
                 request_types: std::collections::HashSet::new(),
+                has_void_methods: false,
             });
         }
         
         let service_data = services.get_mut(&tag).unwrap();
+        
+        // Check if this is a void method
+        let return_type = self.get_return_type(operation)?;
+        if return_type == "void" {
+            service_data.has_void_methods = true;
+        }
         
         // Generate method
         let method_code = self.generate_method(method, path, operation)?;
@@ -160,7 +167,12 @@ impl AngularGenerator {
         let return_type = self.get_return_type(operation)?;
         
         let mut method = String::new();
-        method.push_str(&format!("  {}({}): Observable<{}> {{\n", method_name, parameters, return_type));
+        // For void types, return Promise instead of Observable
+        if return_type == "void" {
+            method.push_str(&format!("  {}({}): Promise<{}> {{\n", method_name, parameters, return_type));
+        } else {
+            method.push_str(&format!("  {}({}): Observable<{}> {{\n", method_name, parameters, return_type));
+        }
         
         // Generate URL building
         let url_params = self.get_url_params(path, operation)?;
@@ -200,31 +212,41 @@ impl AngularGenerator {
         
         // Add Zod validation for response if enabled (but not for requests)
         if self.with_zod {
-            let response_schema_name = if return_type == "unknown[]" {
-                // For unknown arrays, we can't validate the schema, so just skip validation
-                format!("z.array(z.unknown())")
-            } else if return_type.ends_with("[]") {
-                // For typed arrays, create array schema
-                let base_type = &return_type[..return_type.len() - 2];
-                format!("z.array({}Schema)", base_type)
+            // Skip validation for void types - they shouldn't be validated
+            if return_type == "void" {
+                method.push_str(&format!("    return lastValueFrom({});\n", http_call));
             } else {
-                // For single types, use the standard schema
-                format!("{}Schema", return_type)
-            };
-            
-            method.push_str(&format!("    return {}\n", http_call));
-            method.push_str("      .pipe(\n");
-            
-            if return_type == "unknown[]" {
-                // For unknown arrays, just cast to the expected type without validation
-                method.push_str(&format!("        map(response => response as {})\n", return_type));
-            } else {
-                method.push_str(&format!("        map(response => {}.parse(response))\n", response_schema_name));
+                let response_schema_name = if return_type == "unknown[]" {
+                    // For unknown arrays, we can't validate the schema, so just skip validation
+                    format!("z.array(z.unknown())")
+                } else if return_type.ends_with("[]") {
+                    // For typed arrays, create array schema
+                    let base_type = &return_type[..return_type.len() - 2];
+                    format!("z.array({}Schema)", base_type)
+                } else {
+                    // For single types, use the standard schema
+                    format!("{}Schema", return_type)
+                };
+                
+                method.push_str(&format!("    return {}\n", http_call));
+                method.push_str("      .pipe(\n");
+                
+                if return_type == "unknown[]" {
+                    // For unknown arrays, just cast to the expected type without validation
+                    method.push_str(&format!("        map(response => response as {})\n", return_type));
+                } else {
+                    method.push_str(&format!("        map(response => {}.parse(response))\n", response_schema_name));
+                }
+                
+                method.push_str("      );\n");
             }
-            
-            method.push_str("      );\n");
         } else {
-            method.push_str(&format!("    return {};\n", http_call));
+            // For void types, convert Observable to Promise even without Zod
+            if return_type == "void" {
+                method.push_str(&format!("    return lastValueFrom({});\n", http_call));
+            } else {
+                method.push_str(&format!("    return {};\n", http_call));
+            }
         }
         
         method.push_str("  }\n");
@@ -431,6 +453,11 @@ impl AngularGenerator {
         service.push_str("import { Injectable } from \"@angular/core\";\n");
         service.push_str("import { Observable } from \"rxjs\";\n");
         
+        // Import lastValueFrom if there are void methods
+        if service_data.has_void_methods {
+            service.push_str("import { lastValueFrom } from \"rxjs\";\n");
+        }
+        
         if self.with_zod {
             service.push_str("import { map } from \"rxjs/operators\";\n");
             service.push_str("import { z } from \"zod\";\n");
@@ -589,4 +616,5 @@ struct ServiceData {
     methods: Vec<String>,
     response_types: std::collections::HashSet<String>,
     request_types: std::collections::HashSet<String>,
+    has_void_methods: bool,
 } 
