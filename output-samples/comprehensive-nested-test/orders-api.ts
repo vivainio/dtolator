@@ -8,40 +8,39 @@ import { map } from "rxjs/operators";
 import { z } from "zod";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  Product,
-  ProductSchema,
-  ProductCategory,
-  ProductListResponse,
-  ProductListResponseSchema,
-  UpdateProductRequest,
+  CreateOrderRequest,
+  Order,
+  OrderSchema,
+  UpdateOrderStatusRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
-export class ProductsApi {
+export class OrdersApi {
   constructor(private http: HttpClient) {}
 
-  searchProductsWithFilters(queryParams?: { category?: ProductCategory, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
-    const url = subsToUrl("/products", {}, queryParams || {});
-    return this.http.get<ProductListResponse>(url)
+  createNewOrder(dto: CreateOrderRequest): Observable<Order> {
+    const url = subsToUrl("/orders", {}, {});
+    return this.http.post<Order>(url, dto)
       .pipe(
-        map(response => ProductListResponseSchema.parse(response))
+        map(response => OrderSchema.parse(response))
       );
   }
 
-  getProductByID(productId: string): Observable<Product> {
-    const url = subsToUrl("/products/{productId}", { productId: productId }, {});
-    return this.http.get<Product>(url)
+  getOrderByID(orderId: string): Observable<Order> {
+    const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
+    return this.http.get<Order>(url)
       .pipe(
-        map(response => ProductSchema.parse(response))
+        map(response => OrderSchema.parse(response))
       );
   }
 
-  updateProduct(productId: string, dto: UpdateProductRequest): Observable<Product> {
-    const url = subsToUrl("/products/{productId}", { productId: productId }, {});
-    return this.http.put<Product>(url, dto)
+  updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest): Observable<Order> {
+    const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
+    return this.http.patch<Order>(url, dto)
       .pipe(
-        map(response => ProductSchema.parse(response))
+        map(response => OrderSchema.parse(response))
       );
   }
 
 }
+

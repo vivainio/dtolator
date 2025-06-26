@@ -6,28 +6,30 @@ import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  CreateUserRequest,
-  User,
-  UserListResponse,
+  Product,
+  ProductCategory,
+  ProductListResponse,
+  UpdateProductRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
-export class UsersApi {
+export class ProductsApi {
   constructor(private http: HttpClient) {}
 
-  getAllUsersWithPagination(queryParams?: { page?: number, limit?: number }): Observable<UserListResponse> {
-    const url = subsToUrl("/users", {}, queryParams || {});
-    return this.http.get<UserListResponse>(url);
+  searchProductsWithFilters(queryParams?: { category?: ProductCategory, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
+    const url = subsToUrl("/products", {}, queryParams || {});
+    return this.http.get<ProductListResponse>(url);
   }
 
-  createNewUserAccount(dto: CreateUserRequest): Observable<User> {
-    const url = subsToUrl("/users", {}, {});
-    return this.http.post<User>(url, dto);
+  getProductByID(productId: string): Observable<Product> {
+    const url = subsToUrl("/products/{productId}", { productId: productId }, {});
+    return this.http.get<Product>(url);
   }
 
-  getUserProfileByID(userId: string): Observable<User> {
-    const url = subsToUrl("/users/{userId}", { userId: userId }, {});
-    return this.http.get<User>(url);
+  updateProduct(productId: string, dto: UpdateProductRequest): Observable<Product> {
+    const url = subsToUrl("/products/{productId}", { productId: productId }, {});
+    return this.http.put<Product>(url, dto);
   }
 
 }
+

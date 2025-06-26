@@ -6,28 +6,24 @@ import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  CreateOrderRequest,
-  Order,
-  UpdateOrderStatusRequest,
+  Inventory,
+  InventoryResponse,
+  UpdateInventoryRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
-export class OrdersApi {
+export class InventoryApi {
   constructor(private http: HttpClient) {}
 
-  createNewOrder(dto: CreateOrderRequest): Observable<Order> {
-    const url = subsToUrl("/orders", {}, {});
-    return this.http.post<Order>(url, dto);
+  getInventoryLevels(queryParams?: { lowStock?: boolean }): Observable<InventoryResponse> {
+    const url = subsToUrl("/inventory", {}, queryParams || {});
+    return this.http.get<InventoryResponse>(url);
   }
 
-  getOrderByID(orderId: string): Observable<Order> {
-    const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
-    return this.http.get<Order>(url);
-  }
-
-  updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest): Observable<Order> {
-    const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
-    return this.http.patch<Order>(url, dto);
+  updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
+    const url = subsToUrl("/inventory/{productId}", { productId: productId }, {});
+    return this.http.put<Inventory>(url, dto);
   }
 
 }
+

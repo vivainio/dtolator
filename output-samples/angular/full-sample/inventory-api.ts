@@ -8,38 +8,32 @@ import { map } from "rxjs/operators";
 import { z } from "zod";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  CreateOrderRequest,
-  Order,
-  OrderSchema,
-  UpdateOrderStatusRequest,
+  Inventory,
+  InventorySchema,
+  InventoryResponse,
+  InventoryResponseSchema,
+  UpdateInventoryRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
-export class OrdersApi {
+export class InventoryApi {
   constructor(private http: HttpClient) {}
 
-  createNewOrder(dto: CreateOrderRequest): Observable<Order> {
-    const url = subsToUrl("/orders", {}, {});
-    return this.http.post<Order>(url, dto)
+  getInventoryLevels(queryParams?: { lowStock?: boolean }): Observable<InventoryResponse> {
+    const url = subsToUrl("/inventory", {}, queryParams || {});
+    return this.http.get<InventoryResponse>(url)
       .pipe(
-        map(response => OrderSchema.parse(response))
+        map(response => InventoryResponseSchema.parse(response))
       );
   }
 
-  getOrderByID(orderId: string): Observable<Order> {
-    const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
-    return this.http.get<Order>(url)
+  updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
+    const url = subsToUrl("/inventory/{productId}", { productId: productId }, {});
+    return this.http.put<Inventory>(url, dto)
       .pipe(
-        map(response => OrderSchema.parse(response))
-      );
-  }
-
-  updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest): Observable<Order> {
-    const url = subsToUrl("/orders/{orderId}", { orderId: orderId }, {});
-    return this.http.patch<Order>(url, dto)
-      .pipe(
-        map(response => OrderSchema.parse(response))
+        map(response => InventorySchema.parse(response))
       );
   }
 
 }
+

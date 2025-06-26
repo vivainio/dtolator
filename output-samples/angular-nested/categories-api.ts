@@ -6,23 +6,23 @@ import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  Inventory,
-  InventoryResponse,
-  UpdateInventoryRequest,
+  Category,
+  CreateCategoryRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
-export class InventoryApi {
+export class CategoriesApi {
   constructor(private http: HttpClient) {}
 
-  getInventoryLevels(queryParams?: { lowStock?: boolean }): Observable<InventoryResponse> {
-    const url = subsToUrl("/inventory", {}, queryParams || {});
-    return this.http.get<InventoryResponse>(url);
+  getAllProductCategories(): Observable<Category[]> {
+    const url = subsToUrl("/categories", {}, {});
+    return this.http.get<Category[]>(url);
   }
 
-  updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
-    const url = subsToUrl("/inventory/{productId}", { productId: productId }, {});
-    return this.http.put<Inventory>(url, dto);
+  createNewCategory(dto: CreateCategoryRequest): Observable<Category> {
+    const url = subsToUrl("/categories", {}, {});
+    return this.http.post<Category>(url, dto);
   }
 
 }
+

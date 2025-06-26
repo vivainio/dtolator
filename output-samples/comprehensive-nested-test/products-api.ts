@@ -8,39 +8,41 @@ import { map } from "rxjs/operators";
 import { z } from "zod";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  CreateUserRequest,
-  User,
-  UserSchema,
-  UserListResponse,
-  UserListResponseSchema,
+  Product,
+  ProductSchema,
+  ProductCategory,
+  ProductListResponse,
+  ProductListResponseSchema,
+  UpdateProductRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
-export class UsersApi {
+export class ProductsApi {
   constructor(private http: HttpClient) {}
 
-  getAllUsersWithPagination(queryParams?: { page?: number, limit?: number }): Observable<UserListResponse> {
-    const url = subsToUrl("/users", {}, queryParams || {});
-    return this.http.get<UserListResponse>(url)
+  searchProductsWithFilters(queryParams?: { category?: ProductCategory, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
+    const url = subsToUrl("/products", {}, queryParams || {});
+    return this.http.get<ProductListResponse>(url)
       .pipe(
-        map(response => UserListResponseSchema.parse(response))
+        map(response => ProductListResponseSchema.parse(response))
       );
   }
 
-  createNewUserAccount(dto: CreateUserRequest): Observable<User> {
-    const url = subsToUrl("/users", {}, {});
-    return this.http.post<User>(url, dto)
+  getProductByID(productId: string): Observable<Product> {
+    const url = subsToUrl("/products/{productId}", { productId: productId }, {});
+    return this.http.get<Product>(url)
       .pipe(
-        map(response => UserSchema.parse(response))
+        map(response => ProductSchema.parse(response))
       );
   }
 
-  getUserProfileByID(userId: string): Observable<User> {
-    const url = subsToUrl("/users/{userId}", { userId: userId }, {});
-    return this.http.get<User>(url)
+  updateProduct(productId: string, dto: UpdateProductRequest): Observable<Product> {
+    const url = subsToUrl("/products/{productId}", { productId: productId }, {});
+    return this.http.put<Product>(url, dto)
       .pipe(
-        map(response => UserSchema.parse(response))
+        map(response => ProductSchema.parse(response))
       );
   }
 
 }
+

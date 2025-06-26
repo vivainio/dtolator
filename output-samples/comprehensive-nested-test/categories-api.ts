@@ -8,31 +8,30 @@ import { map } from "rxjs/operators";
 import { z } from "zod";
 import { subsToUrl } from "./subs-to-url.func";
 import {
-  Inventory,
-  InventorySchema,
-  InventoryResponse,
-  InventoryResponseSchema,
-  UpdateInventoryRequest,
+  Category,
+  CategorySchema,
+  CreateCategoryRequest,
 } from "./dto";
 
 @Injectable({ providedIn: "root" })
-export class InventoryApi {
+export class CategoriesApi {
   constructor(private http: HttpClient) {}
 
-  getInventoryLevels(queryParams?: { lowStock?: boolean }): Observable<InventoryResponse> {
-    const url = subsToUrl("/inventory", {}, queryParams || {});
-    return this.http.get<InventoryResponse>(url)
+  getAllProductCategories(): Observable<Category[]> {
+    const url = subsToUrl("/categories", {}, {});
+    return this.http.get<Category[]>(url)
       .pipe(
-        map(response => InventoryResponseSchema.parse(response))
+        map(response => z.array(CategorySchema).parse(response))
       );
   }
 
-  updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
-    const url = subsToUrl("/inventory/{productId}", { productId: productId }, {});
-    return this.http.put<Inventory>(url, dto)
+  createNewCategory(dto: CreateCategoryRequest): Observable<Category> {
+    const url = subsToUrl("/categories", {}, {});
+    return this.http.post<Category>(url, dto)
       .pipe(
-        map(response => InventorySchema.parse(response))
+        map(response => CategorySchema.parse(response))
       );
   }
 
 }
+
