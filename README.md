@@ -74,6 +74,16 @@ Generate Angular API services with Zod validation to directory:
 dtolator -i schema.json -o ./output --angular --zod
 ```
 
+Generate Angular API services using Promises to directory:
+```bash
+dtolator -i schema.json -o ./output --angular --promises
+```
+
+Generate Angular API services with Promises and Zod validation to directory:
+```bash
+dtolator -i schema.json -o ./output --angular --promises --zod
+```
+
 Generate Pydantic models to stdout:
 ```bash
 dtolator -i schema.json --pydantic
@@ -117,6 +127,7 @@ Options:
   -t, --typescript         Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
   -z, --zod                Generate Zod schemas (creates schema.ts and makes dto.ts import from it)
   -a, --angular            Generate Angular API services (creates multiple service files and utilities)
+      --promises           Generate promises using lastValueFrom instead of Observables (only works with --angular)
       --pydantic           Generate Pydantic BaseModel classes for Python
       --python-dict        Generate Python TypedDict definitions
       --dotnet             Generate C# classes with System.Text.Json serialization
@@ -124,6 +135,328 @@ Options:
   -p, --pretty             Pretty print the output
   -h, --help               Print help
   -V, --version            Print version
+```
+
+## Angular Integration
+
+dtolator provides first-class support for Angular applications by generating type-safe API services directly from your OpenAPI specifications. This eliminates the need to manually write API service code and ensures your frontend stays in sync with your backend API.
+
+### Quick Start
+
+Generate Angular services from your OpenAPI schema:
+
+```bash
+# Basic Angular services (returns Observables)
+dtolator -i your-api-spec.json -o ./src/app/api --angular
+
+# Angular services with Zod validation
+dtolator -i your-api-spec.json -o ./src/app/api --angular --zod
+
+# Angular services returning Promises
+dtolator -i your-api-spec.json -o ./src/app/api --angular --promises
+
+# Angular services with Promises and Zod validation
+dtolator -i your-api-spec.json -o ./src/app/api --angular --promises --zod
+```
+
+### What Gets Generated
+
+When you run dtolator with the `--angular` flag, it generates a complete Angular API client including:
+
+- **TypeScript interfaces** (`dto.ts`) - All your API data types
+- **Zod schemas** (`schema.ts`) - Runtime validation schemas (when using `--zod`)
+- **Service files** (`*-api.ts`) - Injectable Angular services for each API tag
+- **Utility functions** (`subs-to-url.func.ts`) - URL building helpers
+- **Barrel exports** (`index.ts`) - Clean imports for your application
+
+### Observable vs Promise APIs
+
+dtolator supports both Observable-based and Promise-based APIs:
+
+#### Observable-based Services (Default)
+
+```typescript
+// Generated service (default behavior)
+@Injectable({ providedIn: "root" })
+export class UsersApi {
+  constructor(private http: HttpClient) {}
+
+  listAllUsers(): Observable<User[]> {
+    const url = subsToUrl("/users", {}, {});
+    return this.http.get<User[]>(url);
+  }
+
+  createUser(dto: CreateUserRequest): Observable<ApiResponse> {
+    const url = subsToUrl("/users", {}, {});
+    return this.http.post<ApiResponse>(url, dto);
+  }
+}
+```
+
+#### Promise-based Services (with `--promises`)
+
+```typescript
+// Generated service with --promises flag
+@Injectable({ providedIn: "root" })
+export class UsersApi {
+  constructor(private http: HttpClient) {}
+
+  listAllUsers(): Promise<User[]> {
+    const url = subsToUrl("/users", {}, {});
+    return lastValueFrom(this.http.get<User[]>(url));
+  }
+
+  createUser(dto: CreateUserRequest): Promise<ApiResponse> {
+    const url = subsToUrl("/users", {}, {});
+    return lastValueFrom(this.http.post<ApiResponse>(url, dto));
+  }
+}
+```
+
+### Zod Validation Integration
+
+When using the `--zod` flag, all API responses are automatically validated at runtime:
+
+#### With Observables + Zod
+
+```typescript
+@Injectable({ providedIn: "root" })
+export class UsersApi {
+  constructor(private http: HttpClient) {}
+
+  listAllUsers(): Observable<User[]> {
+    const url = subsToUrl("/users", {}, {});
+    return this.http.get<User[]>(url)
+      .pipe(
+        map(response => z.array(UserSchema).parse(response))
+      );
+  }
+}
+```
+
+#### With Promises + Zod
+
+```typescript
+@Injectable({ providedIn: "root" })
+export class UsersApi {
+  constructor(private http: HttpClient) {}
+
+  listAllUsers(): Promise<User[]> {
+    const url = subsToUrl("/users", {}, {});
+    return lastValueFrom(this.http.get<User[]>(url)
+      .pipe(
+        map(response => z.array(UserSchema).parse(response))
+      ));
+  }
+}
+```
+
+### Using Generated Services in Components
+
+#### Observable Pattern
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { Observable } from 'rxjs';
+import { UsersApi, User } from './api';
+
+@Component({
+  selector: 'app-users',
+  template: `
+    <div *ngFor="let user of users$ | async">
+      {{ user.name }} - {{ user.email }}
+    </div>
+  `
+})
+export class UsersComponent implements OnInit {
+  users$!: Observable<User[]>;
+
+  constructor(private usersApi: UsersApi) {}
+
+  ngOnInit() {
+    this.users$ = this.usersApi.listAllUsers();
+  }
+
+  async createUser(userData: CreateUserRequest) {
+    // Even with Observable services, you can use lastValueFrom for one-off operations
+    this.usersApi.createUser(userData).subscribe({
+      next: (response) => console.log('User created:', response),
+      error: (error) => console.error('Error:', error)
+    });
+  }
+}
+```
+
+#### Promise Pattern
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { UsersApi, User, CreateUserRequest } from './api';
+
+@Component({
+  selector: 'app-users',
+  template: `
+    <div *ngFor="let user of users">
+      {{ user.name }} - {{ user.email }}
+    </div>
+  `
+})
+export class UsersComponent implements OnInit {
+  users: User[] = [];
+
+  constructor(private usersApi: UsersApi) {}
+
+  async ngOnInit() {
+    try {
+      this.users = await this.usersApi.listAllUsers();
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  }
+
+  async createUser(userData: CreateUserRequest) {
+    try {
+      const response = await this.usersApi.createUser(userData);
+      console.log('User created:', response);
+      // Refresh the list
+      this.users = await this.usersApi.listAllUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+    }
+  }
+}
+```
+
+### Required Dependencies
+
+Add these dependencies to your Angular project:
+
+```json
+{
+  "dependencies": {
+    "@angular/common": "^17.0.0",
+    "@angular/core": "^17.0.0",
+    "rxjs": "^7.8.0"
+  }
+}
+```
+
+If using Zod validation (recommended):
+
+```json
+{
+  "dependencies": {
+    "zod": "^3.22.0"
+  }
+}
+```
+
+### Advanced Features
+
+#### Error Handling with Zod
+
+When Zod validation is enabled, you get automatic runtime type checking:
+
+```typescript
+// This will throw a ZodError if the API returns unexpected data
+try {
+  const users = await this.usersApi.listAllUsers();
+  // users is guaranteed to match User[] schema
+} catch (error) {
+  if (error instanceof ZodError) {
+    console.error('API returned invalid data:', error.errors);
+  } else {
+    console.error('Network or other error:', error);
+  }
+}
+```
+
+#### Path Parameters and Query Parameters
+
+dtolator automatically handles path and query parameters:
+
+```typescript
+// Generated method with path and query parameters
+async getUsersByStatus(
+  status: string,
+  queryParams?: { page?: number; limit?: number }
+): Promise<User[]> {
+  const url = subsToUrl("/users/status/{status}", { status }, queryParams || {});
+  return lastValueFrom(this.http.get<User[]>(url));
+}
+
+// Usage
+const activeUsers = await this.usersApi.getUsersByStatus('active', { 
+  page: 1, 
+  limit: 10 
+});
+```
+
+#### Request Body Handling
+
+For POST/PUT requests with request bodies:
+
+```typescript
+// Generated method with request body
+async updateUser(userId: number, dto: UpdateUserRequest): Promise<User> {
+  const url = subsToUrl("/users/{userId}", { userId }, {});
+  return lastValueFrom(this.http.put<User>(url, dto));
+}
+
+// Usage
+const updatedUser = await this.usersApi.updateUser(123, {
+  name: "John Doe",
+  email: "john@example.com"
+});
+```
+
+### Best Practices
+
+1. **Choose Observable or Promise based on your needs:**
+   - Use **Observables** for reactive programming, data streams, and when you need operators like `map`, `filter`, `debounce`
+   - Use **Promises** for simple async operations, better async/await support, and when working with non-reactive code
+
+2. **Enable Zod validation for production apps:**
+   ```bash
+   dtolator -i api-spec.json -o ./src/app/api --angular --promises --zod
+   ```
+
+3. **Import only what you need:**
+   ```typescript
+   // Good: Import specific services and types
+   import { UsersApi, User, CreateUserRequest } from './api';
+   
+   // Avoid: Importing everything
+   import * as API from './api';
+   ```
+
+4. **Handle errors appropriately:**
+   ```typescript
+   try {
+     const result = await this.usersApi.createUser(userData);
+   } catch (error) {
+     // Handle both network errors and validation errors
+     this.handleApiError(error);
+   }
+   ```
+
+### Integration with Angular HTTP Interceptors
+
+The generated services work seamlessly with Angular HTTP interceptors for authentication, logging, etc.:
+
+```typescript
+@Injectable()
+export class AuthInterceptor implements HttpInterceptor {
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    const authReq = req.clone({
+      headers: req.headers.set('Authorization', `Bearer ${this.getToken()}`)
+    });
+    return next.handle(authReq);
+  }
+}
+
+// Your generated services automatically benefit from this interceptor
+const users = await this.usersApi.listAllUsers(); // Includes auth header
 ```
 
 ## Examples
