@@ -61,8 +61,62 @@ struct Cli {
     debug: bool,
 }
 
+impl Cli {
+    fn build_command_string(&self) -> String {
+        let mut parts = vec!["dtolator".to_string()];
+        
+        parts.push(format!("--input {}", self.input.display()));
+        
+        // Skip output directory in command string as it's usually a temp directory
+        // and makes tests non-deterministic
+        
+        if self.typescript {
+            parts.push("--typescript".to_string());
+        }
+        
+        if self.zod {
+            parts.push("--zod".to_string());
+        }
+        
+        if self.angular {
+            parts.push("--angular".to_string());
+        }
+        
+        if self.pydantic {
+            parts.push("--pydantic".to_string());
+        }
+        
+        if self.python_dict {
+            parts.push("--python-dict".to_string());
+        }
+        
+        if self.dotnet {
+            parts.push("--dotnet".to_string());
+        }
+        
+        if self.endpoints {
+            parts.push("--endpoints".to_string());
+        }
+        
+        if self.promises {
+            parts.push("--promises".to_string());
+        }
+        
+        if self.pretty {
+            parts.push("--pretty".to_string());
+        }
+        
+        if self.debug {
+            parts.push("--debug".to_string());
+        }
+        
+        parts.join(" ")
+    }
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let command_string = cli.build_command_string();
     
     // Read and parse the OpenAPI schema
     let input_content = std::fs::read_to_string(&cli.input)
@@ -79,11 +133,11 @@ fn main() -> Result<()> {
             
                 if cli.angular {
         // Generate Angular services with multiple files
-        generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod, cli.debug, cli.promises)?;
+        generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod, cli.debug, cli.promises, &command_string)?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
                 let pydantic_generator = PydanticGenerator::new();
-                let pydantic_output = pydantic_generator.generate(&schema)?;
+                let pydantic_output = pydantic_generator.generate_with_command(&schema, &command_string)?;
                 let pydantic_final = if cli.pretty { format_output(&pydantic_output) } else { pydantic_output };
                 
                 let models_path = output_dir.join("models.py");
@@ -95,7 +149,7 @@ fn main() -> Result<()> {
             } else if cli.python_dict {
                 // Generate Python TypedDict definitions to a Python file
                 let python_dict_generator = PythonDictGenerator::new();
-                let python_dict_output = python_dict_generator.generate(&schema)?;
+                let python_dict_output = python_dict_generator.generate_with_command(&schema, &command_string)?;
                 let python_dict_final = if cli.pretty { format_output(&python_dict_output) } else { python_dict_output };
                 
                 let typed_dicts_path = output_dir.join("typed_dicts.py");
@@ -107,7 +161,7 @@ fn main() -> Result<()> {
             } else if cli.dotnet {
                 // Generate C# classes to a C# file
                 let dotnet_generator = DotNetGenerator::new();
-                let dotnet_output = dotnet_generator.generate(&schema)?;
+                let dotnet_output = dotnet_generator.generate_with_command(&schema, &command_string)?;
                 let dotnet_final = if cli.pretty { format_output(&dotnet_output) } else { dotnet_output };
                 
                 let models_path = output_dir.join("Models.cs");
@@ -121,7 +175,7 @@ fn main() -> Result<()> {
                 
                 // Generate Zod schemas first
                 let zod_generator = ZodGenerator::new();
-                let zod_output = zod_generator.generate(&schema)?;
+                let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
                 let zod_final = if cli.pretty { format_output(&zod_output) } else { zod_output };
                 
                 let schema_path = output_dir.join("schema.ts");
@@ -129,7 +183,7 @@ fn main() -> Result<()> {
                     .with_context(|| format!("Failed to write schema.ts file: {}", schema_path.display()))?;
                 
                 // Generate TypeScript interfaces that import from schema.ts
-                let ts_output = generate_typescript_with_imports(&schema)?;
+                let ts_output = generate_typescript_with_imports(&schema, &command_string)?;
                 let ts_final = format_typescript(&ts_output);
                 
                 let dto_path = output_dir.join("dto.ts");
@@ -142,7 +196,7 @@ fn main() -> Result<()> {
             } else {
                 // Generate only dto.ts with TypeScript interfaces
                 let ts_generator = TypeScriptGenerator::new();
-                let ts_output = ts_generator.generate(&schema)?;
+                let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
                 let ts_final = format_typescript(&ts_output);
                 
                 let dto_path = output_dir.join("dto.ts");
@@ -157,25 +211,25 @@ fn main() -> Result<()> {
             // No output directory - use original single-output behavior with stdout
             let output = if cli.endpoints {
                 let generator = EndpointsGenerator::new();
-                generator.generate(&schema)?
+                generator.generate_with_command(&schema, &command_string)?
             } else if cli.typescript {
                 let generator = TypeScriptGenerator::new();
-                generator.generate(&schema)?
+                generator.generate_with_command(&schema, &command_string)?
             } else if cli.angular {
                 let generator = AngularGenerator::new().with_promises(cli.promises);
-                generator.generate(&schema)?
+                generator.generate_with_command(&schema, &command_string)?
             } else if cli.pydantic {
                 let generator = PydanticGenerator::new();
-                generator.generate(&schema)?
+                generator.generate_with_command(&schema, &command_string)?
             } else if cli.python_dict {
                 let generator = PythonDictGenerator::new();
-                generator.generate(&schema)?
+                generator.generate_with_command(&schema, &command_string)?
             } else if cli.dotnet {
                 let generator = DotNetGenerator::new();
-                generator.generate(&schema)?
+                generator.generate_with_command(&schema, &command_string)?
             } else {
                 let generator = ZodGenerator::new();
-                generator.generate(&schema)?
+                generator.generate_with_command(&schema, &command_string)?
             };
             
             // Format output if pretty printing is requested
@@ -192,9 +246,9 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, pretty: bool, with_zod: bool, debug: bool, promises: bool) -> Result<()> {
+fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, pretty: bool, with_zod: bool, debug: bool, promises: bool, command_string: &str) -> Result<()> {
     let angular_generator = AngularGenerator::new().with_zod_validation(with_zod).with_debug(debug).with_promises(promises);
-    let output = angular_generator.generate(schema)?;
+    let output = angular_generator.generate_with_command(schema, command_string)?;
     
     // Also generate DTOs and utility function
     let dto_path = output_dir.join("dto.ts");
@@ -202,7 +256,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     if with_zod {
         // Generate Zod schemas first
         let zod_generator = ZodGenerator::new();
-        let zod_output = zod_generator.generate(schema)?;
+        let zod_output = zod_generator.generate_with_command(schema, command_string)?;
         let zod_final = if pretty { format_output(&zod_output) } else { zod_output };
         
         let schema_path = output_dir.join("schema.ts");
@@ -210,7 +264,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
             .with_context(|| format!("Failed to write schema.ts file: {}", schema_path.display()))?;
         
         // Generate TypeScript interfaces that re-export from schema.ts
-        let ts_output = generate_typescript_with_imports(schema)?;
+        let ts_output = generate_typescript_with_imports(schema, command_string)?;
         let ts_final = format_typescript(&ts_output);
         
         fs::write(&dto_path, ts_final)
@@ -218,7 +272,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     } else {
         // Generate only TypeScript interfaces
         let ts_generator = TypeScriptGenerator::new();
-        let dto_output = ts_generator.generate(schema)?;
+        let dto_output = ts_generator.generate_with_command(schema, command_string)?;
         let dto_final = format_typescript(&dto_output);
         
         fs::write(&dto_path, dto_final)
@@ -226,7 +280,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     }
     
     // Generate subs-to-url utility function
-    let subs_to_url_content = generate_subs_to_url_func();
+    let subs_to_url_content = generate_subs_to_url_func(command_string);
     let subs_to_url_formatted = format_typescript(&subs_to_url_content);
     let subs_path = output_dir.join("subs-to-url.func.ts");
     fs::write(&subs_path, subs_to_url_formatted)
@@ -411,12 +465,12 @@ fn extract_type_name(schema: &openapi::Schema) -> Option<String> {
     }
 }
 
-fn generate_typescript_with_imports(schema: &OpenApiSchema) -> Result<String> {
+fn generate_typescript_with_imports(schema: &OpenApiSchema, command_string: &str) -> Result<String> {
     let mut output = String::new();
     
     // Add header comment
-    output.push_str("// Generated TypeScript interfaces from OpenAPI schema\n");
-    output.push_str("// Do not modify this file manually\n\n");
+    output.push_str(&format!("// Generated by {}\n", command_string));
+    output.push_str("// Do not modify manually\n\n");
     
     if let Some(components) = &schema.components {
         if let Some(schemas) = &components.schemas {
@@ -453,7 +507,7 @@ fn generate_typescript_with_imports(schema: &OpenApiSchema) -> Result<String> {
                 // Generate TypeScript interfaces for request types (direct interfaces, not z.infer)
                 if !request_types.is_empty() {
                     let ts_generator = TypeScriptGenerator::new();
-                    let ts_output = ts_generator.generate(schema)?;
+                    let ts_output = ts_generator.generate_with_command(schema, command_string)?;
                     
                     // Extract only request type interfaces from the TypeScript output
                     let ts_lines: Vec<&str> = ts_output.lines().collect();
@@ -523,9 +577,9 @@ fn generate_typescript_with_imports(schema: &OpenApiSchema) -> Result<String> {
     Ok(output)
 }
 
-fn generate_subs_to_url_func() -> String {
-    r#"// Generated utility function for URL building
-// Do not modify this file manually
+fn generate_subs_to_url_func(command_string: &str) -> String {
+    let template = r#"// Generated by COMMAND_PLACEHOLDER
+// Do not modify manually
 
 export function subsToUrl(
   url: string,
@@ -568,7 +622,8 @@ export function subsToUrl(
 
   return injectedApiConfig + url;
 }
-"#.to_string()
+"#;
+    template.replace("COMMAND_PLACEHOLDER", command_string)
 }
 
 fn format_output(output: &str) -> String {
