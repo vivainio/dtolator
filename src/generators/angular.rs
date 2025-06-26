@@ -7,6 +7,7 @@ pub struct AngularGenerator {
     base_url: String,
     with_zod: bool,
     debug: bool,
+    promises: bool,
 }
 
 impl AngularGenerator {
@@ -15,6 +16,7 @@ impl AngularGenerator {
             base_url: "environment.apiUrl".to_string(),
             with_zod: false,
             debug: false,
+            promises: false,
         }
     }
     
@@ -30,6 +32,11 @@ impl AngularGenerator {
     
     pub fn with_debug(mut self, debug: bool) -> Self {
         self.debug = debug;
+        self
+    }
+    
+    pub fn with_promises(mut self, promises: bool) -> Self {
+        self.promises = promises;
         self
     }
 }
@@ -167,8 +174,8 @@ impl AngularGenerator {
         let return_type = self.get_return_type(operation)?;
         
         let mut method = String::new();
-        // For void types, return Promise instead of Observable
-        if return_type == "void" {
+        // For void types or when promises flag is set, return Promise instead of Observable
+        if return_type == "void" || self.promises {
             method.push_str(&format!("  {}({}): Promise<{}> {{\n", method_name, parameters, return_type));
         } else {
             method.push_str(&format!("  {}({}): Observable<{}> {{\n", method_name, parameters, return_type));
@@ -228,21 +235,37 @@ impl AngularGenerator {
                     format!("{}Schema", return_type)
                 };
                 
-                method.push_str(&format!("    return {}\n", http_call));
-                method.push_str("      .pipe(\n");
-                
-                if return_type == "unknown[]" {
-                    // For unknown arrays, just cast to the expected type without validation
-                    method.push_str(&format!("        map(response => response as {})\n", return_type));
+                if self.promises {
+                    // When promises flag is set, wrap the observable with lastValueFrom
+                    method.push_str(&format!("    return lastValueFrom({}\n", http_call));
+                    method.push_str("      .pipe(\n");
+                    
+                    if return_type == "unknown[]" {
+                        // For unknown arrays, just cast to the expected type without validation
+                        method.push_str(&format!("        map(response => response as {})\n", return_type));
+                    } else {
+                        method.push_str(&format!("        map(response => {}.parse(response))\n", response_schema_name));
+                    }
+                    
+                    method.push_str("      ));\n");
                 } else {
-                    method.push_str(&format!("        map(response => {}.parse(response))\n", response_schema_name));
+                    // Original observable behavior
+                    method.push_str(&format!("    return {}\n", http_call));
+                    method.push_str("      .pipe(\n");
+                    
+                    if return_type == "unknown[]" {
+                        // For unknown arrays, just cast to the expected type without validation
+                        method.push_str(&format!("        map(response => response as {})\n", return_type));
+                    } else {
+                        method.push_str(&format!("        map(response => {}.parse(response))\n", response_schema_name));
+                    }
+                    
+                    method.push_str("      );\n");
                 }
-                
-                method.push_str("      );\n");
             }
         } else {
-            // For void types, convert Observable to Promise even without Zod
-            if return_type == "void" {
+            // For void types or when promises flag is set, convert Observable to Promise
+            if return_type == "void" || self.promises {
                 method.push_str(&format!("    return lastValueFrom({});\n", http_call));
             } else {
                 method.push_str(&format!("    return {};\n", http_call));
@@ -451,10 +474,14 @@ impl AngularGenerator {
         // Imports
         service.push_str("import { HttpClient } from \"@angular/common/http\";\n");
         service.push_str("import { Injectable } from \"@angular/core\";\n");
-        service.push_str("import { Observable } from \"rxjs\";\n");
         
-        // Import lastValueFrom if there are void methods
-        if service_data.has_void_methods {
+        // Import Observable only if not using promises
+        if !self.promises {
+            service.push_str("import { Observable } from \"rxjs\";\n");
+        }
+        
+        // Import lastValueFrom if there are void methods or promises are enabled
+        if service_data.has_void_methods || self.promises {
             service.push_str("import { lastValueFrom } from \"rxjs\";\n");
         }
         

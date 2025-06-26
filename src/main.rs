@@ -48,6 +48,10 @@ struct Cli {
     #[arg(short, long)]
     endpoints: bool,
     
+    /// Generate promises using lastValueFrom instead of Observables (only works with --angular)
+    #[arg(long)]
+    promises: bool,
+    
     /// Pretty print the output
     #[arg(short, long)]
     pretty: bool,
@@ -75,7 +79,7 @@ fn main() -> Result<()> {
             
                 if cli.angular {
         // Generate Angular services with multiple files
-        generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod, cli.debug)?;
+        generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod, cli.debug, cli.promises)?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
                 let pydantic_generator = PydanticGenerator::new();
@@ -158,7 +162,7 @@ fn main() -> Result<()> {
                 let generator = TypeScriptGenerator::new();
                 generator.generate(&schema)?
             } else if cli.angular {
-                let generator = AngularGenerator::new();
+                let generator = AngularGenerator::new().with_promises(cli.promises);
                 generator.generate(&schema)?
             } else if cli.pydantic {
                 let generator = PydanticGenerator::new();
@@ -188,8 +192,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, pretty: bool, with_zod: bool, debug: bool) -> Result<()> {
-    let angular_generator = AngularGenerator::new().with_zod_validation(with_zod).with_debug(debug);
+fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, pretty: bool, with_zod: bool, debug: bool, promises: bool) -> Result<()> {
+    let angular_generator = AngularGenerator::new().with_zod_validation(with_zod).with_debug(debug).with_promises(promises);
     let output = angular_generator.generate(schema)?;
     
     // Also generate DTOs and utility function

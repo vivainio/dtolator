@@ -195,7 +195,9 @@ class TestSuite:
             "Comprehensive Nested Test",
             "Nested Test",
             "Crash Angular with Zod",
-            "Crash Angular without Zod"
+            "Crash Angular without Zod",
+            "Angular Promises with Zod",
+            "Angular Promises without Zod"
         }
         
         # Define all test cases based on the output-samples directory structure
@@ -280,6 +282,20 @@ class TestSuite:
                 input_file="crash-schema.json",
                 command_args=["--angular"],
                 expected_dir="output-samples/crash-angular-no-zod"
+            ),
+            
+            # Promises tests - Testing new --promises flag
+            TestCase(
+                name="Angular Promises with Zod",
+                input_file="simple-sample.json",
+                command_args=["--angular", "--zod", "--promises"],
+                expected_dir="output-samples/angular-promises-with-zod"
+            ),
+            TestCase(
+                name="Angular Promises without Zod",
+                input_file="simple-sample.json",
+                command_args=["--angular", "--promises"],
+                expected_dir="output-samples/angular-promises-no-zod"
             ),
         ]
     
