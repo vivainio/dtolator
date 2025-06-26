@@ -5,6 +5,7 @@
 
 # Generated output files
 output/
+test-output/
 
 # IDE
 .vscode/
