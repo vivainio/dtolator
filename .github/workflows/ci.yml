@@ -111,20 +111,20 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: |
         mkdir -p dist
-        cp target/${{ matrix.target }}/release/dtolator dist/${{ matrix.name }}
-        chmod +x dist/${{ matrix.name }}
+        cp target/${{ matrix.target }}/release/dtolator dist/dtolator
+        chmod +x dist/dtolator
     
     - name: Package binary (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         mkdir dist
-        cp target/${{ matrix.target }}/release/dtolator.exe dist/${{ matrix.name }}
+        cp target/${{ matrix.target }}/release/dtolator.exe dist/dtolator.exe
     
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.name }}
-        path: dist/${{ matrix.name }}
+        path: dist/
 
   release:
     name: Create Release
