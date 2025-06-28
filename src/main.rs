@@ -4,12 +4,13 @@ use std::path::PathBuf;
 use std::fs;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use serde::{Deserialize, Serialize};
 
 mod openapi;
 mod generators;
 
 use openapi::{OpenApiSchema, Schema, Components, Info};
-use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, python_dict::PythonDictGenerator, dotnet::DotNetGenerator, Generator};
+use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, python_dict::PythonDictGenerator, dotnet::DotNetGenerator, json_schema::JsonSchemaGenerator, Generator};
 use indexmap::IndexMap;
 
 #[derive(Parser)]
@@ -22,6 +23,10 @@ struct Cli {
     /// Input plain JSON file (for generating DTOs like quicktype.io)
     #[arg(long)]
     json: Option<PathBuf>,
+    
+    /// Input JSON Schema file (for generating DTOs from JSON Schema)
+    #[arg(long)]
+    from_json_schema: Option<PathBuf>,
     
     /// Name for the root class/interface when using --json (default: Root)
     #[arg(long, default_value = "Root")]
@@ -55,6 +60,10 @@ struct Cli {
     #[arg(long)]
     dotnet: bool,
     
+    /// Generate JSON Schema output
+    #[arg(long)]
+    json_schema: bool,
+    
     /// Generate API endpoint types from OpenAPI paths
     #[arg(short, long)]
     endpoints: bool,
@@ -84,6 +93,10 @@ impl Cli {
             parts.push(format!("--json {}", json_path.display()));
         }
         
+        if let Some(json_schema_path) = &self.from_json_schema {
+            parts.push(format!("--from-json-schema {}", json_schema_path.display()));
+        }
+        
         // Skip output directory in command string as it's usually a temp directory
         // and makes tests non-deterministic
         
@@ -111,6 +124,10 @@ impl Cli {
             parts.push("--dotnet".to_string());
         }
         
+        if self.json_schema {
+            parts.push("--json-schema".to_string());
+        }
+        
         if self.endpoints {
             parts.push("--endpoints".to_string());
         }
@@ -136,14 +153,14 @@ fn main() -> Result<()> {
     let command_string = cli.build_command_string();
     
     // Validate that exactly one input type is provided
-    match (&cli.openapi, &cli.json) {
-        (Some(_), Some(_)) => {
-            return Err(anyhow::anyhow!("Please specify either --openapi or --json, not both"));
-        }
-        (None, None) => {
-            return Err(anyhow::anyhow!("Please specify either --openapi or --json input file"));
-        }
-        _ => {}
+    let input_count = [&cli.openapi, &cli.json, &cli.from_json_schema].iter().filter(|x| x.is_some()).count();
+    
+    if input_count == 0 {
+        return Err(anyhow::anyhow!("Please specify exactly one input type: --openapi, --json, or --from-json-schema"));
+    }
+    
+    if input_count > 1 {
+        return Err(anyhow::anyhow!("Please specify only one input type: --openapi, --json, or --from-json-schema"));
     }
     
     // Read and parse the input file
@@ -160,8 +177,17 @@ fn main() -> Result<()> {
             .with_context(|| format!("Failed to read JSON file: {}", json_path.display()))?;
         
         json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
+    } else if let Some(json_schema_path) = &cli.from_json_schema {
+        // Read and parse JSON Schema, then convert to OpenAPI schema
+        let input_content = std::fs::read_to_string(json_schema_path)
+            .with_context(|| format!("Failed to read JSON Schema file: {}", json_schema_path.display()))?;
+        
+        // Strip JavaScript-style comments that might be in generated JSON Schema files
+        let cleaned_content = strip_json_comments(&input_content);
+        
+        json_schema_to_openapi_schema(serde_json::from_str(&cleaned_content)?, &cli.root)?
     } else {
-        unreachable!() // We validated above that one of them is Some
+        unreachable!() // We validated above that exactly one of them is Some
     };
     
     match cli.output {
@@ -209,6 +235,18 @@ fn main() -> Result<()> {
                 
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
+            } else if cli.json_schema {
+                // Generate JSON Schema to a JSON file
+                let json_schema_generator = JsonSchemaGenerator::new();
+                let json_schema_output = json_schema_generator.generate_with_command(&schema, &command_string)?;
+                let json_schema_final = if cli.pretty { format_output(&json_schema_output) } else { json_schema_output };
+                
+                let schema_path = output_dir.join("schema.json");
+                fs::write(&schema_path, json_schema_final)
+                    .with_context(|| format!("Failed to write schema.json file: {}", schema_path.display()))?;
+                
+                println!("Generated files:");
+                println!("  - {}", schema_path.display());
             } else if cli.zod {
                 // Generate both dto.ts (with imports) and schema.ts
                 
@@ -265,6 +303,9 @@ fn main() -> Result<()> {
                 generator.generate_with_command(&schema, &command_string)?
             } else if cli.dotnet {
                 let generator = DotNetGenerator::new();
+                generator.generate_with_command(&schema, &command_string)?
+            } else if cli.json_schema {
+                let generator = JsonSchemaGenerator::new();
                 generator.generate_with_command(&schema, &command_string)?
             } else {
                 let generator = ZodGenerator::new();
@@ -1113,4 +1154,311 @@ fn json_to_openapi_schema_with_root(json_value: serde_json::Value, root_name: &s
         }),
         paths: None,
     })
-} 
+}
+
+// JSON Schema structures for parsing
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct JsonSchemaDefinition {
+    #[serde(rename = "$schema")]
+    pub schema: Option<String>,
+    #[serde(rename = "$defs")]
+    pub defs: Option<IndexMap<String, JsonSchemaObject>>,
+    #[serde(rename = "$ref")]
+    pub reference: Option<String>,
+    #[serde(flatten)]
+    pub root: JsonSchemaObject,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct JsonSchemaObject {
+    #[serde(rename = "type")]
+    pub schema_type: Option<JsonSchemaType>,
+    pub properties: Option<IndexMap<String, JsonSchemaObject>>,
+    pub required: Option<Vec<String>>,
+    #[serde(rename = "additionalProperties")]
+    pub additional_properties: Option<serde_json::Value>,
+    pub items: Option<Box<JsonSchemaObject>>,
+    #[serde(rename = "enum")]
+    pub enum_values: Option<Vec<serde_json::Value>>,
+    pub format: Option<String>,
+    pub description: Option<String>,
+    pub title: Option<String>,
+    pub example: Option<serde_json::Value>,
+    #[serde(rename = "allOf")]
+    pub all_of: Option<Vec<JsonSchemaObject>>,
+    #[serde(rename = "oneOf")]
+    pub one_of: Option<Vec<JsonSchemaObject>>,
+    #[serde(rename = "anyOf")]
+    pub any_of: Option<Vec<JsonSchemaObject>>,
+    pub minimum: Option<f64>,
+    pub maximum: Option<f64>,
+    #[serde(rename = "minLength")]
+    pub min_length: Option<usize>,
+    #[serde(rename = "maxLength")]
+    pub max_length: Option<usize>,
+    pub pattern: Option<String>,
+    #[serde(rename = "$ref")]
+    pub reference: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum JsonSchemaType {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+fn json_schema_to_openapi_schema(json_schema: JsonSchemaDefinition, root_name: &str) -> Result<OpenApiSchema> {
+    let mut schemas = IndexMap::new();
+    
+    // Process $defs first if they exist
+    if let Some(defs) = &json_schema.defs {
+        for (name, schema_obj) in defs {
+            let openapi_schema = json_schema_object_to_openapi_schema(schema_obj)?;
+            schemas.insert(name.clone(), openapi_schema);
+        }
+    }
+    
+    // Process the root schema
+    let root_schema = if let Some(ref_path) = &json_schema.reference {
+        // Root is a reference to a def
+        Schema::Reference {
+            reference: convert_json_schema_ref(ref_path)?,
+        }
+    } else {
+        // Root is an inline schema
+        json_schema_object_to_openapi_schema(&json_schema.root)?
+    };
+    
+    // Add root schema if it's not just a reference
+    if matches!(root_schema, Schema::Object { .. }) {
+        schemas.insert(root_name.to_string(), root_schema);
+    } else if let Schema::Reference { .. } = root_schema {
+        // If root is a reference, we still need to add it under the root name for consistency
+        schemas.insert(root_name.to_string(), root_schema);
+    }
+    
+    // Extract metadata from JSON Schema
+    let title = json_schema.root.title.clone().unwrap_or_else(|| "Generated from JSON Schema".to_string());
+    let description = json_schema.root.description.clone().unwrap_or_else(|| "Schema generated from JSON Schema input".to_string());
+    
+    Ok(OpenApiSchema {
+        openapi: Some("3.0.0".to_string()),
+        info: Some(Info {
+            title,
+            version: "1.0.0".to_string(),
+            description: Some(description),
+        }),
+        components: Some(Components {
+            schemas: Some(schemas),
+        }),
+        paths: None,
+    })
+}
+
+fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Result<Schema> {
+    // Handle references first
+    if let Some(ref_path) = &json_schema.reference {
+        return Ok(Schema::Reference {
+            reference: convert_json_schema_ref(ref_path)?,
+        });
+    }
+    
+    // Handle composition schemas
+    if let Some(all_of) = &json_schema.all_of {
+        let schemas: Result<Vec<Schema>> = all_of.iter().map(json_schema_object_to_openapi_schema).collect();
+        return Ok(Schema::Object {
+            schema_type: None,
+            properties: None,
+            required: None,
+            additional_properties: None,
+            items: None,
+            enum_values: None,
+            format: None,
+            description: json_schema.description.clone(),
+            example: json_schema.example.clone(),
+            all_of: Some(schemas?),
+            one_of: None,
+            any_of: None,
+            minimum: json_schema.minimum,
+            maximum: json_schema.maximum,
+            min_length: json_schema.min_length,
+            max_length: json_schema.max_length,
+            pattern: json_schema.pattern.clone(),
+            nullable: None,
+        });
+    }
+    
+    if let Some(one_of) = &json_schema.one_of {
+        let schemas: Result<Vec<Schema>> = one_of.iter().map(json_schema_object_to_openapi_schema).collect();
+        return Ok(Schema::Object {
+            schema_type: None,
+            properties: None,
+            required: None,
+            additional_properties: None,
+            items: None,
+            enum_values: None,
+            format: None,
+            description: json_schema.description.clone(),
+            example: json_schema.example.clone(),
+            all_of: None,
+            one_of: Some(schemas?),
+            any_of: None,
+            minimum: json_schema.minimum,
+            maximum: json_schema.maximum,
+            min_length: json_schema.min_length,
+            max_length: json_schema.max_length,
+            pattern: json_schema.pattern.clone(),
+            nullable: None,
+        });
+    }
+    
+    if let Some(any_of) = &json_schema.any_of {
+        let schemas: Result<Vec<Schema>> = any_of.iter().map(json_schema_object_to_openapi_schema).collect();
+        return Ok(Schema::Object {
+            schema_type: None,
+            properties: None,
+            required: None,
+            additional_properties: None,
+            items: None,
+            enum_values: None,
+            format: None,
+            description: json_schema.description.clone(),
+            example: json_schema.example.clone(),
+            all_of: None,
+            one_of: None,
+            any_of: Some(schemas?),
+            minimum: json_schema.minimum,
+            maximum: json_schema.maximum,
+            min_length: json_schema.min_length,
+            max_length: json_schema.max_length,
+            pattern: json_schema.pattern.clone(),
+            nullable: None,
+        });
+    }
+    
+    // Handle regular schema types
+    let (schema_type, nullable) = match &json_schema.schema_type {
+        Some(JsonSchemaType::Single(type_str)) => {
+            (Some(type_str.clone()), false)
+        }
+        Some(JsonSchemaType::Multiple(types)) => {
+            // Handle union types like ["string", "null"]
+            let non_null_types: Vec<&String> = types.iter().filter(|t| *t != "null").collect();
+            let has_null = types.iter().any(|t| t == "null");
+            
+            if non_null_types.len() == 1 {
+                (Some(non_null_types[0].clone()), has_null)
+            } else if non_null_types.is_empty() {
+                (Some("null".to_string()), true)
+            } else {
+                // Multiple non-null types - this is more complex, for now just take the first
+                (Some(non_null_types[0].clone()), has_null)
+            }
+        }
+        None => (None, false),
+    };
+    
+    // Convert properties
+    let properties = if let Some(props) = &json_schema.properties {
+        let mut openapi_props = IndexMap::new();
+        for (key, prop_schema) in props {
+            openapi_props.insert(key.clone(), json_schema_object_to_openapi_schema(prop_schema)?);
+        }
+        Some(openapi_props)
+    } else {
+        None
+    };
+    
+    // Handle array items
+    let items = if let Some(items_schema) = &json_schema.items {
+        Some(Box::new(json_schema_object_to_openapi_schema(items_schema)?))
+    } else {
+        None
+    };
+    
+    // Convert additional properties
+    let additional_properties = match &json_schema.additional_properties {
+        Some(serde_json::Value::Bool(false)) => None, // Strict mode in JSON Schema
+        Some(serde_json::Value::Bool(true)) => None,  // Allow any additional properties
+        Some(_) => None, // More complex additional properties schema - skip for now
+        None => None,
+    };
+    
+    Ok(Schema::Object {
+        schema_type,
+        properties,
+        required: json_schema.required.clone(),
+        additional_properties,
+        items,
+        enum_values: json_schema.enum_values.clone(),
+        format: json_schema.format.clone(),
+        description: json_schema.description.clone(),
+        example: json_schema.example.clone(),
+        all_of: None,
+        one_of: None,
+        any_of: None,
+        minimum: json_schema.minimum,
+        maximum: json_schema.maximum,
+        min_length: json_schema.min_length,
+        max_length: json_schema.max_length,
+        pattern: json_schema.pattern.clone(),
+        nullable: if nullable { Some(true) } else { None },
+    })
+}
+
+fn convert_json_schema_ref(json_schema_ref: &str) -> Result<String> {
+    // Convert JSON Schema $ref format to OpenAPI format
+    // JSON Schema: "#/$defs/MyType" -> OpenAPI: "#/components/schemas/MyType"
+    if let Some(def_name) = json_schema_ref.strip_prefix("#/$defs/") {
+        Ok(format!("#/components/schemas/{}", def_name))
+    } else if let Some(def_name) = json_schema_ref.strip_prefix("#/definitions/") {
+        // Also support older JSON Schema format
+        Ok(format!("#/components/schemas/{}", def_name))
+    } else {
+        // Pass through other reference formats
+        Ok(json_schema_ref.to_string())
+    }
+}
+
+fn strip_json_comments(content: &str) -> String {
+    // Remove JavaScript-style comments from JSON content
+    // This handles /* ... */ style comments that might be in generated JSON Schema files
+    let mut result = String::new();
+    let mut chars = content.chars().peekable();
+    
+    while let Some(ch) = chars.next() {
+        if ch == '/' {
+            if let Some(&'*') = chars.peek() {
+                // Start of /* comment - skip until we find */
+                chars.next(); // consume the *
+                let mut found_end = false;
+                while let Some(comment_ch) = chars.next() {
+                    if comment_ch == '*' {
+                        if let Some(&'/') = chars.peek() {
+                            chars.next(); // consume the /
+                            found_end = true;
+                            break;
+                        }
+                    }
+                }
+                // Skip any trailing whitespace/newlines after comment
+                while let Some(&whitespace_ch) = chars.peek() {
+                    if whitespace_ch.is_whitespace() {
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                // Not a comment start, keep the character
+                result.push(ch);
+            }
+        } else {
+            // Regular character, keep it
+            result.push(ch);
+        }
+    }
+    
+    result
+}

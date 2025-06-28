@@ -1,0 +1,21 @@
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "isActive": true,
+  "age": 30,
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "zipCode": "10001"
+  },
+  "tags": ["developer", "typescript", "json-schema"],
+  "profile": {
+    "bio": "Software developer with 5 years experience",
+    "avatar": null,
+    "socialLinks": {
+      "github": "https://github.com/johndoe",
+      "twitter": "@johndoe"
+    }
+  }
+} 

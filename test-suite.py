@@ -334,6 +334,52 @@ class TestSuite:
                 command_args=["--json", "--pydantic"],
                 expected_dir="output-samples/json-deduplication-pydantic"
             ),
+            
+            # JSON Schema tests
+            TestCase(
+                name="JSON Simple JSON Schema",
+                input_file="test-data-simple.json",
+                command_args=["--json", "--json-schema", "--pretty"],
+                expected_dir="output-samples/json-simple-json-schema"
+            ),
+            TestCase(
+                name="JSON Complex JSON Schema",
+                input_file="test-data-complex.json", 
+                command_args=["--json", "--json-schema", "--pretty"],
+                expected_dir="output-samples/json-complex-json-schema"
+            ),
+            TestCase(
+                name="OpenAPI JSON Schema",
+                input_file="simple-sample.json",
+                command_args=["--openapi", "--json-schema", "--pretty"],
+                expected_dir="output-samples/openapi-json-schema"
+            ),
+            
+            # From JSON Schema tests - using existing generated JSON Schema files as input
+            TestCase(
+                name="From JSON Schema TypeScript",
+                input_file="output-samples/json-simple-json-schema/schema.json",
+                command_args=["--from-json-schema", "--typescript", "--pretty"],
+                expected_dir="output-samples/from-json-schema-typescript"
+            ),
+            TestCase(
+                name="From JSON Schema Zod",
+                input_file="output-samples/json-complex-json-schema/schema.json",
+                command_args=["--from-json-schema", "--zod", "--pretty"],
+                expected_dir="output-samples/from-json-schema-zod"
+            ),
+            TestCase(
+                name="From JSON Schema Pydantic",
+                input_file="output-samples/openapi-json-schema/schema.json",
+                command_args=["--from-json-schema", "--pydantic", "--pretty"],
+                expected_dir="output-samples/from-json-schema-pydantic"
+            ),
+            TestCase(
+                name="From JSON Schema Angular",
+                input_file="output-samples/json-simple-json-schema/schema.json",
+                command_args=["--from-json-schema", "--angular", "--pretty"],
+                expected_dir="output-samples/from-json-schema-angular"
+            ),
         ]
     
     def check_npm_availability(self) -> bool:
@@ -580,29 +626,39 @@ export {};
         else:
             print_colored(f"\n🔍 Running: {test_case.name}", Colors.BLUE)
         
-        # Handle JSON test cases with special logic
-        if "--json" in test_case.command_args:
-            # For JSON tests, we need to determine the correct input file
-            # This is a placeholder - in real implementation, we'd need the actual JSON files
-            # For now, we'll skip these tests or use a placeholder
+        # Handle JSON test cases with special logic - skip only the placeholder ones
+        if "--json" in test_case.command_args and test_case.input_file in ["full-sample.json", "simple-sample.json"]:
+            # These are placeholder JSON test cases that don't have actual JSON input files
+            # Skip them for now
             if self.refresh_mode:
-                print_colored(f"⚠️  Skipping JSON test case in refresh mode: {test_case.name}", Colors.YELLOW)
+                print_colored(f"⚠️  Skipping placeholder JSON test case in refresh mode: {test_case.name}", Colors.YELLOW)
                 return True
             else:
                 print_colored(f"⚠️  Skipping JSON test case (no input file specified): {test_case.name}", Colors.YELLOW)
                 return True
         
-        # Prepare command - use --openapi for all non-JSON tests
-        cmd = [str(self.dtolator_binary), "--openapi", test_case.input_file] + test_case.command_args
+        # Prepare command based on input type
+        if "--json" in test_case.command_args:
+            # JSON input test case
+            cmd = [str(self.dtolator_binary), "--json", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--json"]
+        elif "--from-json-schema" in test_case.command_args:
+            # JSON Schema input test case
+            cmd = [str(self.dtolator_binary), "--from-json-schema", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--from-json-schema"]
+        elif "--openapi" in test_case.command_args:
+            # OpenAPI test case that already specifies --openapi in command_args
+            cmd = [str(self.dtolator_binary), "--openapi", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--openapi"]
+        else:
+            # Default: assume OpenAPI input for backward compatibility
+            cmd = [str(self.dtolator_binary), "--openapi", test_case.input_file] + test_case.command_args
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             
             # Determine if we should use directory output based on command args
-            # For single file generators like --dotnet, --pydantic, --python-dict, we output to directory
+            # For single file generators like --dotnet, --pydantic, --python-dict, --json-schema, we output to directory
             # if expected_dir is specified, even though the original command outputs to stdout
             should_use_dir_output = (test_case.expected_dir is not None and 
-                                   any(arg in ["--dotnet", "--pydantic", "--python-dict"] for arg in test_case.command_args))
+                                   any(arg in ["--dotnet", "--pydantic", "--python-dict", "--json-schema"] for arg in test_case.command_args))
             
             if test_case.expected_dir and not should_use_dir_output:
                 # Test with directory output
@@ -687,6 +743,8 @@ export {};
                         output_filename = "models.py"
                     elif "--python-dict" in test_case.command_args:
                         output_filename = "typed_dicts.py"
+                    elif "--json-schema" in test_case.command_args:
+                        output_filename = "schema.json"
                     else:
                         output_filename = "output.txt"
                     
@@ -710,6 +768,8 @@ export {};
                         expected_filename = "models.py"
                     elif "--python-dict" in test_case.command_args:
                         expected_filename = "typed_dicts.py"
+                    elif "--json-schema" in test_case.command_args:
+                        expected_filename = "schema.json"
                     else:
                         print_colored(f"❌ Unknown command type for directory comparison", Colors.RED)
                         return False

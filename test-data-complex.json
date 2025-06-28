@@ -1,0 +1,68 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Alice Johnson",
+      "email": "alice@company.com",
+      "role": "admin",
+      "permissions": ["read", "write", "delete"],
+      "metadata": {
+        "createdAt": "2024-01-15T10:30:00Z",
+        "lastLogin": "2024-01-20T14:22:00Z",
+        "preferences": {
+          "theme": "dark",
+          "language": "en-US",
+          "notifications": {
+            "email": true,
+            "push": false,
+            "sms": null
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "name": "Bob Smith",
+      "email": "bob@company.com",
+      "role": "user",
+      "permissions": ["read"],
+      "metadata": {
+        "createdAt": "2024-01-16T09:15:00Z",
+        "lastLogin": null,
+        "preferences": {
+          "theme": "light",
+          "language": "en-US",
+          "notifications": {
+            "email": false,
+            "push": true,
+            "sms": false
+          }
+        }
+      }
+    }
+  ],
+  "organization": {
+    "name": "Tech Corp",
+    "industry": "Technology",
+    "settings": {
+      "security": {
+        "twoFactorRequired": true,
+        "passwordPolicy": {
+          "minLength": 8,
+          "requireSpecialChars": true,
+          "requireNumbers": true
+        }
+      },
+      "features": {
+        "apiAccess": true,
+        "advancedReporting": false,
+        "customBranding": null
+      }
+    }
+  },
+  "statistics": {
+    "totalUsers": 250,
+    "activeUsers": 180,
+    "growth": 12.5
+  }
+} 
