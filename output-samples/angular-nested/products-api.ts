@@ -4,7 +4,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   Product,
   ProductCategory,
@@ -27,7 +27,7 @@ export class ProductsApi {
    * @returns Observable<ProductListResponse> - Products list
    */
   searchProductsWithFilters(queryParams?: SearchProductsWithFiltersQueryParams): Observable<ProductListResponse> {
-    const url = subsToUrl('/products', {}, queryParams || {});
+    const url = fillUrl('/products', {}, queryParams || {});
     return this.http.get<ProductListResponse>(url);
   }
 
@@ -38,7 +38,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product found
    */
   getProductByID(productId: string): Observable<Product> {
-    const url = subsToUrl('/products/{productId}', { productId: productId }, {});
+    const url = fillUrl('/products/{productId}', { productId: productId }, {});
     return this.http.get<Product>(url);
   }
 
@@ -50,7 +50,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product updated
    */
   updateProduct(productId: string, dto: UpdateProductRequest): Observable<Product> {
-    const url = subsToUrl('/products/{productId}', { productId: productId }, {});
+    const url = fillUrl('/products/{productId}', { productId: productId }, {});
     return this.http.put<Product>(url, dto);
   }
 

@@ -4,7 +4,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   Category,
   CreateCategoryRequest,
@@ -20,7 +20,7 @@ export class CategoriesApi {
    * @returns Observable<Category[]> - Categories list
    */
   getAllProductCategories(): Observable<Category[]> {
-    const url = subsToUrl('/categories', {}, {});
+    const url = fillUrl('/categories', {}, {});
     return this.http.get<Category[]>(url);
   }
 
@@ -31,7 +31,7 @@ export class CategoriesApi {
    * @returns Observable<Category> - Category created
    */
   createNewCategory(dto: CreateCategoryRequest): Observable<Category> {
-    const url = subsToUrl('/categories', {}, {});
+    const url = fillUrl('/categories', {}, {});
     return this.http.post<Category>(url, dto);
   }
 

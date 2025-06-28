@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   CreateOrderRequest,
   Order,
@@ -25,7 +25,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order created
    */
   createNewOrder(dto: CreateOrderRequest): Observable<Order> {
-    const url = subsToUrl('/orders', {}, {});
+    const url = fillUrl('/orders', {}, {});
     return this.http.post<Order>(url, dto)
       .pipe(
         map(response => OrderSchema.parse(response))
@@ -39,7 +39,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order found
    */
   getOrderByID(orderId: string): Observable<Order> {
-    const url = subsToUrl('/orders/{orderId}', { orderId: orderId }, {});
+    const url = fillUrl('/orders/{orderId}', { orderId: orderId }, {});
     return this.http.get<Order>(url)
       .pipe(
         map(response => OrderSchema.parse(response))
@@ -54,7 +54,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order status updated
    */
   updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest): Observable<Order> {
-    const url = subsToUrl('/orders/{orderId}', { orderId: orderId }, {});
+    const url = fillUrl('/orders/{orderId}', { orderId: orderId }, {});
     return this.http.patch<Order>(url, dto)
       .pipe(
         map(response => OrderSchema.parse(response))

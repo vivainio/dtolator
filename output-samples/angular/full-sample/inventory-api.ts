@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   Inventory,
   InventorySchema,
@@ -28,7 +28,7 @@ export class InventoryApi {
    * @returns Observable<InventoryResponse> - Inventory levels
    */
   getInventoryLevels(queryParams?: InventoryLevelsQueryParams): Observable<InventoryResponse> {
-    const url = subsToUrl('/inventory', {}, queryParams || {});
+    const url = fillUrl('/inventory', {}, queryParams || {});
     return this.http.get<InventoryResponse>(url)
       .pipe(
         map(response => InventoryResponseSchema.parse(response))
@@ -43,7 +43,7 @@ export class InventoryApi {
    * @returns Observable<Inventory> - Inventory updated
    */
   updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
-    const url = subsToUrl('/inventory/{productId}', { productId: productId }, {});
+    const url = fillUrl('/inventory/{productId}', { productId: productId }, {});
     return this.http.put<Inventory>(url, dto)
       .pipe(
         map(response => InventorySchema.parse(response))

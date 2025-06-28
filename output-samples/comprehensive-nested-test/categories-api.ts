@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   Category,
   CategorySchema,
@@ -23,7 +23,7 @@ export class CategoriesApi {
    * @returns Observable<Category[]> - Categories list
    */
   getAllProductCategories(): Observable<Category[]> {
-    const url = subsToUrl('/categories', {}, {});
+    const url = fillUrl('/categories', {}, {});
     return this.http.get<Category[]>(url)
       .pipe(
         map(response => z.array(CategorySchema).parse(response))
@@ -37,7 +37,7 @@ export class CategoriesApi {
    * @returns Observable<Category> - Category created
    */
   createNewCategory(dto: CreateCategoryRequest): Observable<Category> {
-    const url = subsToUrl('/categories', {}, {});
+    const url = fillUrl('/categories', {}, {});
     return this.http.post<Category>(url, dto)
       .pipe(
         map(response => CategorySchema.parse(response))

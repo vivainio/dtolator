@@ -4,7 +4,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   Inventory,
   InventoryLevelsQueryParams,
@@ -24,7 +24,7 @@ export class InventoryApi {
    * @returns Observable<InventoryResponse> - Inventory levels
    */
   getInventoryLevels(queryParams?: InventoryLevelsQueryParams): Observable<InventoryResponse> {
-    const url = subsToUrl('/inventory', {}, queryParams || {});
+    const url = fillUrl('/inventory', {}, queryParams || {});
     return this.http.get<InventoryResponse>(url);
   }
 
@@ -36,7 +36,7 @@ export class InventoryApi {
    * @returns Observable<Inventory> - Inventory updated
    */
   updateProductInventory(productId: string, dto: UpdateInventoryRequest): Observable<Inventory> {
-    const url = subsToUrl('/inventory/{productId}', { productId: productId }, {});
+    const url = fillUrl('/inventory/{productId}', { productId: productId }, {});
     return this.http.put<Inventory>(url, dto);
   }
 

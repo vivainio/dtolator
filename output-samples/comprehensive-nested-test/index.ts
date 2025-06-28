@@ -2,7 +2,7 @@
 // Do not modify manually
 
 export * from './dto';
-export * from './subs-to-url.func';
+export * from './fill-url';
 export * from './analytics-api';
 export * from './categories-api';
 export * from './inventory-api';

@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   ProductAnalytics,
   ProductAnalyticsSchema,
@@ -28,7 +28,7 @@ export class AnalyticsApi {
    * @returns Observable<SalesAnalytics> - Sales analytics data
    */
   getSalesAnalytics(queryParams?: SalesAnalyticsQueryParams): Observable<SalesAnalytics> {
-    const url = subsToUrl('/analytics/sales', {}, queryParams || {});
+    const url = fillUrl('/analytics/sales', {}, queryParams || {});
     return this.http.get<SalesAnalytics>(url)
       .pipe(
         map(response => SalesAnalyticsSchema.parse(response))
@@ -41,7 +41,7 @@ export class AnalyticsApi {
    * @returns Observable<ProductAnalytics> - Product analytics data
    */
   getProductAnalytics(): Observable<ProductAnalytics> {
-    const url = subsToUrl('/analytics/products', {}, {});
+    const url = fillUrl('/analytics/products', {}, {});
     return this.http.get<ProductAnalytics>(url)
       .pipe(
         map(response => ProductAnalyticsSchema.parse(response))

@@ -194,7 +194,7 @@ impl AngularGenerator {
         let url_params = self.get_url_params(path, operation)?;
         let query_params = self.get_query_params(operation)?;
         
-        method.push_str(&format!("    const url = subsToUrl('{}', {}, {});\n", path, url_params, query_params));
+        method.push_str(&format!("    const url = fillUrl('{}', {}, {});\n", path, url_params, query_params));
         
         // Generate HTTP call
         let request_body = self.get_request_body(operation)?;
@@ -520,7 +520,7 @@ impl AngularGenerator {
             service.push_str("import { z } from 'zod';\n");
         }
         
-        service.push_str("import { subsToUrl } from './subs-to-url.func';\n");
+        service.push_str("import { fillUrl } from './fill-url';\n");
         
         if !service_data.imports.is_empty() {
             let mut imports: Vec<String> = service_data.imports.iter().cloned().collect();
@@ -579,7 +579,7 @@ impl AngularGenerator {
         index.push_str("// Do not modify manually\n\n");
         
         index.push_str("export * from './dto';\n");
-        index.push_str("export * from './subs-to-url.func';\n");
+        index.push_str("export * from './fill-url';\n");
         
         for tag in tags {
             let file_name = self.to_kebab_case(&format!("{}-api", tag));

@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   ApiResponse,
   ApiResponseSchema,
@@ -27,7 +27,7 @@ export class UsersApi {
    * @returns Promise<User[]> - Successful response
    */
   listAllUsers(): Promise<User[]> {
-    const url = subsToUrl('/users', {}, {});
+    const url = fillUrl('/users', {}, {});
     return lastValueFrom(this.http.get<User[]>(url)
       .pipe(
         map(response => z.array(UserSchema).parse(response))
@@ -43,7 +43,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User created successfully
    */
   createNewUser(dto: CreateUserRequest): Promise<ApiResponse> {
-    const url = subsToUrl('/users', {}, {});
+    const url = fillUrl('/users', {}, {});
     return lastValueFrom(this.http.post<ApiResponse>(url, dto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -59,7 +59,7 @@ export class UsersApi {
    * @returns Promise<User> - User found
    */
   getUserByID(userId: number): Promise<User> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId }, {});
     return lastValueFrom(this.http.get<User>(url)
       .pipe(
         map(response => UserSchema.parse(response))
@@ -76,7 +76,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User updated successfully
    */
   updateUserProfile(userId: number, dto: CreateUserRequest): Promise<ApiResponse> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId }, {});
     return lastValueFrom(this.http.put<ApiResponse>(url, dto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -92,7 +92,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User deleted successfully
    */
   deleteUserAccount(userId: number): Promise<ApiResponse> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId }, {});
     return lastValueFrom(this.http.delete<ApiResponse>(url)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -108,7 +108,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User activated successfully
    */
   activateUserAccount(userId: number): Promise<ApiResponse> {
-    const url = subsToUrl('/users/{userId}/activate', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}/activate', { userId: userId }, {});
     return lastValueFrom(this.http.post<ApiResponse>(url, null)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -124,7 +124,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User deactivated successfully
    */
   deactivateUserAccount(userId: number): Promise<ApiResponse> {
-    const url = subsToUrl('/users/{userId}/deactivate', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}/deactivate', { userId: userId }, {});
     return lastValueFrom(this.http.post<ApiResponse>(url, null)
       .pipe(
         map(response => ApiResponseSchema.parse(response))

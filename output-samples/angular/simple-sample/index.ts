@@ -2,5 +2,5 @@
 // Do not modify manually
 
 export * from './dto';
-export * from './subs-to-url.func';
+export * from './fill-url';
 export * from './users-api';

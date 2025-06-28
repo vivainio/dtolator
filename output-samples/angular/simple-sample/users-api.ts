@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   ApiResponse,
   ApiResponseSchema,
@@ -27,7 +27,7 @@ export class UsersApi {
    * @returns Observable<User[]> - Successful response
    */
   listAllUsers(): Observable<User[]> {
-    const url = subsToUrl('/users', {}, {});
+    const url = fillUrl('/users', {}, {});
     return this.http.get<User[]>(url)
       .pipe(
         map(response => z.array(UserSchema).parse(response))
@@ -43,7 +43,7 @@ export class UsersApi {
    * @returns Observable<ApiResponse> - User created successfully
    */
   createNewUser(dto: CreateUserRequest): Observable<ApiResponse> {
-    const url = subsToUrl('/users', {}, {});
+    const url = fillUrl('/users', {}, {});
     return this.http.post<ApiResponse>(url, dto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -59,7 +59,7 @@ export class UsersApi {
    * @returns Observable<User> - User found
    */
   getUserByID(userId: number): Observable<User> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId }, {});
     return this.http.get<User>(url)
       .pipe(
         map(response => UserSchema.parse(response))
@@ -76,7 +76,7 @@ export class UsersApi {
    * @returns Observable<ApiResponse> - User updated successfully
    */
   updateUserProfile(userId: number, dto: CreateUserRequest): Observable<ApiResponse> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId }, {});
     return this.http.put<ApiResponse>(url, dto)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -92,7 +92,7 @@ export class UsersApi {
    * @returns Observable<ApiResponse> - User deleted successfully
    */
   deleteUserAccount(userId: number): Observable<ApiResponse> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId }, {});
     return this.http.delete<ApiResponse>(url)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -108,7 +108,7 @@ export class UsersApi {
    * @returns Observable<ApiResponse> - User activated successfully
    */
   activateUserAccount(userId: number): Observable<ApiResponse> {
-    const url = subsToUrl('/users/{userId}/activate', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}/activate', { userId: userId }, {});
     return this.http.post<ApiResponse>(url, null)
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -124,7 +124,7 @@ export class UsersApi {
    * @returns Observable<ApiResponse> - User deactivated successfully
    */
   deactivateUserAccount(userId: number): Observable<ApiResponse> {
-    const url = subsToUrl('/users/{userId}/deactivate', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}/deactivate', { userId: userId }, {});
     return this.http.post<ApiResponse>(url, null)
       .pipe(
         map(response => ApiResponseSchema.parse(response))

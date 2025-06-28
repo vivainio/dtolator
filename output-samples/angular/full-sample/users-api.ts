@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { subsToUrl } from './subs-to-url.func';
+import { fillUrl } from './fill-url';
 import {
   AllUsersWithPaginationQueryParams,
   CreateUserRequest,
@@ -31,7 +31,7 @@ export class UsersApi {
    * @returns Observable<UserListResponse> - Successful response
    */
   getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams): Observable<UserListResponse> {
-    const url = subsToUrl('/users', {}, queryParams || {});
+    const url = fillUrl('/users', {}, queryParams || {});
     return this.http.get<UserListResponse>(url)
       .pipe(
         map(response => UserListResponseSchema.parse(response))
@@ -47,7 +47,7 @@ export class UsersApi {
    * @returns Observable<User> - User created successfully
    */
   createNewUserAccount(dto: CreateUserRequest): Observable<User> {
-    const url = subsToUrl('/users', {}, {});
+    const url = fillUrl('/users', {}, {});
     return this.http.post<User>(url, dto)
       .pipe(
         map(response => UserSchema.parse(response))
@@ -61,7 +61,7 @@ export class UsersApi {
    * @returns Observable<User> - User found
    */
   getUserProfileByID(userId: string): Observable<User> {
-    const url = subsToUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId }, {});
     return this.http.get<User>(url)
       .pipe(
         map(response => UserSchema.parse(response))
