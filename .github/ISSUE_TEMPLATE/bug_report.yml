@@ -1,0 +1,105 @@
+name: Bug Report
+description: File a bug report to help us improve dtolator
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+
+  - type: input
+    id: version
+    attributes:
+      label: dtolator Version
+      description: What version of dtolator are you using?
+      placeholder: e.g., v0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: output_format
+    attributes:
+      label: Output Format
+      description: Which output format were you trying to generate?
+      multiple: true
+      options:
+        - TypeScript interfaces
+        - Zod schemas
+        - Angular services
+        - Pydantic models
+        - Python TypedDict
+        - C# classes
+        - API endpoints
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command Used
+      description: What command did you run that caused the issue?
+      placeholder: dtolator -i schema.json --typescript -o ./output
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: input_schema
+    attributes:
+      label: Input OpenAPI Schema
+      description: Please provide the OpenAPI schema that caused the issue (or a minimal reproduction case)
+      placeholder: Paste your OpenAPI schema JSON here
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include any error messages.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here, including screenshots if applicable.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have provided a minimal reproduction case
+          required: false
+        - label: I am using the latest version of dtolator
+          required: false 

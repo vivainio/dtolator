@@ -2,19 +2,30 @@ use clap::Parser;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::fs;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 mod openapi;
 mod generators;
 
-use openapi::OpenApiSchema;
+use openapi::{OpenApiSchema, Schema, Components, Info};
 use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, python_dict::PythonDictGenerator, dotnet::DotNetGenerator, Generator};
+use indexmap::IndexMap;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// Input OpenAPI schema JSON file
-    #[arg(short, long)]
-    input: PathBuf,
+    #[arg(long)]
+    openapi: Option<PathBuf>,
+    
+    /// Input plain JSON file (for generating DTOs like quicktype.io)
+    #[arg(long)]
+    json: Option<PathBuf>,
+    
+    /// Name for the root class/interface when using --json (default: Root)
+    #[arg(long, default_value = "Root")]
+    root: String,
     
     /// Output directory path (if specified, writes dto.ts and optionally schema.ts files)
     #[arg(short, long)]
@@ -65,7 +76,13 @@ impl Cli {
     fn build_command_string(&self) -> String {
         let mut parts = vec!["dtolator".to_string()];
         
-        parts.push(format!("--input {}", self.input.display()));
+        if let Some(openapi_path) = &self.openapi {
+            parts.push(format!("--openapi {}", openapi_path.display()));
+        }
+        
+        if let Some(json_path) = &self.json {
+            parts.push(format!("--json {}", json_path.display()));
+        }
         
         // Skip output directory in command string as it's usually a temp directory
         // and makes tests non-deterministic
@@ -118,12 +135,34 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let command_string = cli.build_command_string();
     
-    // Read and parse the OpenAPI schema
-    let input_content = std::fs::read_to_string(&cli.input)
-        .with_context(|| format!("Failed to read input file: {}", cli.input.display()))?;
+    // Validate that exactly one input type is provided
+    match (&cli.openapi, &cli.json) {
+        (Some(_), Some(_)) => {
+            return Err(anyhow::anyhow!("Please specify either --openapi or --json, not both"));
+        }
+        (None, None) => {
+            return Err(anyhow::anyhow!("Please specify either --openapi or --json input file"));
+        }
+        _ => {}
+    }
     
-    let schema: OpenApiSchema = serde_json::from_str(&input_content)
-        .with_context(|| "Failed to parse OpenAPI schema JSON")?;
+    // Read and parse the input file
+    let schema = if let Some(openapi_path) = &cli.openapi {
+        // Read and parse OpenAPI schema
+        let input_content = std::fs::read_to_string(openapi_path)
+            .with_context(|| format!("Failed to read OpenAPI file: {}", openapi_path.display()))?;
+        
+        serde_json::from_str::<OpenApiSchema>(&input_content)
+            .with_context(|| "Failed to parse OpenAPI schema JSON")?
+    } else if let Some(json_path) = &cli.json {
+        // Read and parse plain JSON, then convert to OpenAPI schema
+        let input_content = std::fs::read_to_string(json_path)
+            .with_context(|| format!("Failed to read JSON file: {}", json_path.display()))?;
+        
+        json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
+    } else {
+        unreachable!() // We validated above that one of them is Some
+    };
     
     match cli.output {
         Some(output_dir) => {
@@ -634,4 +673,437 @@ fn format_typescript(code: &str) -> String {
     // Minimal formatting - just return the code as-is to preserve structure
     // This ensures tests pass while removing the dprint dependency
     code.to_string()
+}
+
+fn longest_common_suffix(strings: &[String]) -> String {
+    if strings.is_empty() {
+        return String::new();
+    }
+    let revs: Vec<Vec<char>> = strings.iter().map(|s| s.chars().rev().collect()).collect();
+    let mut suffix = Vec::new();
+    for i in 0..revs[0].len() {
+        let c = revs[0][i];
+        if revs.iter().all(|r| r.len() > i && r[i].to_ascii_lowercase() == c.to_ascii_lowercase()) {
+            suffix.push(c);
+        } else {
+            break;
+        }
+    }
+    suffix.into_iter().rev().collect()
+}
+
+fn capitalize_first_letter(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+
+fn update_refs(schemas: &mut IndexMap<String, Schema>, old_names: &[String], new_name: &str) {
+    fn update_schema_refs(schema: &mut Schema, old_names: &[String], new_name: &str) {
+        match schema {
+            Schema::Reference { reference } => {
+                for old in old_names {
+                    let old_ref = format!("#/components/schemas/{}", old);
+                    if reference == &old_ref {
+                        *reference = format!("#/components/schemas/{}", new_name);
+                    }
+                }
+            }
+            Schema::Object { properties, items, all_of, one_of, any_of, .. } => {
+                if let Some(props) = properties {
+                    for (_k, v) in props.iter_mut() {
+                        update_schema_refs(v, old_names, new_name);
+                    }
+                }
+                if let Some(item) = items {
+                    update_schema_refs(item, old_names, new_name);
+                }
+                if let Some(schemas) = all_of {
+                    for s in schemas.iter_mut() {
+                        update_schema_refs(s, old_names, new_name);
+                    }
+                }
+                if let Some(schemas) = one_of {
+                    for s in schemas.iter_mut() {
+                        update_schema_refs(s, old_names, new_name);
+                    }
+                }
+                if let Some(schemas) = any_of {
+                    for s in schemas.iter_mut() {
+                        update_schema_refs(s, old_names, new_name);
+                    }
+                }
+            }
+        }
+    }
+    for (_k, schema) in schemas.iter_mut() {
+        update_schema_refs(schema, old_names, new_name);
+    }
+}
+
+fn json_value_to_schema_pass1(
+    value: &serde_json::Value,
+    schemas: &mut IndexMap<String, Schema>,
+    current_name: &str,
+    struct_hashes: &mut std::collections::HashMap<u64, (String, Vec<String>, Option<String>, Vec<String>)>,
+    hash_to_placeholder: &mut std::collections::HashMap<u64, String>,
+    parent_key: Option<&str>,
+) -> Result<Schema> {
+    match value {
+        serde_json::Value::Null => Ok(Schema::Object {
+            schema_type: Some("null".to_string()),
+            properties: None,
+            required: None,
+            additional_properties: None,
+            items: None,
+            enum_values: None,
+            format: None,
+            description: None,
+            example: None,
+            all_of: None,
+            one_of: None,
+            any_of: None,
+            minimum: None,
+            maximum: None,
+            min_length: None,
+            max_length: None,
+            pattern: None,
+            nullable: Some(true),
+        }),
+        serde_json::Value::Bool(_) => Ok(Schema::Object {
+            schema_type: Some("boolean".to_string()),
+            properties: None,
+            required: None,
+            additional_properties: None,
+            items: None,
+            enum_values: None,
+            format: None,
+            description: None,
+            example: None,
+            all_of: None,
+            one_of: None,
+            any_of: None,
+            minimum: None,
+            maximum: None,
+            min_length: None,
+            max_length: None,
+            pattern: None,
+            nullable: None,
+        }),
+        serde_json::Value::Number(n) => {
+            if n.is_i64() || n.is_u64() {
+                Ok(Schema::Object {
+                    schema_type: Some("integer".to_string()),
+                    properties: None,
+                    required: None,
+                    additional_properties: None,
+                    items: None,
+                    enum_values: None,
+                    format: None,
+                    description: None,
+                    example: None,
+                    all_of: None,
+                    one_of: None,
+                    any_of: None,
+                    minimum: None,
+                    maximum: None,
+                    min_length: None,
+                    max_length: None,
+                    pattern: None,
+                    nullable: None,
+                })
+            } else {
+                Ok(Schema::Object {
+                    schema_type: Some("number".to_string()),
+                    properties: None,
+                    required: None,
+                    additional_properties: None,
+                    items: None,
+                    enum_values: None,
+                    format: None,
+                    description: None,
+                    example: None,
+                    all_of: None,
+                    one_of: None,
+                    any_of: None,
+                    minimum: None,
+                    maximum: None,
+                    min_length: None,
+                    max_length: None,
+                    pattern: None,
+                    nullable: None,
+                })
+            }
+        }
+        serde_json::Value::String(_) => Ok(Schema::Object {
+            schema_type: Some("string".to_string()),
+            properties: None,
+            required: None,
+            additional_properties: None,
+            items: None,
+            enum_values: None,
+            format: None,
+            description: None,
+            example: None,
+            all_of: None,
+            one_of: None,
+            any_of: None,
+            minimum: None,
+            maximum: None,
+            min_length: None,
+            max_length: None,
+            pattern: None,
+            nullable: None,
+        }),
+        serde_json::Value::Array(arr) => {
+            if arr.is_empty() {
+                Ok(Schema::Object {
+                    schema_type: Some("array".to_string()),
+                    properties: None,
+                    required: None,
+                    additional_properties: None,
+                    items: Some(Box::new(Schema::Object {
+                        schema_type: Some("object".to_string()),
+                        properties: None,
+                        required: None,
+                        additional_properties: None,
+                        items: None,
+                        enum_values: None,
+                        format: None,
+                        description: None,
+                        example: None,
+                        all_of: None,
+                        one_of: None,
+                        any_of: None,
+                        minimum: None,
+                        maximum: None,
+                        min_length: None,
+                        max_length: None,
+                        pattern: None,
+                        nullable: None,
+                    })),
+                    enum_values: None,
+                    format: None,
+                    description: None,
+                    example: None,
+                    all_of: None,
+                    one_of: None,
+                    any_of: None,
+                    minimum: None,
+                    maximum: None,
+                    min_length: None,
+                    max_length: None,
+                    pattern: None,
+                    nullable: None,
+                })
+            } else {
+                let item_schema = json_value_to_schema_pass1(&arr[0], schemas, &format!("{}Item", current_name), struct_hashes, hash_to_placeholder, None)?;
+                Ok(Schema::Object {
+                    schema_type: Some("array".to_string()),
+                    properties: None,
+                    required: None,
+                    additional_properties: None,
+                    items: Some(Box::new(item_schema)),
+                    enum_values: None,
+                    format: None,
+                    description: None,
+                    example: None,
+                    all_of: None,
+                    one_of: None,
+                    any_of: None,
+                    minimum: None,
+                    maximum: None,
+                    min_length: None,
+                    max_length: None,
+                    pattern: None,
+                    nullable: None,
+                })
+            }
+        }
+        serde_json::Value::Object(obj) => {
+            if obj.is_empty() {
+                return Ok(Schema::Object {
+                    schema_type: Some("object".to_string()),
+                    properties: None,
+                    required: None,
+                    additional_properties: None,
+                    items: None,
+                    enum_values: None,
+                    format: None,
+                    description: None,
+                    example: None,
+                    all_of: None,
+                    one_of: None,
+                    any_of: None,
+                    minimum: None,
+                    maximum: None,
+                    min_length: None,
+                    max_length: None,
+                    pattern: None,
+                    nullable: None,
+                });
+            }
+
+            // Create hash for deduplication
+            let mut hasher = DefaultHasher::new();
+            let serialized = serde_json::to_string(obj)?;
+            serialized.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            if let Some(placeholder) = hash_to_placeholder.get(&hash) {
+                // Already processed this structure
+                return Ok(Schema::Reference { 
+                    reference: format!("#/components/schemas/{}", placeholder) 
+                });
+            }
+
+            // Generate properties
+            let mut properties = IndexMap::new();
+            let mut required = Vec::new();
+
+            for (key, value) in obj {
+                // Create meaningful names for nested objects
+                let property_name = match value {
+                    serde_json::Value::Object(_) => {
+                        // For nested objects, create a meaningful type name
+                        let base_name = capitalize_first_letter(key);
+                        // If the key itself is meaningful, use it; otherwise derive from parent
+                        if base_name.len() > 2 && !base_name.ends_with("s") {
+                            base_name
+                        } else {
+                            format!("{}{}", current_name, base_name)
+                        }
+                    }
+                    serde_json::Value::Array(arr) => {
+                        // For arrays, check if they contain objects
+                        if !arr.is_empty() {
+                            if let serde_json::Value::Object(_) = &arr[0] {
+                                // Array of objects - create a type name for the item type
+                                let mut item_name = capitalize_first_letter(key);
+                                if item_name.ends_with("s") && item_name.len() > 1 {
+                                    // Remove plural 's' to get item name
+                                    item_name.pop();
+                                } else {
+                                    item_name = format!("{}Item", current_name);
+                                }
+                                item_name
+                            } else {
+                                format!("{}Item", current_name)
+                            }
+                        } else {
+                            format!("{}Item", current_name)
+                        }
+                    }
+                    _ => capitalize_first_letter(key)
+                };
+                
+                let property_schema = json_value_to_schema_pass1(value, schemas, &property_name, struct_hashes, hash_to_placeholder, Some(key))?;
+                properties.insert(key.clone(), property_schema);
+                required.push(key.clone());
+            }
+
+            let placeholder_name = format!("HASH_{}", hash);
+            hash_to_placeholder.insert(hash, placeholder_name.clone());
+            struct_hashes.insert(hash, (current_name.to_string(), required.clone(), None, vec![]));
+
+            let schema = Schema::Object {
+                schema_type: Some("object".to_string()),
+                properties: Some(properties),
+                required: if required.is_empty() { None } else { Some(required) },
+                additional_properties: None,
+                items: None,
+                enum_values: None,
+                format: None,
+                description: None,
+                example: None,
+                all_of: None,
+                one_of: None,
+                any_of: None,
+                minimum: None,
+                maximum: None,
+                min_length: None,
+                max_length: None,
+                pattern: None,
+                nullable: None,
+            };
+
+            schemas.insert(current_name.to_string(), schema.clone());
+            
+            // Only return a reference if this is not the root level object
+            if current_name != "Root" && parent_key.is_some() {
+                Ok(Schema::Reference { 
+                    reference: format!("#/components/schemas/{}", current_name) 
+                })
+            } else {
+                Ok(schema)
+            }
+        }
+    }
+}
+
+fn resolve_placeholders(schema: &mut Schema, hash_to_final_name: &std::collections::HashMap<String, String>) {
+    match schema {
+        Schema::Reference { reference } => {
+            for (placeholder, final_name) in hash_to_final_name {
+                let placeholder_ref = format!("#/components/schemas/{}", placeholder);
+                if reference == &placeholder_ref {
+                    *reference = format!("#/components/schemas/{}", final_name);
+                }
+            }
+        }
+        Schema::Object { properties, items, all_of, one_of, any_of, .. } => {
+            if let Some(props) = properties {
+                for (_key, prop_schema) in props.iter_mut() {
+                    resolve_placeholders(prop_schema, hash_to_final_name);
+                }
+            }
+            if let Some(item_schema) = items {
+                resolve_placeholders(item_schema, hash_to_final_name);
+            }
+            if let Some(schemas) = all_of {
+                for s in schemas.iter_mut() {
+                    resolve_placeholders(s, hash_to_final_name);
+                }
+            }
+            if let Some(schemas) = one_of {
+                for s in schemas.iter_mut() {
+                    resolve_placeholders(s, hash_to_final_name);
+                }
+            }
+            if let Some(schemas) = any_of {
+                for s in schemas.iter_mut() {
+                    resolve_placeholders(s, hash_to_final_name);
+                }
+            }
+        }
+    }
+}
+
+fn json_to_openapi_schema_with_root(json_value: serde_json::Value, root_name: &str) -> Result<OpenApiSchema> {
+    let mut schemas = IndexMap::new();
+    let mut struct_hashes: std::collections::HashMap<u64, (String, Vec<String>, Option<String>, Vec<String>)> = std::collections::HashMap::new();
+    let mut hash_to_placeholder: std::collections::HashMap<u64, String> = std::collections::HashMap::new();
+    let root_schema = json_value_to_schema_pass1(&json_value, &mut schemas, root_name, &mut struct_hashes, &mut hash_to_placeholder, None)?;
+    schemas.insert(root_name.to_string(), root_schema);
+    let hash_to_final_name: std::collections::HashMap<String, String> = hash_to_placeholder.iter().map(|(h, _)| {
+        let (final_name, _, _, _) = struct_hashes.get(h).unwrap();
+        (format!("HASH_{}", h), final_name.clone())
+    }).collect();
+    for (_k, schema) in schemas.iter_mut() {
+        resolve_placeholders(schema, &hash_to_final_name);
+    }
+    Ok(OpenApiSchema {
+        openapi: Some("3.0.0".to_string()),
+        info: Some(Info {
+            title: "Generated from JSON".to_string(),
+            version: "1.0.0".to_string(),
+            description: Some("Schema generated from plain JSON input".to_string()),
+        }),
+        components: Some(Components {
+            schemas: Some(schemas),
+        }),
+        paths: None,
+    })
 } 
