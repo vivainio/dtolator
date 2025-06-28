@@ -18,11 +18,11 @@ use indexmap::IndexMap;
 struct Cli {
     /// Input OpenAPI schema JSON file
     #[arg(long)]
-    openapi: Option<PathBuf>,
+    from_openapi: Option<PathBuf>,
     
     /// Input plain JSON file (for generating DTOs like quicktype.io)
     #[arg(long)]
-    json: Option<PathBuf>,
+    from_json: Option<PathBuf>,
     
     /// Input JSON Schema file (for generating DTOs from JSON Schema)
     #[arg(long)]
@@ -85,16 +85,25 @@ impl Cli {
     fn build_command_string(&self) -> String {
         let mut parts = vec!["dtolator".to_string()];
         
-        if let Some(openapi_path) = &self.openapi {
-            parts.push(format!("--openapi {}", openapi_path.display()));
+        if let Some(openapi_path) = &self.from_openapi {
+            let filename = openapi_path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("unknown");
+            parts.push(format!("--from-openapi {}", filename));
         }
         
-        if let Some(json_path) = &self.json {
-            parts.push(format!("--json {}", json_path.display()));
+        if let Some(json_path) = &self.from_json {
+            let filename = json_path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("unknown");
+            parts.push(format!("--from-json {}", filename));
         }
         
         if let Some(json_schema_path) = &self.from_json_schema {
-            parts.push(format!("--from-json-schema {}", json_schema_path.display()));
+            let filename = json_schema_path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("unknown");
+            parts.push(format!("--from-json-schema {}", filename));
         }
         
         // Skip output directory in command string as it's usually a temp directory
@@ -153,25 +162,25 @@ fn main() -> Result<()> {
     let command_string = cli.build_command_string();
     
     // Validate that exactly one input type is provided
-    let input_count = [&cli.openapi, &cli.json, &cli.from_json_schema].iter().filter(|x| x.is_some()).count();
+    let input_count = [&cli.from_openapi, &cli.from_json, &cli.from_json_schema].iter().filter(|x| x.is_some()).count();
     
     if input_count == 0 {
-        return Err(anyhow::anyhow!("Please specify exactly one input type: --openapi, --json, or --from-json-schema"));
+        return Err(anyhow::anyhow!("Please specify exactly one input type: --from-openapi, --from-json, or --from-json-schema"));
     }
     
     if input_count > 1 {
-        return Err(anyhow::anyhow!("Please specify only one input type: --openapi, --json, or --from-json-schema"));
+        return Err(anyhow::anyhow!("Please specify only one input type: --from-openapi, --from-json, or --from-json-schema"));
     }
     
     // Read and parse the input file
-    let schema = if let Some(openapi_path) = &cli.openapi {
+    let schema = if let Some(openapi_path) = &cli.from_openapi {
         // Read and parse OpenAPI schema
         let input_content = std::fs::read_to_string(openapi_path)
             .with_context(|| format!("Failed to read OpenAPI file: {}", openapi_path.display()))?;
         
         serde_json::from_str::<OpenApiSchema>(&input_content)
             .with_context(|| "Failed to parse OpenAPI schema JSON")?
-    } else if let Some(json_path) = &cli.json {
+    } else if let Some(json_path) = &cli.from_json {
         // Read and parse plain JSON, then convert to OpenAPI schema
         let input_content = std::fs::read_to_string(json_path)
             .with_context(|| format!("Failed to read JSON file: {}", json_path.display()))?;

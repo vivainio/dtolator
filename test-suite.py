@@ -295,43 +295,43 @@ class TestSuite:
             TestCase(
                 name="JSON Complex TypeScript",
                 input_file="full-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--json", "--typescript"],
+                command_args=["--from-json", "--typescript"],
                 expected_dir="output-samples/json-complex-typescript"
             ),
             TestCase(
                 name="JSON Complex Pydantic",
                 input_file="full-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--json", "--pydantic"],
+                command_args=["--from-json", "--pydantic"],
                 expected_dir="output-samples/json-complex-pydantic"
             ),
             TestCase(
                 name="JSON Simple TypeScript",
                 input_file="simple-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--json", "--typescript"],
+                command_args=["--from-json", "--typescript"],
                 expected_dir="output-samples/json-simple-typescript"
             ),
             TestCase(
                 name="JSON Simple Zod",
                 input_file="simple-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--json", "--zod"],
+                command_args=["--from-json", "--zod"],
                 expected_dir="output-samples/json-simple-zod"
             ),
             TestCase(
                 name="JSON Simple Pydantic",
                 input_file="simple-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--json", "--pydantic"],
+                command_args=["--from-json", "--pydantic"],
                 expected_dir="output-samples/json-simple-pydantic"
             ),
             TestCase(
                 name="JSON Deduplication TypeScript",
                 input_file="full-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--json", "--typescript"],
+                command_args=["--from-json", "--typescript"],
                 expected_dir="output-samples/json-deduplication-typescript"
             ),
             TestCase(
                 name="JSON Deduplication Pydantic",
                 input_file="full-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--json", "--pydantic"],
+                command_args=["--from-json", "--pydantic"],
                 expected_dir="output-samples/json-deduplication-pydantic"
             ),
             
@@ -339,19 +339,19 @@ class TestSuite:
             TestCase(
                 name="JSON Simple JSON Schema",
                 input_file="test-data-simple.json",
-                command_args=["--json", "--json-schema", "--pretty"],
+                command_args=["--from-json", "--json-schema", "--pretty"],
                 expected_dir="output-samples/json-simple-json-schema"
             ),
             TestCase(
                 name="JSON Complex JSON Schema",
                 input_file="test-data-complex.json", 
-                command_args=["--json", "--json-schema", "--pretty"],
+                command_args=["--from-json", "--json-schema", "--pretty"],
                 expected_dir="output-samples/json-complex-json-schema"
             ),
             TestCase(
                 name="OpenAPI JSON Schema",
                 input_file="simple-sample.json",
-                command_args=["--openapi", "--json-schema", "--pretty"],
+                command_args=["--from-openapi", "--json-schema", "--pretty"],
                 expected_dir="output-samples/openapi-json-schema"
             ),
             
@@ -627,7 +627,7 @@ export {};
             print_colored(f"\n🔍 Running: {test_case.name}", Colors.BLUE)
         
         # Handle JSON test cases with special logic - skip only the placeholder ones
-        if "--json" in test_case.command_args and test_case.input_file in ["full-sample.json", "simple-sample.json"]:
+        if "--from-json" in test_case.command_args and test_case.input_file in ["full-sample.json", "simple-sample.json"]:
             # These are placeholder JSON test cases that don't have actual JSON input files
             # Skip them for now
             if self.refresh_mode:
@@ -638,18 +638,18 @@ export {};
                 return True
         
         # Prepare command based on input type
-        if "--json" in test_case.command_args:
+        if "--from-json" in test_case.command_args:
             # JSON input test case
-            cmd = [str(self.dtolator_binary), "--json", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--json"]
+            cmd = [str(self.dtolator_binary), "--from-json", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--from-json"]
         elif "--from-json-schema" in test_case.command_args:
             # JSON Schema input test case
             cmd = [str(self.dtolator_binary), "--from-json-schema", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--from-json-schema"]
-        elif "--openapi" in test_case.command_args:
-            # OpenAPI test case that already specifies --openapi in command_args
-            cmd = [str(self.dtolator_binary), "--openapi", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--openapi"]
+        elif "--from-openapi" in test_case.command_args:
+            # OpenAPI test case that already specifies --from-openapi in command_args
+            cmd = [str(self.dtolator_binary), "--from-openapi", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--from-openapi"]
         else:
             # Default: assume OpenAPI input for backward compatibility
-            cmd = [str(self.dtolator_binary), "--openapi", test_case.input_file] + test_case.command_args
+            cmd = [str(self.dtolator_binary), "--from-openapi", test_case.input_file] + test_case.command_args
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
