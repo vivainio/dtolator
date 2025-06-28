@@ -1,13 +1,21 @@
-# JSON Simple JSON Schema
+# JSON Simple JSON Schema Output Sample
 
-This directory contains the expected output for generating JSON Schema from a simple JSON file.
+## Overview
+This directory contains a JSON Schema generated from plain JSON data.
+
+- **Command**: `dtolator --json test-data-simple.json --json-schema`
+
+## Generated Files
+- `schema.json` - JSON Schema (Draft 2020-12) representation of the JSON data structure
+
+## Features Demonstrated
+- Plain JSON to JSON Schema conversion
+- Automatic type inference from JSON values
+- Schema generation with proper constraints
+- Root object schema definition
 
 ## Input
 - **Source**: `test-data-simple.json` - A simple JSON object with basic data types
-- **Command**: `dtolator --json test-data-simple.json --json-schema --pretty`
-
-## Generated Files
-- `schema.json` - JSON Schema (Draft 2020-12) representation of the input JSON structure
 
 ## Features Demonstrated
 - ✅ Basic type conversion (string, integer, boolean, null)

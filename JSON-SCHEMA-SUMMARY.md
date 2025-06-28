@@ -39,26 +39,26 @@
 - **Fixed command construction** for JSON and OpenAPI tests
 - **Enhanced test logic** to handle mixed input types
 - **Added JSON Schema** to single-file output generators
-- **Proper flag handling** with `--pretty` support
+- **Proper flag handling**
 
 ## 📋 **Usage Examples**
 
 ### Basic JSON to JSON Schema
 ```bash
 # From plain JSON file
-cargo run -- --json data.json --json-schema --pretty
+cargo run -- --json data.json --json-schema
 
 # Save to file
-cargo run -- --json data.json --json-schema --output ./schemas --pretty
+cargo run -- --json data.json --json-schema --output ./schemas
 ```
 
 ### OpenAPI to JSON Schema  
 ```bash
 # From OpenAPI specification
-cargo run -- --openapi api.json --json-schema --pretty
+cargo run -- --openapi api.json --json-schema
 
 # Save to file  
-cargo run -- --openapi api.json --json-schema --output ./schemas --pretty
+cargo run -- --openapi api.json --json-schema --output ./schemas
 ```
 
 ## 🎨 **Generated Output Features**
@@ -85,7 +85,7 @@ cargo run -- --openapi api.json --json-schema --output ./schemas --pretty
 - ✅ **All existing tests pass** (21/21 tests)
 - ✅ **New JSON Schema tests pass** (3/3 new tests)
 - ✅ **File and stdout output** both working
-- ✅ **Pretty printing** correctly implemented
+
 - ✅ **Command integration** properly configured
 
 ### Code Quality

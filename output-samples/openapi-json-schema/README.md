@@ -1,21 +1,22 @@
-# OpenAPI JSON Schema
+# OpenAPI JSON Schema Output Sample
 
-This directory contains the expected output for generating JSON Schema from an OpenAPI specification.
+## Overview
+This directory contains a JSON Schema generated from an OpenAPI specification.
+
+- **Command**: `dtolator --openapi simple-sample.json --json-schema`
+
+## Generated Files
+- `schema.json` - Complete JSON Schema (Draft 2020-12) generated from the OpenAPI specification
+
+## Features Demonstrated
+- OpenAPI to JSON Schema conversion
+- Proper `$defs` section with reusable schemas
+- JSON Schema Draft 2020-12 compliance
+- Schema metadata extraction from OpenAPI info
+- Reference resolution and validation constraints
 
 ## Input
 - **Source**: `simple-sample.json` - An OpenAPI 3.0.3 specification with user management endpoints
-- **Command**: `dtolator --openapi simple-sample.json --json-schema --pretty`
-
-## Generated Files
-- `schema.json` - JSON Schema (Draft 2020-12) representation of all schemas defined in the OpenAPI specification
-
-## Features Demonstrated
-- ✅ OpenAPI schema component extraction
-- ✅ Reference resolution between schemas (`$ref` handling)
-- ✅ Type system conversion from OpenAPI to JSON Schema
-- ✅ Comprehensive schema definitions for API data models
-- ✅ Proper metadata extraction from OpenAPI info section
-- ✅ Complex object relationships and dependencies
 
 ## JSON Schema Output
 The generated schema converts OpenAPI component schemas to JSON Schema format:

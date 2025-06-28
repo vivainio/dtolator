@@ -28,9 +28,11 @@ Test Cases:
 - Nested Test: full-sample.json -> TypeScript + Zod schemas only
 - DotNet Test: simple-sample.json -> C# classes
 - Pydantic Test: simple-sample.json -> Python Pydantic models
-- Python TypedDict Test: simple-sample.json -> Python TypedDict
-- Python TypedDict Full: full-sample.json -> Python TypedDict
-- JSON Tests: Various JSON files -> TypeScript, Zod, and Pydantic models
+- Python TypedDict Tests: Various OpenAPI files -> Python TypedDict
+- Angular Promises Tests: simple-sample.json -> Angular services with Promise-based methods
+- JSON Tests: test-data-simple.json & test-data-complex.json -> TypeScript, Zod, and Pydantic models
+- JSON Schema Tests: Various inputs -> JSON Schema generation and conversion
+- From JSON Schema Tests: Generated JSON Schema files -> TypeScript, Zod, and Pydantic models
 
 Each test runs the dtolator command with appropriate flags and compares the output
 with the expected files in the output-samples directory. Any differences are
@@ -206,6 +208,8 @@ class TestSuite:
             "JSON Complex TypeScript",
             "JSON Simple TypeScript",
             "JSON Simple Zod",
+            "From JSON Schema TypeScript",
+            "From JSON Schema Zod",
         }
         
         # Define all test cases based on the output-samples directory structure
@@ -292,67 +296,55 @@ class TestSuite:
                 expected_dir="output-samples/angular-promises-no-zod"
             ),
             
-            # JSON to TypeScript/Zod/Pydantic tests (placeholder JSON file - will need real files)
-            TestCase(
-                name="JSON Complex TypeScript",
-                input_file="full-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--from-json", "--typescript"],
-                expected_dir="output-samples/json-complex-typescript"
-            ),
-            TestCase(
-                name="JSON Complex Pydantic",
-                input_file="full-sample.json",  # This will be replaced with actual JSON file
-                command_args=["--from-json", "--pydantic"],
-                expected_dir="output-samples/json-complex-pydantic"
-            ),
+            # JSON to TypeScript/Zod/Pydantic tests using actual JSON files
             TestCase(
                 name="JSON Simple TypeScript",
-                input_file="simple-sample.json",  # This will be replaced with actual JSON file
+                input_file="test-data-simple.json",
                 command_args=["--from-json", "--typescript"],
                 expected_dir="output-samples/json-simple-typescript"
             ),
             TestCase(
                 name="JSON Simple Zod",
-                input_file="simple-sample.json",  # This will be replaced with actual JSON file
+                input_file="test-data-simple.json",
                 command_args=["--from-json", "--zod"],
                 expected_dir="output-samples/json-simple-zod"
             ),
             TestCase(
                 name="JSON Simple Pydantic",
-                input_file="simple-sample.json",  # This will be replaced with actual JSON file
+                input_file="test-data-simple.json",
                 command_args=["--from-json", "--pydantic"],
                 expected_dir="output-samples/json-simple-pydantic"
             ),
             TestCase(
-                name="JSON Deduplication TypeScript",
-                input_file="full-sample.json",  # This will be replaced with actual JSON file
+                name="JSON Complex TypeScript",
+                input_file="test-data-complex.json",
                 command_args=["--from-json", "--typescript"],
-                expected_dir="output-samples/json-deduplication-typescript"
+                expected_dir="output-samples/json-complex-typescript"
             ),
             TestCase(
-                name="JSON Deduplication Pydantic",
-                input_file="full-sample.json",  # This will be replaced with actual JSON file
+                name="JSON Complex Pydantic",
+                input_file="test-data-complex.json",
                 command_args=["--from-json", "--pydantic"],
-                expected_dir="output-samples/json-deduplication-pydantic"
+                expected_dir="output-samples/json-complex-pydantic"
             ),
             
             # JSON Schema tests
             TestCase(
                 name="JSON Simple JSON Schema",
                 input_file="test-data-simple.json",
-                command_args=["--from-json", "--json-schema", "--pretty"],
+                command_args=["--from-json", "--json-schema"],
                 expected_dir="output-samples/json-simple-json-schema"
             ),
             TestCase(
                 name="JSON Complex JSON Schema",
                 input_file="test-data-complex.json", 
-                command_args=["--from-json", "--json-schema", "--pretty"],
+                command_args=["--from-json", "--json-schema"],
                 expected_dir="output-samples/json-complex-json-schema"
             ),
             TestCase(
                 name="OpenAPI JSON Schema",
                 input_file="simple-sample.json",
-                command_args=["--from-openapi", "--json-schema", "--pretty"],
+                command_args=["--from-openapi", "--json-schema"],
                 expected_dir="output-samples/openapi-json-schema"
             ),
             
@@ -360,19 +352,19 @@ class TestSuite:
             TestCase(
                 name="From JSON Schema TypeScript",
                 input_file="output-samples/json-simple-json-schema/schema.json",
-                command_args=["--from-json-schema", "--typescript", "--pretty"],
+                command_args=["--from-json-schema", "--typescript"],
                 expected_dir="output-samples/from-json-schema-typescript"
             ),
             TestCase(
                 name="From JSON Schema Zod",
                 input_file="output-samples/json-complex-json-schema/schema.json",
-                command_args=["--from-json-schema", "--zod", "--pretty"],
+                command_args=["--from-json-schema", "--zod"],
                 expected_dir="output-samples/from-json-schema-zod"
             ),
             TestCase(
                 name="From JSON Schema Pydantic",
                 input_file="output-samples/openapi-json-schema/schema.json",
-                command_args=["--from-json-schema", "--pydantic", "--pretty"],
+                command_args=["--from-json-schema", "--pydantic"],
                 expected_dir="output-samples/from-json-schema-pydantic"
             ),
         ]
@@ -1142,16 +1134,7 @@ interface Observer<T> {
         else:
             print_colored(f"\nRunning: {test_case.name}", Colors.BLUE)
         
-        # Handle JSON test cases with special logic - skip only the placeholder ones
-        if "--from-json" in test_case.command_args and test_case.input_file in ["full-sample.json", "simple-sample.json"]:
-            # These are placeholder JSON test cases that don't have actual JSON input files
-            # Skip them for now
-            if self.refresh_mode:
-                print_colored(f"WARNING: Skipping placeholder JSON test case in refresh mode: {test_case.name}", Colors.YELLOW)
-                return True
-            else:
-                print_colored(f"WARNING: Skipping JSON test case (no input file specified): {test_case.name}", Colors.YELLOW)
-                return True
+
         
         # Prepare command based on input type
         if "--from-json" in test_case.command_args:

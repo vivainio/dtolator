@@ -1,13 +1,22 @@
-# JSON Complex JSON Schema
+# JSON Complex JSON Schema Output Sample
 
-This directory contains the expected output for generating JSON Schema from a complex JSON file with nested structures.
+## Overview
+This directory contains a JSON Schema generated from complex JSON data with nested structures.
+
+- **Command**: `dtolator --json test-data-complex.json --json-schema`
+
+## Generated Files
+- `schema.json` - JSON Schema (Draft 2020-12) representation of the complex JSON data structure
+
+## Features Demonstrated
+- Complex JSON to JSON Schema conversion
+- Nested object and array handling
+- Multiple type definitions in `$defs`
+- Reference resolution between schemas
+- Comprehensive validation constraints
 
 ## Input
 - **Source**: `test-data-complex.json` - A complex JSON object with deeply nested structures, arrays of objects, and mixed data types
-- **Command**: `dtolator --json test-data-complex.json --json-schema --pretty`
-
-## Generated Files
-- `schema.json` - JSON Schema (Draft 2020-12) representation of the complex JSON structure
 
 ## Features Demonstrated
 - ✅ Complex nested object hierarchies

@@ -190,7 +190,7 @@ Options:
       --dotnet                  Generate C# classes with System.Text.Json serialization
       --json-schema             Generate JSON Schema output
   -e, --endpoints               Generate API endpoint types from OpenAPI paths
-  -p, --pretty                  Pretty print the output
+
       --debug                   Enable debug output
   -h, --help                    Print help
   -V, --version                 Print version

@@ -72,10 +72,6 @@ struct Cli {
     #[arg(long)]
     promises: bool,
     
-    /// Pretty print the output
-    #[arg(short, long)]
-    pretty: bool,
-    
     /// Enable debug output
     #[arg(long)]
     debug: bool,
@@ -143,10 +139,6 @@ impl Cli {
         
         if self.promises {
             parts.push("--promises".to_string());
-        }
-        
-        if self.pretty {
-            parts.push("--pretty".to_string());
         }
         
         if self.debug {
@@ -220,17 +212,16 @@ fn main() -> Result<()> {
             fs::create_dir_all(&output_dir)
                 .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
             
-                if cli.angular {
-        // Generate Angular services with multiple files
-        generate_angular_services(&schema, &output_dir, cli.pretty, cli.zod, cli.debug, cli.promises, &command_string)?;
+            if cli.angular {
+                // Generate Angular services with multiple files
+                generate_angular_services(&schema, &output_dir, cli.zod, cli.debug, cli.promises, &command_string)?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
                 let pydantic_generator = PydanticGenerator::new();
                 let pydantic_output = pydantic_generator.generate_with_command(&schema, &command_string)?;
-                let pydantic_final = if cli.pretty { format_output(&pydantic_output) } else { pydantic_output };
                 
                 let models_path = output_dir.join("models.py");
-                fs::write(&models_path, pydantic_final)
+                fs::write(&models_path, pydantic_output)
                     .with_context(|| format!("Failed to write models.py file: {}", models_path.display()))?;
                 
                 println!("Generated files:");
@@ -239,10 +230,9 @@ fn main() -> Result<()> {
                 // Generate Python TypedDict definitions to a Python file
                 let python_dict_generator = PythonDictGenerator::new();
                 let python_dict_output = python_dict_generator.generate_with_command(&schema, &command_string)?;
-                let python_dict_final = if cli.pretty { format_output(&python_dict_output) } else { python_dict_output };
                 
                 let typed_dicts_path = output_dir.join("typed_dicts.py");
-                fs::write(&typed_dicts_path, python_dict_final)
+                fs::write(&typed_dicts_path, python_dict_output)
                     .with_context(|| format!("Failed to write typed_dicts.py file: {}", typed_dicts_path.display()))?;
                 
                 println!("Generated files:");
@@ -251,10 +241,9 @@ fn main() -> Result<()> {
                 // Generate C# classes to a C# file
                 let dotnet_generator = DotNetGenerator::new();
                 let dotnet_output = dotnet_generator.generate_with_command(&schema, &command_string)?;
-                let dotnet_final = if cli.pretty { format_output(&dotnet_output) } else { dotnet_output };
                 
                 let models_path = output_dir.join("Models.cs");
-                fs::write(&models_path, dotnet_final)
+                fs::write(&models_path, dotnet_output)
                     .with_context(|| format!("Failed to write Models.cs file: {}", models_path.display()))?;
                 
                 println!("Generated files:");
@@ -263,10 +252,9 @@ fn main() -> Result<()> {
                 // Generate JSON Schema to a JSON file
                 let json_schema_generator = JsonSchemaGenerator::new();
                 let json_schema_output = json_schema_generator.generate_with_command(&schema, &command_string)?;
-                let json_schema_final = if cli.pretty { format_output(&json_schema_output) } else { json_schema_output };
                 
                 let schema_path = output_dir.join("schema.json");
-                fs::write(&schema_path, json_schema_final)
+                fs::write(&schema_path, json_schema_output)
                     .with_context(|| format!("Failed to write schema.json file: {}", schema_path.display()))?;
                 
                 println!("Generated files:");
@@ -277,18 +265,16 @@ fn main() -> Result<()> {
                 // Generate Zod schemas first
                 let zod_generator = ZodGenerator::new();
                 let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
-                let zod_final = if cli.pretty { format_output(&zod_output) } else { zod_output };
                 
                 let schema_path = output_dir.join("schema.ts");
-                fs::write(&schema_path, zod_final)
+                fs::write(&schema_path, zod_output)
                     .with_context(|| format!("Failed to write schema.ts file: {}", schema_path.display()))?;
                 
                 // Generate TypeScript interfaces that import from schema.ts
                 let ts_output = generate_typescript_with_imports(&schema, &command_string)?;
-                let ts_final = format_typescript(&ts_output);
                 
                 let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_final)
+                fs::write(&dto_path, ts_output)
                     .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
                 
                 println!("Generated files:");
@@ -298,10 +284,9 @@ fn main() -> Result<()> {
                 // Generate only dto.ts with TypeScript interfaces
                 let ts_generator = TypeScriptGenerator::new();
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
-                let ts_final = format_typescript(&ts_output);
                 
                 let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_final)
+                fs::write(&dto_path, ts_output)
                     .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
                 
                 println!("Generated files:");
@@ -336,21 +321,14 @@ fn main() -> Result<()> {
                 generator.generate_with_command(&schema, &command_string)?
             };
             
-            // Format output if pretty printing is requested
-            let final_output = if cli.pretty {
-                format_output(&output)
-            } else {
-                output
-            };
-            
-            println!("{}", final_output);
+            println!("{}", output);
         }
     }
     
     Ok(())
 }
 
-fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, pretty: bool, with_zod: bool, debug: bool, promises: bool, command_string: &str) -> Result<()> {
+fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, with_zod: bool, debug: bool, promises: bool, command_string: &str) -> Result<()> {
     let angular_generator = AngularGenerator::new().with_zod_validation(with_zod).with_debug(debug).with_promises(promises);
     let output = angular_generator.generate_with_command(schema, command_string)?;
     
@@ -361,33 +339,29 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
         // Generate Zod schemas first
         let zod_generator = ZodGenerator::new();
         let zod_output = zod_generator.generate_with_command(schema, command_string)?;
-        let zod_final = if pretty { format_output(&zod_output) } else { zod_output };
         
         let schema_path = output_dir.join("schema.ts");
-        fs::write(&schema_path, zod_final)
+        fs::write(&schema_path, zod_output)
             .with_context(|| format!("Failed to write schema.ts file: {}", schema_path.display()))?;
         
         // Generate TypeScript interfaces that re-export from schema.ts
         let ts_output = generate_typescript_with_imports(schema, command_string)?;
-        let ts_final = format_typescript(&ts_output);
         
-        fs::write(&dto_path, ts_final)
+        fs::write(&dto_path, ts_output)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
     } else {
         // Generate only TypeScript interfaces
         let ts_generator = TypeScriptGenerator::new();
         let dto_output = ts_generator.generate_with_command(schema, command_string)?;
-        let dto_final = format_typescript(&dto_output);
         
-        fs::write(&dto_path, dto_final)
+        fs::write(&dto_path, dto_output)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
     }
     
     // Generate subs-to-url utility function
     let subs_to_url_content = generate_subs_to_url_func(command_string);
-    let subs_to_url_formatted = format_typescript(&subs_to_url_content);
     let subs_path = output_dir.join("subs-to-url.func.ts");
-    fs::write(&subs_path, subs_to_url_formatted)
+    fs::write(&subs_path, subs_to_url_content)
         .with_context(|| format!("Failed to write subs-to-url.func.ts file: {}", subs_path.display()))?;
     
     // Parse and split the Angular generator output into individual service files
@@ -422,14 +396,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
                 }
                 
                 let service_path = output_dir.join(&current_file);
-                let final_content = if current_file.ends_with(".ts") {
-                    format_typescript(&current_content)
-                } else if pretty {
-                    format_output(&current_content)
-                } else {
-                    current_content.clone()
-                };
-                fs::write(&service_path, final_content)
+                fs::write(&service_path, &current_content)
                     .with_context(|| format!("Failed to write {} file: {}", current_file, service_path.display()))?;
                 files_generated.push(service_path.display().to_string());
             }
@@ -458,14 +425,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
     // Write the last file if there is one
     if !current_file.is_empty() && !current_content.is_empty() {
         let service_path = output_dir.join(&current_file);
-        let final_content = if current_file.ends_with(".ts") {
-            format_typescript(&current_content)
-        } else if pretty {
-            format_output(&current_content)
-        } else {
-            current_content
-        };
-        fs::write(&service_path, final_content)
+        fs::write(&service_path, &current_content)
             .with_context(|| format!("Failed to write {} file: {}", current_file, service_path.display()))?;
         files_generated.push(service_path.display().to_string());
     }
@@ -480,14 +440,7 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, prett
                 if let Some(newline_pos) = first_marker.find('\n') {
                     let first_file_name = &first_marker[..newline_pos];
                     let service_path = output_dir.join(first_file_name);
-                    let final_content = if first_file_name.ends_with(".ts") {
-                        format_typescript(first_service_content)
-                    } else if pretty {
-                        format_output(first_service_content)
-                    } else {
-                        first_service_content.to_string()
-                    };
-                    fs::write(&service_path, final_content)
+                    fs::write(&service_path, first_service_content)
                         .with_context(|| format!("Failed to write {} file: {}", first_file_name, service_path.display()))?;
                     
                     // Add to files_generated if not already there
@@ -720,7 +673,7 @@ export function subsToUrl(
   const injectedApiConfig = (window as any).API_URL;
   if (!injectedApiConfig) {
     throw new Error(
-      'API_URL is not configured. Please set (window as any).API_URL to your backend API base URL. Example: (window as any).API_URL = "https://api.example.com";'
+      'API_URL is not configured. Please set (window as any).API_URL to your backend API base URL. Example: (window as any).API_URL = \'https://api.example.com\';'
     );
   }
 
@@ -728,16 +681,6 @@ export function subsToUrl(
 }
 "#;
     template.replace("COMMAND_PLACEHOLDER", command_string)
-}
-
-fn format_output(output: &str) -> String {
-    format_typescript(output)
-}
-
-fn format_typescript(code: &str) -> String {
-    // Minimal formatting - just return the code as-is to preserve structure
-    // This ensures tests pass while removing the dprint dependency
-    code.to_string()
 }
 
 fn longest_common_suffix(strings: &[String]) -> String {

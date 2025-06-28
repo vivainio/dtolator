@@ -1,13 +1,31 @@
-# Pydantic Sample Output
+# Pydantic Models Output Sample
 
-This directory contains sample Pydantic BaseModel classes generated from OpenAPI schemas using the `--pydantic` flag.
+## Overview
+This directory contains generated Pydantic BaseModel classes from an OpenAPI specification.
+
+## Generated Command
+```bash
+dtolator -i simple-sample.json --pydantic
+```
+
+## Generated Files
+- `models.py` - Pydantic BaseModel classes with full type annotations and validation
+
+## Features Demonstrated
+- Clean Pydantic model generation with proper Python typing
+- Automatic validation and serialization
+- Optional field handling
+- Nested model relationships with proper imports
+- JSON Schema generation capabilities built into Pydantic
+
+The generated models are ready for immediate use in FastAPI, Django, or any Python application requiring robust data validation and serialization.
 
 ## Generated Files
 
 ### models.py
 Generated from `simple-sample.json` using:
 ```bash
-dtolator -i simple-sample.json --pydantic --pretty
+dtolator -i simple-sample.json --pydantic
 ```
 
 Contains Pydantic BaseModel classes with:

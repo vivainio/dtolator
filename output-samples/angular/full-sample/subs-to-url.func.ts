@@ -36,7 +36,7 @@ export function subsToUrl(
   const injectedApiConfig = (window as any).API_URL;
   if (!injectedApiConfig) {
     throw new Error(
-      'API_URL is not configured. Please set (window as any).API_URL to your backend API base URL. Example: (window as any).API_URL = "https://api.example.com";'
+      'API_URL is not configured. Please set (window as any).API_URL to your backend API base URL. Example: (window as any).API_URL = \'https://api.example.com\';'
     );
   }
 
