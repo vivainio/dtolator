@@ -4,19 +4,20 @@
 
 ## Features
 
-- ✅ Convert OpenAPI 3.x schemas to Zod schemas with validation
-- ✅ Convert OpenAPI 3.x schemas to TypeScript interfaces
-- ✅ Convert OpenAPI 3.x schemas to Pydantic BaseModel classes
-- ✅ Convert OpenAPI 3.x schemas to Python TypedDict definitions
-- ✅ Convert OpenAPI 3.x schemas to C# classes with System.Text.Json serialization
-- ✅ Generate API endpoint types for type-safe client development
-- ✅ Support for complex types (objects, arrays, enums, unions)
-- ✅ Support for OpenAPI composition keywords (`allOf`, `oneOf`, `anyOf`)
-- ✅ Support for validation constraints (min/max, length, patterns, formats)
-- ✅ Support for nullable types
-- ✅ Support for schema references (`$ref`)
-- ✅ Extract path parameters, query parameters, and request/response types
-- ✅ Command-line interface with flexible output options
+- ✅ **Multiple Input Types**: OpenAPI 3.x schemas, plain JSON, and JSON Schema files
+- ✅ **Multiple Output Formats**: Zod schemas, TypeScript interfaces, Pydantic models, Python TypedDict, C# classes, JSON Schema
+- ✅ **Angular Integration**: Generate complete Angular API services with observables or promises
+- ✅ **Type-Safe API Clients**: Generate endpoint types for compile-time safety
+- ✅ **Runtime Validation**: Zod schema generation with full validation support
+- ✅ **Complex Type Support**: Objects, arrays, enums, unions, nested structures
+- ✅ **OpenAPI Composition**: Full support for `allOf`, `oneOf`, `anyOf` keywords
+- ✅ **Validation Constraints**: min/max, length, patterns, formats, required fields
+- ✅ **Nullable Types**: Proper handling of optional and nullable properties
+- ✅ **Schema References**: Full `$ref` resolution and cross-references
+- ✅ **API Extraction**: Path parameters, query parameters, request/response types
+- ✅ **Flexible Output**: stdout, single files, or complete directory structures
+- ✅ **JSON Schema Generation**: Convert OpenAPI/JSON to standardized JSON Schema format
+- ✅ **Debug Support**: Detailed debug output for troubleshooting generation issues
 
 ## Installation
 
@@ -36,105 +37,163 @@ The binary will be available at `target/release/dtolator`.
 
 Generate Zod schemas to stdout (default):
 ```bash
-dtolator -i schema.json
+dtolator --from-openapi schema.json
 ```
 
 Generate TypeScript interfaces to stdout:
 ```bash
-dtolator -i schema.json --typescript
+dtolator --from-openapi schema.json --typescript
 ```
 
 Generate API endpoint types to stdout:
 ```bash
-dtolator -i schema.json --endpoints
+dtolator --from-openapi schema.json --endpoints
 ```
 
 Generate Angular API services to stdout:
 ```bash
-dtolator -i schema.json --angular
+dtolator --from-openapi schema.json --angular
 ```
 
 Generate TypeScript interfaces to directory:
 ```bash
-dtolator -i schema.json -o ./output
+dtolator --from-openapi schema.json -o ./output
 ```
 
 Generate Zod schemas + TypeScript interfaces to directory:
 ```bash
-dtolator -i schema.json -o ./output --zod
+dtolator --from-openapi schema.json -o ./output --zod
 ```
 
 Generate Angular API services to directory:
 ```bash
-dtolator -i schema.json -o ./output --angular
+dtolator --from-openapi schema.json -o ./output --angular
 ```
 
 Generate Angular API services with Zod validation to directory:
 ```bash
-dtolator -i schema.json -o ./output --angular --zod
+dtolator --from-openapi schema.json -o ./output --angular --zod
 ```
 
 Generate Angular API services using Promises to directory:
 ```bash
-dtolator -i schema.json -o ./output --angular --promises
+dtolator --from-openapi schema.json -o ./output --angular --promises
 ```
 
 Generate Angular API services with Promises and Zod validation to directory:
 ```bash
-dtolator -i schema.json -o ./output --angular --promises --zod
+dtolator --from-openapi schema.json -o ./output --angular --promises --zod
 ```
 
 Generate Pydantic models to stdout:
 ```bash
-dtolator -i schema.json --pydantic
+dtolator --from-openapi schema.json --pydantic
 ```
 
 Generate Pydantic models to directory:
 ```bash
-dtolator -i schema.json -o ./output --pydantic
+dtolator --from-openapi schema.json -o ./output --pydantic
 ```
 
 Generate Python TypedDict definitions to stdout:
 ```bash
-dtolator -i schema.json --python-dict
+dtolator --from-openapi schema.json --python-dict
 ```
 
 Generate Python TypedDict definitions to directory:
 ```bash
-dtolator -i schema.json -o ./output --python-dict
+dtolator --from-openapi schema.json -o ./output --python-dict
 ```
 
 Generate C# classes to stdout:
 ```bash
-dtolator -i schema.json --dotnet
+dtolator --from-openapi schema.json --dotnet
 ```
 
 Generate C# classes to directory:
 ```bash
-dtolator -i schema.json -o ./output --dotnet
+dtolator --from-openapi schema.json -o ./output --dotnet
 ```
+
+Generate JSON Schema from OpenAPI:
+```bash
+dtolator --from-openapi schema.json --json-schema
+```
+
+Generate TypeScript from plain JSON:
+```bash
+dtolator --from-json data.json --typescript
+```
+
+Generate Zod schemas from JSON Schema:
+```bash
+dtolator --from-json-schema schema.json --zod
+```
+
+### Input Types
+
+dtolator supports three different input types for maximum flexibility:
+
+#### 1. OpenAPI Schema Input (`--from-openapi`)
+Use this for OpenAPI 3.x specification files. This is the most common use case and provides the richest type information including API endpoints, request/response schemas, and validation rules.
+
+```bash
+# OpenAPI schema with full API endpoint information
+dtolator --from-openapi api-spec.json --angular -o ./api-client
+```
+
+#### 2. Plain JSON Input (`--from-json`)
+Use this to generate types directly from JSON data, similar to tools like quicktype.io. dtolator will infer the schema structure from your JSON data.
+
+```bash
+# Generate TypeScript from JSON data
+dtolator --from-json user-data.json --typescript --root User
+
+# Generate Pydantic models from JSON
+dtolator --from-json api-response.json --pydantic --root ApiResponse
+```
+
+#### 3. JSON Schema Input (`--from-json-schema`)
+Use this when you already have a JSON Schema and want to generate code from it. This is useful for converting between different schema formats or when working with existing JSON Schema definitions.
+
+```bash
+# Convert JSON Schema to Zod
+dtolator --from-json-schema user.schema.json --zod
+
+# Convert JSON Schema to TypeScript
+dtolator --from-json-schema product.schema.json --typescript
+```
+
+**Note:** The `--root` option is only used with `--from-json` to specify the name of the root type when generating from plain JSON data.
 
 ### Command Line Options
 
 ```
 Convert OpenAPI schema JSON files to Zod schema definitions or TypeScript interfaces
 
-Usage: dtolator [OPTIONS] --input <INPUT>
+Usage: dtolator [OPTIONS] <INPUT_TYPE>
+
+Input Types (exactly one required):
+      --from-openapi <FILE>     Input OpenAPI schema JSON file
+      --from-json <FILE>        Input plain JSON file (for generating DTOs like quicktype.io)
+      --from-json-schema <FILE> Input JSON Schema file (for generating DTOs from JSON Schema)
 
 Options:
-  -i, --input <INPUT>      Input OpenAPI schema JSON file
-  -o, --output <OUTPUT>    Output directory path (if specified, writes dto.ts and optionally schema.ts files)
-  -t, --typescript         Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
-  -z, --zod                Generate Zod schemas (creates schema.ts and makes dto.ts import from it)
-  -a, --angular            Generate Angular API services (creates multiple service files and utilities)
-      --promises           Generate promises using lastValueFrom instead of Observables (only works with --angular)
-      --pydantic           Generate Pydantic BaseModel classes for Python
-      --python-dict        Generate Python TypedDict definitions
-      --dotnet             Generate C# classes with System.Text.Json serialization
-  -e, --endpoints          Generate API endpoint types from OpenAPI paths
-  -p, --pretty             Pretty print the output
-  -h, --help               Print help
-  -V, --version            Print version
+      --root <NAME>             Name for the root class/interface when using --from-json (default: Root)
+  -o, --output <OUTPUT>         Output directory path (if specified, writes dto.ts and optionally schema.ts files)
+  -t, --typescript              Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
+  -z, --zod                     Generate Zod schemas (creates schema.ts and makes dto.ts import from it)
+  -a, --angular                 Generate Angular API services (creates multiple service files and utilities)
+      --promises                Generate promises using lastValueFrom instead of Observables (only works with --angular)
+      --pydantic                Generate Pydantic BaseModel classes for Python
+      --python-dict             Generate Python TypedDict definitions
+      --dotnet                  Generate C# classes with System.Text.Json serialization
+      --json-schema             Generate JSON Schema output
+  -e, --endpoints               Generate API endpoint types from OpenAPI paths
+  -p, --pretty                  Pretty print the output
+      --debug                   Enable debug output
+  -h, --help                    Print help
+  -V, --version                 Print version
 ```
 
 ## Angular Integration
@@ -147,16 +206,16 @@ Generate Angular services from your OpenAPI schema:
 
 ```bash
 # Basic Angular services (returns Observables)
-dtolator -i your-api-spec.json -o ./src/app/api --angular
+dtolator --from-openapi your-api-spec.json -o ./src/app/api --angular
 
 # Angular services with Zod validation
-dtolator -i your-api-spec.json -o ./src/app/api --angular --zod
+dtolator --from-openapi your-api-spec.json -o ./src/app/api --angular --zod
 
 # Angular services returning Promises
-dtolator -i your-api-spec.json -o ./src/app/api --angular --promises
+dtolator --from-openapi your-api-spec.json -o ./src/app/api --angular --promises
 
 # Angular services with Promises and Zod validation
-dtolator -i your-api-spec.json -o ./src/app/api --angular --promises --zod
+dtolator --from-openapi your-api-spec.json -o ./src/app/api --angular --promises --zod
 ```
 
 ### What Gets Generated
@@ -418,7 +477,7 @@ const updatedUser = await this.usersApi.updateUser(123, {
 
 2. **Enable Zod validation for production apps:**
    ```bash
-   dtolator -i api-spec.json -o ./src/app/api --angular --promises --zod
+   dtolator --from-openapi api-spec.json -o ./src/app/api --angular --promises --zod
    ```
 
 3. **Import only what you need:**
@@ -1006,24 +1065,30 @@ Test the application with the provided samples:
 cargo build --release
 
 # Test with simple example (Zod schemas - default)
-./target/release/dtolator -i simple-sample.json
+./target/release/dtolator --from-openapi simple-sample.json
 
 # Test with TypeScript interfaces
-./target/release/dtolator -i simple-sample.json --typescript
+./target/release/dtolator --from-openapi simple-sample.json --typescript
 
 # Test with API endpoints generation
-./target/release/dtolator -i full-sample.json --endpoints
+./target/release/dtolator --from-openapi full-sample.json --endpoints
 
 # Test with Python TypedDict generation
-./target/release/dtolator -i simple-sample.json --python-dict
+./target/release/dtolator --from-openapi simple-sample.json --python-dict
 
 # Test with C# classes generation
-./target/release/dtolator -i simple-sample.json --dotnet
+./target/release/dtolator --from-openapi simple-sample.json --dotnet
 
 # Generate complete type-safe API client setup
-./target/release/dtolator -i full-sample.json --typescript -o types.ts
-./target/release/dtolator -i full-sample.json --endpoints -o api-endpoints.ts
-./target/release/dtolator -i full-sample.json -o schemas.ts  # Zod schemas
+./target/release/dtolator --from-openapi full-sample.json --typescript -o ./output
+./target/release/dtolator --from-openapi full-sample.json --endpoints -o ./output
+./target/release/dtolator --from-openapi full-sample.json -o ./output  # Zod schemas
+
+# Test JSON to TypeScript conversion
+./target/release/dtolator --from-json test-data-simple.json --typescript
+
+# Test JSON Schema to Zod conversion
+./target/release/dtolator --from-json-schema generated-schema.json --zod
 ```
 
 ### Complete Project Setup
@@ -1032,13 +1097,13 @@ For a production-ready type-safe API setup, generate all three outputs:
 
 ```bash
 # 1. Generate TypeScript interfaces for data types
-dtolator -i your-api.json --typescript -o src/types/api-types.ts
+dtolator --from-openapi your-api.json --typescript -o ./src/types
 
 # 2. Generate API endpoint definitions  
-dtolator -i your-api.json --endpoints -o src/types/api-endpoints.ts
+dtolator --from-openapi your-api.json --endpoints -o ./src/types
 
 # 3. Generate Zod schemas for runtime validation
-dtolator -i your-api.json -o src/schemas/api-schemas.ts
+dtolator --from-openapi your-api.json -o ./src/schemas --zod
 ```
 
 This gives you:
@@ -1358,13 +1423,19 @@ export class UserService {
 
 ```bash
 # Test with simple nested objects
-dtolator -i simple-sample.json --typescript
+dtolator --from-openapi simple-sample.json --typescript
 
 # Test with complex deep nesting
-dtolator -i full-sample.json --zod
+dtolator --from-openapi full-sample.json --zod
 
 # Generate complete type-safe setup with nesting
-dtolator -i full-sample.json --angular -o ./output-dir
+dtolator --from-openapi full-sample.json --angular -o ./output-dir
+
+# Test JSON to TypeScript with nested objects
+dtolator --from-json test-data-complex.json --typescript
+
+# Test JSON Schema with nested structures
+dtolator --from-json-schema complex-schema.json --zod
 ```
 
 The generated code maintains complete type safety and validation for all nested structures, making it easy to work with complex API responses and requests in your applications. 
