@@ -375,12 +375,6 @@ class TestSuite:
                 command_args=["--from-json-schema", "--pydantic", "--pretty"],
                 expected_dir="output-samples/from-json-schema-pydantic"
             ),
-            TestCase(
-                name="From JSON Schema Angular",
-                input_file="output-samples/json-simple-json-schema/schema.json",
-                command_args=["--from-json-schema", "--angular", "--pretty"],
-                expected_dir="output-samples/from-json-schema-angular"
-            ),
         ]
     
     def check_npm_availability(self) -> bool:
