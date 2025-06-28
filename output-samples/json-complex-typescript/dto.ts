@@ -9,7 +9,7 @@ export interface Item {
   reviewCount: number;
 }
 
-export interface ItemItemSpecifications {
+export interface OrderItemSpecifications {
   batteryLife: number;
   brand: string;
   color: string;
@@ -55,20 +55,20 @@ export interface UserAddressCoordinates {
   longitude: number;
 }
 
-export interface RecommendationItem {
+export interface Recommendation {
   item: Item;
   reason: string;
   score: number;
   type: string;
 }
 
-export interface ItemItem {
+export interface OrderItem {
   categories: string[];
   name: string;
   price: number;
   productId: string;
   quantity: number;
-  specifications: ItemItemSpecifications;
+  specifications: OrderItemSpecifications;
 }
 
 export interface Billing {
@@ -130,18 +130,11 @@ export interface Profile {
   preferences: ProfilePreferences;
 }
 
-export interface OrderItem {
+export interface Order {
   currency: string;
   date: string;
   id: string;
-  items: {
-    categories: string[];
-    name: string;
-    price: number;
-    productId: string;
-    quantity: number;
-    specifications: ItemItemSpecifications;
-  }[];
+  items: OrderItem[];
   shipping: Shipping;
   status: string;
   total: number;
@@ -152,34 +145,14 @@ export interface User {
   email: string;
   id: number;
   isActive: boolean;
-  orders: {
-    currency: string;
-    date: string;
-    id: string;
-    items: {
-    categories: string[];
-    name: string;
-    price: number;
-    productId: string;
-    quantity: number;
-    specifications: ItemItemSpecifications;
-  }[];
-    shipping: Shipping;
-    status: string;
-    total: number;
-  }[];
+  orders: Order[];
   profile: Profile;
   subscription: Subscription;
   username: string;
 }
 
 export interface Data {
-  recommendations: {
-    item: Item;
-    reason: string;
-    score: number;
-    type: string;
-  }[];
+  recommendations: Recommendation[];
   user: User;
 }
 

@@ -899,7 +899,25 @@ fn json_value_to_schema_pass1(
                     nullable: None,
                 })
             } else {
-                let item_schema = json_value_to_schema_pass1(&arr[0], schemas, &format!("{}Item", current_name), struct_hashes, hash_to_placeholder, None)?;
+                // Create a meaningful name for the array item type
+                let item_name = if let Some(parent_key) = parent_key {
+                    // Use parent key to create meaningful type name
+                    let mut name = capitalize_first_letter(parent_key);
+                    // Remove plural 's' to get singular item name
+                    if name.ends_with("s") && name.len() > 1 {
+                        name.pop();
+                    }
+                    // Handle special cases
+                    match name.as_str() {
+                        "Item" => format!("{}Item", current_name),
+                        "Data" => format!("{}DataItem", current_name),  
+                        _ => name,
+                    }
+                } else {
+                    format!("{}Item", current_name)
+                };
+                
+                let item_schema = json_value_to_schema_pass1(&arr[0], schemas, &item_name, struct_hashes, hash_to_placeholder, Some(&item_name.to_lowercase()))?;
                 Ok(Schema::Object {
                     schema_type: Some("array".to_string()),
                     properties: None,
@@ -977,23 +995,12 @@ fn json_value_to_schema_pass1(
                         }
                     }
                     serde_json::Value::Array(arr) => {
-                        // For arrays, check if they contain objects
-                        if !arr.is_empty() {
-                            if let serde_json::Value::Object(_) = &arr[0] {
-                                // Array of objects - create a type name for the item type
-                                let mut item_name = capitalize_first_letter(key);
-                                if item_name.ends_with("s") && item_name.len() > 1 {
-                                    // Remove plural 's' to get item name
-                                    item_name.pop();
-                                } else {
-                                    item_name = format!("{}Item", current_name);
-                                }
-                                item_name
-                            } else {
-                                format!("{}Item", current_name)
-                            }
+                        // For arrays containing objects, create a meaningful type name for container
+                        if !arr.is_empty() && matches!(arr[0], serde_json::Value::Object(_)) {
+                            // This is just for the array property context, actual item naming happens in array processing
+                            current_name.to_string()
                         } else {
-                            format!("{}Item", current_name)
+                            current_name.to_string()
                         }
                     }
                     _ => capitalize_first_letter(key)
