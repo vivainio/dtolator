@@ -150,6 +150,7 @@ impl AngularGenerator {
                 methods: Vec::new(),
                 response_types: std::collections::HashSet::new(),
                 request_types: std::collections::HashSet::new(),
+                query_param_types: std::collections::HashSet::new(),
                 has_void_methods: false,
             });
         }
@@ -320,24 +321,29 @@ impl AngularGenerator {
             }
         }
         
-        // Query parameters
+        // Query parameters (with named types)
         if let Some(parameters) = &operation.parameters {
             let query_params: Vec<&Parameter> = parameters.iter()
                 .filter(|p| p.location == "query")
                 .collect();
             
             if !query_params.is_empty() {
-                let mut query_type = "{ ".to_string();
-                for (i, param) in query_params.iter().enumerate() {
-                    let param_type = self.get_parameter_type(param);
-                    let optional = if param.required.unwrap_or(false) { "" } else { "?" };
-                    query_type.push_str(&format!("{}{}: {}", param.name, optional, param_type));
-                    if i < query_params.len() - 1 {
-                        query_type.push_str(", ");
+                if let Some(type_name) = self.get_query_param_type_name(operation) {
+                    params.push(format!("queryParams?: {}", type_name));
+                } else {
+                    // Fallback to inline type if no good name can be generated
+                    let mut query_type = "{ ".to_string();
+                    for (i, param) in query_params.iter().enumerate() {
+                        let param_type = self.get_parameter_type(param);
+                        let optional = if param.required.unwrap_or(false) { "" } else { "?" };
+                        query_type.push_str(&format!("{}{}: {}", param.name, optional, param_type));
+                        if i < query_params.len() - 1 {
+                            query_type.push_str(", ");
+                        }
                     }
+                    query_type.push_str(" }");
+                    params.push(format!("queryParams?: {}", query_type));
                 }
-                query_type.push_str(" }");
-                params.push(format!("queryParams?: {}", query_type));
             }
         }
         
@@ -443,6 +449,18 @@ impl AngularGenerator {
         
         // Collect parameter types (for query, path, and header parameters)
         if let Some(parameters) = &operation.parameters {
+            let query_params: Vec<&Parameter> = parameters.iter()
+                .filter(|p| p.location == "query")
+                .collect();
+            
+            // If there are query parameters and we can generate a good type name, add it to imports
+            if !query_params.is_empty() {
+                if let Some(type_name) = self.get_query_param_type_name(operation) {
+                    service_data.imports.insert(type_name.clone());
+                    service_data.query_param_types.insert(type_name);
+                }
+            }
+            
             for parameter in parameters {
                 if let Some(schema) = &parameter.schema {
                     if let Some(type_name) = self.extract_type_name(schema) {
@@ -652,6 +670,82 @@ impl AngularGenerator {
         input.replace("_", "-").to_lowercase()
     }
     
+    fn to_pascal_case(&self, input: &str) -> String {
+        input
+            .split_whitespace()
+            .map(|word| {
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                }
+            })
+            .collect()
+    }
+    
+    fn get_query_param_type_name(&self, operation: &Operation) -> Option<String> {
+        if let Some(summary) = &operation.summary {
+            // Convert "Get Sales Analytics" -> "GetSalesAnalyticsQueryParams"
+            let clean_summary = summary
+                .replace("Get ", "")
+                .replace("Create ", "")
+                .replace("Update ", "")
+                .replace("Delete ", "")
+                .replace("Retrieve ", "")
+                .replace("Fetch ", "");
+            let pascal_name = self.to_pascal_case(&clean_summary);
+            Some(format!("{}QueryParams", pascal_name))
+        } else {
+            None
+        }
+    }
+    
+    pub fn generate_query_param_types(&self, schema: &OpenApiSchema) -> Result<String> {
+        let mut types = String::new();
+        let mut generated_types = std::collections::HashSet::new();
+        
+        if let Some(paths) = &schema.paths {
+            for (_path, path_item) in paths {
+                let operations = [
+                    &path_item.get, &path_item.post, &path_item.put, 
+                    &path_item.delete, &path_item.patch
+                ];
+                
+                for operation in operations.into_iter().flatten() {
+                    if let Some(parameters) = &operation.parameters {
+                        let query_params: Vec<&Parameter> = parameters.iter()
+                            .filter(|p| p.location == "query")
+                            .collect();
+                        
+                        if !query_params.is_empty() {
+                            if let Some(type_name) = self.get_query_param_type_name(operation) {
+                                if !generated_types.contains(&type_name) {
+                                    generated_types.insert(type_name.clone());
+                                    
+                                    // Add JSDoc comment for the interface
+                                    if let Some(summary) = &operation.summary {
+                                        types.push_str(&format!("/**\n * Query parameters for {}\n */\n", summary));
+                                    }
+                                    
+                                    types.push_str(&format!("export interface {} {{\n", type_name));
+                                    for param in &query_params {
+                                        let param_type = self.get_parameter_type(param);
+                                        let optional = if param.required.unwrap_or(false) { "" } else { "?" };
+                                        
+                                        types.push_str(&format!("  {}{}: {};\n", param.name, optional, param_type));
+                                    }
+                                    types.push_str("}\n\n");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(types)
+    }
+    
     fn generate_tsdoc_comment(&self, http_method: &str, path: &str, operation: &Operation, return_type: &str) -> Result<String> {
         let mut comment = String::new();
         comment.push_str("  /**\n");
@@ -745,5 +839,6 @@ struct ServiceData {
     methods: Vec<String>,
     response_types: std::collections::HashSet<String>,
     request_types: std::collections::HashSet<String>,
+    query_param_types: std::collections::HashSet<String>,
     has_void_methods: bool,
 } 

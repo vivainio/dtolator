@@ -616,6 +616,13 @@ fn generate_typescript_with_imports(schema: &OpenApiSchema, command_string: &str
                     output.push_str("\n");
                 }
                 
+                // Generate query parameter types for Angular services
+                let angular_generator = AngularGenerator::new();
+                let query_param_types = angular_generator.generate_query_param_types(schema)?;
+                if !query_param_types.trim().is_empty() {
+                    output.push_str(&query_param_types);
+                }
+                
                 // Create and export inferred types from response schemas only
                 for name in &response_types {
                     output.push_str(&format!("export type {} = z.infer<typeof {}Schema>;\n", name, name));

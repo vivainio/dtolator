@@ -9,6 +9,7 @@ import {
   Product,
   ProductCategory,
   ProductListResponse,
+  SearchProductsWithFiltersQueryParams,
   UpdateProductRequest,
 } from './dto';
 
@@ -25,7 +26,7 @@ export class ProductsApi {
    * @param queryParams.maxPrice - optional parameter of type number
    * @returns Observable<ProductListResponse> - Products list
    */
-  searchProductsWithFilters(queryParams?: { category?: ProductCategory, minPrice?: number, maxPrice?: number }): Observable<ProductListResponse> {
+  searchProductsWithFilters(queryParams?: SearchProductsWithFiltersQueryParams): Observable<ProductListResponse> {
     const url = subsToUrl('/products', {}, queryParams || {});
     return this.http.get<ProductListResponse>(url);
   }

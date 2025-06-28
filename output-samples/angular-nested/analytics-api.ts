@@ -8,6 +8,7 @@ import { subsToUrl } from './subs-to-url.func';
 import {
   ProductAnalytics,
   SalesAnalytics,
+  SalesAnalyticsQueryParams,
 } from './dto';
 
 @Injectable({ providedIn: 'root' })
@@ -22,7 +23,7 @@ export class AnalyticsApi {
    * @param queryParams.endDate - optional parameter of type string
    * @returns Observable<SalesAnalytics> - Sales analytics data
    */
-  getSalesAnalytics(queryParams?: { startDate?: string, endDate?: string }): Observable<SalesAnalytics> {
+  getSalesAnalytics(queryParams?: SalesAnalyticsQueryParams): Observable<SalesAnalytics> {
     const url = subsToUrl('/analytics/sales', {}, queryParams || {});
     return this.http.get<SalesAnalytics>(url);
   }

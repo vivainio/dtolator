@@ -6,6 +6,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { subsToUrl } from './subs-to-url.func';
 import {
+  AllUsersWithPaginationQueryParams,
   CreateUserRequest,
   User,
   UserListResponse,
@@ -25,7 +26,7 @@ export class UsersApi {
    * @param queryParams.limit - optional parameter of type number
    * @returns Observable<UserListResponse> - Successful response
    */
-  getAllUsersWithPagination(queryParams?: { page?: number, limit?: number }): Observable<UserListResponse> {
+  getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams): Observable<UserListResponse> {
     const url = subsToUrl('/users', {}, queryParams || {});
     return this.http.get<UserListResponse>(url);
   }

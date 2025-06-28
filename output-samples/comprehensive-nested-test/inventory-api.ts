@@ -10,6 +10,7 @@ import { subsToUrl } from './subs-to-url.func';
 import {
   Inventory,
   InventorySchema,
+  InventoryLevelsQueryParams,
   InventoryResponse,
   InventoryResponseSchema,
   UpdateInventoryRequest,
@@ -26,7 +27,7 @@ export class InventoryApi {
    * @param queryParams.lowStock - optional parameter of type boolean
    * @returns Observable<InventoryResponse> - Inventory levels
    */
-  getInventoryLevels(queryParams?: { lowStock?: boolean }): Observable<InventoryResponse> {
+  getInventoryLevels(queryParams?: InventoryLevelsQueryParams): Observable<InventoryResponse> {
     const url = subsToUrl('/inventory', {}, queryParams || {});
     return this.http.get<InventoryResponse>(url)
       .pipe(
