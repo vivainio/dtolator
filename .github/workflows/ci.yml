@@ -21,10 +21,13 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        components: rustfmt
+        components: rustfmt, clippy
     
     - name: Check formatting
       run: cargo fmt --check
+      
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
     
     - name: Cache cargo
       uses: actions/cache@v4

@@ -3,12 +3,12 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Rust Code Formatting Guidelines
+# Rust Code Quality Guidelines
 
 ## Overview
-This project enforces consistent Rust code formatting using `rustfmt`. The CI pipeline automatically checks code formatting and will fail if code is not properly formatted.
+This project enforces consistent Rust code formatting using `rustfmt` and code quality using `clippy`. The CI pipeline automatically checks both formatting and linting, and will fail if code is not properly formatted or contains linting issues.
 
-## Pre-Commit Formatting Workflow
+## Pre-Commit Quality Workflow
 
 ### 1. Format Your Code
 Before committing any Rust code changes, always run:
@@ -18,9 +18,116 @@ cargo fmt
 
 This will automatically format all Rust files in the project according to the standard Rust formatting rules.
 
-### 2. Verify Formatting
+### 2. Run Clippy Linting
+Check for code quality issues and common mistakes:
+```bash
+cargo clippy
+```
+
+To treat warnings as errors (recommended for CI):
+```bash
+cargo clippy -- -D warnings
+```
+
+### 3. Verify Formatting
 To check if your code is properly formatted without making changes:
 ```bash
 cargo fmt --check
 ```
+
+### 4. Complete Quality Check
+Run both checks together:
+```bash
+cargo fmt --check && cargo clippy -- -D warnings
+```
+
+### 5. Project Structure
+- Main entry point: [src/main.rs](mdc:src/main.rs)
+- Project configuration: [Cargo.toml](mdc:Cargo.toml)
+- CI configuration: [.github/workflows/ci.yml](mdc:.github/workflows/ci.yml)
+
+## CI Integration
+The CI pipeline in [.github/workflows/ci.yml](mdc:.github/workflows/ci.yml) includes both formatting and linting checks:
+- **Format Check**: Runs `cargo fmt --check` to ensure consistent code formatting
+- **Clippy Linting**: Runs `cargo clippy -- -D warnings` to catch code quality issues
+
+This ensures all code merged into the main branch maintains both consistent formatting and high quality standards.
+
+## Best Practices
+
+### Before Every Commit
+1. Run `cargo fmt` to format your code
+2. Run `cargo clippy` to check for linting issues
+3. Fix any clippy warnings or errors
+4. Review the changes to ensure they look correct
+5. Commit your changes
+
+### IDE Integration
+Consider setting up your IDE to run both `rustfmt` and `clippy` automatically:
+- **VS Code**: Install the `rust-analyzer` extension and enable format on save + clippy diagnostics
+- **Other IDEs**: Configure rustfmt as your default formatter and enable clippy linting
+
+### Custom Rules
+- **Formatting**: Create a `rustfmt.toml` file for custom formatting rules (default rules recommended)
+- **Linting**: Create a `clippy.toml` file for custom clippy configuration
+- **Project-level**: Use `[lints]` section in `Cargo.toml` for project-wide clippy settings
+
+## Troubleshooting
+
+### Format Check Fails in CI
+If the CI format check fails:
+1. Pull the latest changes from the remote branch
+2. Run `cargo fmt` locally
+3. Commit the formatting changes
+4. Push your changes
+
+### Clippy Warnings in CI
+If clippy fails in CI:
+1. Run `cargo clippy -- -D warnings` locally to see all issues
+2. Fix the warnings (avoid using `#[allow(clippy::...)]` unless necessary)
+3. Common fixes:
+   - Remove unused variables or imports
+   - Use more idiomatic Rust patterns
+   - Address performance suggestions
+4. Commit the fixes and push
+
+### Large Changes
+For large formatting or linting changes:
+1. Review the changes carefully
+2. Consider making formatting/linting changes in separate commits
+3. This helps keep logical changes separate from style changes
+
+## Common Clippy Issues
+
+### Performance
+- Use `&str` instead of `String` for function parameters when possible
+- Use `Vec::with_capacity()` when you know the size
+- Avoid unnecessary cloning with `.clone()`
+
+### Idiomatic Rust
+- Use `if let` instead of `match` for single pattern matching
+- Use `unwrap_or_else()` instead of `unwrap_or()` for expensive operations
+- Prefer `Iterator` methods over manual loops
+
+### Code Quality
+- Remove unused imports and variables
+- Use meaningful variable names
+- Avoid deep nesting with early returns
+
+## Generator Modules
+The project has several generator modules that should all follow consistent formatting and linting standards:
+- [src/generators/angular.rs](mdc:src/generators/angular.rs)
+- [src/generators/typescript.rs](mdc:src/generators/typescript.rs)
+- [src/generators/zod.rs](mdc:src/generators/zod.rs)
+- [src/generators/pydantic.rs](mdc:src/generators/pydantic.rs)
+- [src/generators/dotnet.rs](mdc:src/generators/dotnet.rs)
+- [src/generators/python_dict.rs](mdc:src/generators/python_dict.rs)
+- [src/generators/json_schema.rs](mdc:src/generators/json_schema.rs)
+- [src/generators/endpoints.rs](mdc:src/generators/endpoints.rs)
+
+All of these modules should be formatted using `cargo fmt` and linted using `cargo clippy` before committing changes.
+
+
+
+
 
