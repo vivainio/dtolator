@@ -50,7 +50,7 @@ jobs:
       run: cargo build --release
     
     - name: Setup Python for integration tests
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     
