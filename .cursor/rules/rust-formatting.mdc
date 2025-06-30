@@ -1,0 +1,26 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Rust Code Formatting Guidelines
+
+## Overview
+This project enforces consistent Rust code formatting using `rustfmt`. The CI pipeline automatically checks code formatting and will fail if code is not properly formatted.
+
+## Pre-Commit Formatting Workflow
+
+### 1. Format Your Code
+Before committing any Rust code changes, always run:
+```bash
+cargo fmt
+```
+
+This will automatically format all Rust files in the project according to the standard Rust formatting rules.
+
+### 2. Verify Formatting
+To check if your code is properly formatted without making changes:
+```bash
+cargo fmt --check
+```
+
