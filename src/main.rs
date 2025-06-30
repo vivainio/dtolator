@@ -1,17 +1,22 @@
-use clap::Parser;
 use anyhow::{Context, Result};
-use std::path::PathBuf;
-use std::fs;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use clap::Parser;
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
+use std::fs;
+use std::hash::{Hash, Hasher};
+use std::path::PathBuf;
 
-mod openapi;
 mod generators;
+mod openapi;
 
-use openapi::{OpenApiSchema, Schema, Components, Info};
-use generators::{zod::ZodGenerator, typescript::TypeScriptGenerator, endpoints::EndpointsGenerator, angular::AngularGenerator, pydantic::PydanticGenerator, python_dict::PythonDictGenerator, dotnet::DotNetGenerator, json_schema::JsonSchemaGenerator, Generator};
+use generators::{
+    angular::AngularGenerator, dotnet::DotNetGenerator, endpoints::EndpointsGenerator,
+    json_schema::JsonSchemaGenerator, pydantic::PydanticGenerator,
+    python_dict::PythonDictGenerator, typescript::TypeScriptGenerator, zod::ZodGenerator,
+    Generator,
+};
 use indexmap::IndexMap;
+use openapi::{Components, Info, OpenApiSchema, Schema};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -19,59 +24,59 @@ struct Cli {
     /// Input OpenAPI schema JSON file
     #[arg(long)]
     from_openapi: Option<PathBuf>,
-    
+
     /// Input plain JSON file (for generating DTOs like quicktype.io)
     #[arg(long)]
     from_json: Option<PathBuf>,
-    
+
     /// Input JSON Schema file (for generating DTOs from JSON Schema)
     #[arg(long)]
     from_json_schema: Option<PathBuf>,
-    
+
     /// Name for the root class/interface when using --json (default: Root)
     #[arg(long, default_value = "Root")]
     root: String,
-    
+
     /// Output directory path (if specified, writes dto.ts and optionally schema.ts files)
     #[arg(short, long)]
     output: Option<PathBuf>,
-    
+
     /// Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
     #[arg(short, long)]
     typescript: bool,
-    
+
     /// Generate Zod schemas (creates schema.ts and makes dto.ts import from it)
     #[arg(short, long)]
     zod: bool,
-    
+
     /// Generate Angular API services (creates multiple service files and utilities)
     #[arg(short, long)]
     angular: bool,
-    
+
     /// Generate Pydantic BaseModel classes for Python
     #[arg(long)]
     pydantic: bool,
-    
+
     /// Generate Python TypedDict definitions
     #[arg(long)]
     python_dict: bool,
-    
+
     /// Generate C# classes with System.Text.Json serialization
     #[arg(long)]
     dotnet: bool,
-    
+
     /// Generate JSON Schema output
     #[arg(long)]
     json_schema: bool,
-    
+
     /// Generate API endpoint types from OpenAPI paths
     #[arg(short, long)]
     endpoints: bool,
-    
+
     /// Generate promises using lastValueFrom instead of Observables (only works with --angular)
     #[arg(long)]
     promises: bool,
-    
+
     /// Enable debug output
     #[arg(long)]
     debug: bool,
@@ -80,71 +85,74 @@ struct Cli {
 impl Cli {
     fn build_command_string(&self) -> String {
         let mut parts = vec!["dtolator".to_string()];
-        
+
         if let Some(openapi_path) = &self.from_openapi {
-            let filename = openapi_path.file_name()
+            let filename = openapi_path
+                .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or("unknown");
             parts.push(format!("--from-openapi {}", filename));
         }
-        
+
         if let Some(json_path) = &self.from_json {
-            let filename = json_path.file_name()
+            let filename = json_path
+                .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or("unknown");
             parts.push(format!("--from-json {}", filename));
         }
-        
+
         if let Some(json_schema_path) = &self.from_json_schema {
-            let filename = json_schema_path.file_name()
+            let filename = json_schema_path
+                .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or("unknown");
             parts.push(format!("--from-json-schema {}", filename));
         }
-        
+
         // Skip output directory in command string as it's usually a temp directory
         // and makes tests non-deterministic
-        
+
         if self.typescript {
             parts.push("--typescript".to_string());
         }
-        
+
         if self.zod {
             parts.push("--zod".to_string());
         }
-        
+
         if self.angular {
             parts.push("--angular".to_string());
         }
-        
+
         if self.pydantic {
             parts.push("--pydantic".to_string());
         }
-        
+
         if self.python_dict {
             parts.push("--python-dict".to_string());
         }
-        
+
         if self.dotnet {
             parts.push("--dotnet".to_string());
         }
-        
+
         if self.json_schema {
             parts.push("--json-schema".to_string());
         }
-        
+
         if self.endpoints {
             parts.push("--endpoints".to_string());
         }
-        
+
         if self.promises {
             parts.push("--promises".to_string());
         }
-        
+
         if self.debug {
             parts.push("--debug".to_string());
         }
-        
+
         parts.join(" ")
     }
 }
@@ -152,132 +160,166 @@ impl Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let command_string = cli.build_command_string();
-    
+
     // Validate that exactly one input type is provided
-    let input_count = [&cli.from_openapi, &cli.from_json, &cli.from_json_schema].iter().filter(|x| x.is_some()).count();
-    
+    let input_count = [&cli.from_openapi, &cli.from_json, &cli.from_json_schema]
+        .iter()
+        .filter(|x| x.is_some())
+        .count();
+
     if input_count == 0 {
         return Err(anyhow::anyhow!("Please specify exactly one input type: --from-openapi, --from-json, or --from-json-schema"));
     }
-    
+
     if input_count > 1 {
         return Err(anyhow::anyhow!("Please specify only one input type: --from-openapi, --from-json, or --from-json-schema"));
     }
-    
+
     // Validate that Angular generation is only used with OpenAPI input
     if cli.angular && cli.from_openapi.is_none() {
         return Err(anyhow::anyhow!("--angular flag requires --from-openapi input. Angular services need API endpoint information that is only available in OpenAPI specifications."));
     }
-    
+
     // Validate that endpoints generation is only used with OpenAPI input
     if cli.endpoints && cli.from_openapi.is_none() {
         return Err(anyhow::anyhow!("--endpoints flag requires --from-openapi input. API endpoint types need path information that is only available in OpenAPI specifications."));
     }
-    
+
     // Validate that promises flag is only used with Angular
     if cli.promises && !cli.angular {
         return Err(anyhow::anyhow!("--promises flag can only be used with --angular. Use --angular --promises to generate Angular services with Promise-based methods."));
     }
-    
+
     // Read and parse the input file
     let schema = if let Some(openapi_path) = &cli.from_openapi {
         // Read and parse OpenAPI schema
         let input_content = std::fs::read_to_string(openapi_path)
             .with_context(|| format!("Failed to read OpenAPI file: {}", openapi_path.display()))?;
-        
+
         serde_json::from_str::<OpenApiSchema>(&input_content)
             .with_context(|| "Failed to parse OpenAPI schema JSON")?
     } else if let Some(json_path) = &cli.from_json {
         // Read and parse plain JSON, then convert to OpenAPI schema
         let input_content = std::fs::read_to_string(json_path)
             .with_context(|| format!("Failed to read JSON file: {}", json_path.display()))?;
-        
+
         json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
     } else if let Some(json_schema_path) = &cli.from_json_schema {
         // Read and parse JSON Schema, then convert to OpenAPI schema
-        let input_content = std::fs::read_to_string(json_schema_path)
-            .with_context(|| format!("Failed to read JSON Schema file: {}", json_schema_path.display()))?;
-        
+        let input_content = std::fs::read_to_string(json_schema_path).with_context(|| {
+            format!(
+                "Failed to read JSON Schema file: {}",
+                json_schema_path.display()
+            )
+        })?;
+
         // Strip JavaScript-style comments that might be in generated JSON Schema files
         let cleaned_content = strip_json_comments(&input_content);
-        
+
         json_schema_to_openapi_schema(serde_json::from_str(&cleaned_content)?, &cli.root)?
     } else {
         unreachable!() // We validated above that exactly one of them is Some
     };
-    
+
     match cli.output {
         Some(output_dir) => {
             // Output directory specified - generate files
-            fs::create_dir_all(&output_dir)
-                .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
-            
+            fs::create_dir_all(&output_dir).with_context(|| {
+                format!(
+                    "Failed to create output directory: {}",
+                    output_dir.display()
+                )
+            })?;
+
             if cli.angular {
                 // Generate Angular services with multiple files
-                generate_angular_services(&schema, &output_dir, cli.zod, cli.debug, cli.promises, &command_string)?;
+                generate_angular_services(
+                    &schema,
+                    &output_dir,
+                    cli.zod,
+                    cli.debug,
+                    cli.promises,
+                    &command_string,
+                )?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
                 let pydantic_generator = PydanticGenerator::new();
-                let pydantic_output = pydantic_generator.generate_with_command(&schema, &command_string)?;
-                
+                let pydantic_output =
+                    pydantic_generator.generate_with_command(&schema, &command_string)?;
+
                 let models_path = output_dir.join("models.py");
-                fs::write(&models_path, pydantic_output)
-                    .with_context(|| format!("Failed to write models.py file: {}", models_path.display()))?;
-                
+                fs::write(&models_path, pydantic_output).with_context(|| {
+                    format!("Failed to write models.py file: {}", models_path.display())
+                })?;
+
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
             } else if cli.python_dict {
                 // Generate Python TypedDict definitions to a Python file
                 let python_dict_generator = PythonDictGenerator::new();
-                let python_dict_output = python_dict_generator.generate_with_command(&schema, &command_string)?;
-                
+                let python_dict_output =
+                    python_dict_generator.generate_with_command(&schema, &command_string)?;
+
                 let typed_dicts_path = output_dir.join("typed_dicts.py");
-                fs::write(&typed_dicts_path, python_dict_output)
-                    .with_context(|| format!("Failed to write typed_dicts.py file: {}", typed_dicts_path.display()))?;
-                
+                fs::write(&typed_dicts_path, python_dict_output).with_context(|| {
+                    format!(
+                        "Failed to write typed_dicts.py file: {}",
+                        typed_dicts_path.display()
+                    )
+                })?;
+
                 println!("Generated files:");
                 println!("  - {}", typed_dicts_path.display());
             } else if cli.dotnet {
                 // Generate C# classes to a C# file
                 let dotnet_generator = DotNetGenerator::new();
-                let dotnet_output = dotnet_generator.generate_with_command(&schema, &command_string)?;
-                
+                let dotnet_output =
+                    dotnet_generator.generate_with_command(&schema, &command_string)?;
+
                 let models_path = output_dir.join("Models.cs");
-                fs::write(&models_path, dotnet_output)
-                    .with_context(|| format!("Failed to write Models.cs file: {}", models_path.display()))?;
-                
+                fs::write(&models_path, dotnet_output).with_context(|| {
+                    format!("Failed to write Models.cs file: {}", models_path.display())
+                })?;
+
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
             } else if cli.json_schema {
                 // Generate JSON Schema to a JSON file
                 let json_schema_generator = JsonSchemaGenerator::new();
-                let json_schema_output = json_schema_generator.generate_with_command(&schema, &command_string)?;
-                
+                let json_schema_output =
+                    json_schema_generator.generate_with_command(&schema, &command_string)?;
+
                 let schema_path = output_dir.join("schema.json");
-                fs::write(&schema_path, json_schema_output)
-                    .with_context(|| format!("Failed to write schema.json file: {}", schema_path.display()))?;
-                
+                fs::write(&schema_path, json_schema_output).with_context(|| {
+                    format!(
+                        "Failed to write schema.json file: {}",
+                        schema_path.display()
+                    )
+                })?;
+
                 println!("Generated files:");
                 println!("  - {}", schema_path.display());
             } else if cli.zod {
                 // Generate both dto.ts (with imports) and schema.ts
-                
+
                 // Generate Zod schemas first
                 let zod_generator = ZodGenerator::new();
                 let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
-                
+
                 let schema_path = output_dir.join("schema.ts");
-                fs::write(&schema_path, zod_output)
-                    .with_context(|| format!("Failed to write schema.ts file: {}", schema_path.display()))?;
-                
+                fs::write(&schema_path, zod_output).with_context(|| {
+                    format!("Failed to write schema.ts file: {}", schema_path.display())
+                })?;
+
                 // Generate TypeScript interfaces that import from schema.ts
                 let ts_generator = TypeScriptGenerator::new();
                 let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
-                
+
                 let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output)
-                    .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
-                
+                fs::write(&dto_path, ts_output).with_context(|| {
+                    format!("Failed to write dto.ts file: {}", dto_path.display())
+                })?;
+
                 println!("Generated files:");
                 println!("  - {}", dto_path.display());
                 println!("  - {}", schema_path.display());
@@ -285,11 +327,12 @@ fn main() -> Result<()> {
                 // Generate only dto.ts with TypeScript interfaces
                 let ts_generator = TypeScriptGenerator::new();
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
-                
+
                 let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output)
-                    .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
-                
+                fs::write(&dto_path, ts_output).with_context(|| {
+                    format!("Failed to write dto.ts file: {}", dto_path.display())
+                })?;
+
                 println!("Generated files:");
                 println!("  - {}", dto_path.display());
             }
@@ -321,41 +364,52 @@ fn main() -> Result<()> {
                 let generator = ZodGenerator::new();
                 generator.generate_with_command(&schema, &command_string)?
             };
-            
+
             println!("{}", output);
         }
     }
-    
+
     Ok(())
 }
 
-fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, with_zod: bool, debug: bool, promises: bool, command_string: &str) -> Result<()> {
-    let angular_generator = AngularGenerator::new().with_zod_validation(with_zod).with_debug(debug).with_promises(promises);
+fn generate_angular_services(
+    schema: &OpenApiSchema,
+    output_dir: &PathBuf,
+    with_zod: bool,
+    debug: bool,
+    promises: bool,
+    command_string: &str,
+) -> Result<()> {
+    let angular_generator = AngularGenerator::new()
+        .with_zod_validation(with_zod)
+        .with_debug(debug)
+        .with_promises(promises);
     let output = angular_generator.generate_with_command(schema, command_string)?;
-    
+
     // Also generate DTOs and utility function
     let dto_path = output_dir.join("dto.ts");
-    
+
     if with_zod {
         // Generate Zod schemas first
         let zod_generator = ZodGenerator::new();
         let zod_output = zod_generator.generate_with_command(schema, command_string)?;
-        
+
         let schema_path = output_dir.join("schema.ts");
-        fs::write(&schema_path, zod_output)
-            .with_context(|| format!("Failed to write schema.ts file: {}", schema_path.display()))?;
-        
+        fs::write(&schema_path, zod_output).with_context(|| {
+            format!("Failed to write schema.ts file: {}", schema_path.display())
+        })?;
+
         // Generate TypeScript interfaces that re-export from schema.ts
         let ts_generator = TypeScriptGenerator::new();
         let ts_output = ts_generator.generate_with_imports(schema, command_string)?;
-        
+
         fs::write(&dto_path, ts_output)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
     } else {
         // Generate only TypeScript interfaces
         let ts_generator = TypeScriptGenerator::new();
         let mut dto_output = ts_generator.generate_with_command(schema, command_string)?;
-        
+
         // Add query parameter types for Angular services
         let angular_generator = AngularGenerator::new();
         let query_param_types = angular_generator.generate_query_param_types(schema)?;
@@ -363,60 +417,76 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, with_
             dto_output.push_str("\n");
             dto_output.push_str(&query_param_types);
         }
-        
+
         fs::write(&dto_path, dto_output)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
     }
-    
+
     // Generate fill-url utility function
     let angular_generator = AngularGenerator::new();
     let fill_url_content = angular_generator.generate_fill_url_func(command_string);
     let fill_url_path = output_dir.join("fill-url.ts");
-    fs::write(&fill_url_path, fill_url_content)
-        .with_context(|| format!("Failed to write fill-url.ts file: {}", fill_url_path.display()))?;
-    
+    fs::write(&fill_url_path, fill_url_content).with_context(|| {
+        format!(
+            "Failed to write fill-url.ts file: {}",
+            fill_url_path.display()
+        )
+    })?;
+
     // Parse and split the Angular generator output into individual service files
-    let mut files_generated = vec![dto_path.display().to_string(), fill_url_path.display().to_string()];
-    
+    let mut files_generated = vec![
+        dto_path.display().to_string(),
+        fill_url_path.display().to_string(),
+    ];
+
     if debug {
         println!("🔍 [DEBUG] Raw Angular generator output:");
         println!("--- START OUTPUT ---");
         println!("{}", output);
         println!("--- END OUTPUT ---");
     }
-    
+
     // Split by the FILE markers and match content to files
     let mut current_content = String::new();
     let mut current_file = String::new();
     let mut in_file_section = false;
-    
+
     for line in output.lines() {
         if debug {
             println!("🔍 [DEBUG] Processing line: {}", line);
         }
-        
+
         if line.starts_with("// FILE: ") {
             if debug {
                 println!("🔍 [DEBUG] Found FILE marker: {}", line);
             }
-            
+
             // If we were collecting content for a previous file, write it now
             if !current_file.is_empty() && !current_content.is_empty() {
                 if debug {
-                    println!("🔍 [DEBUG] Writing previous file: {} ({} chars)", current_file, current_content.len());
+                    println!(
+                        "🔍 [DEBUG] Writing previous file: {} ({} chars)",
+                        current_file,
+                        current_content.len()
+                    );
                 }
-                
+
                 let service_path = output_dir.join(&current_file);
-                fs::write(&service_path, &current_content)
-                    .with_context(|| format!("Failed to write {} file: {}", current_file, service_path.display()))?;
+                fs::write(&service_path, &current_content).with_context(|| {
+                    format!(
+                        "Failed to write {} file: {}",
+                        current_file,
+                        service_path.display()
+                    )
+                })?;
                 files_generated.push(service_path.display().to_string());
             }
-            
+
             // Start collecting for the new file
             current_file = line[9..].to_string(); // Remove "// FILE: "
             current_content.clear();
             in_file_section = true;
-            
+
             if debug {
                 println!("🔍 [DEBUG] Started collecting for file: {}", current_file);
             }
@@ -426,21 +496,26 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, with_
                 current_content.push('\n');
             }
             current_content.push_str(line);
-            
+
             if debug {
                 println!("🔍 [DEBUG] Added line to {}: {}", current_file, line);
             }
         }
     }
-    
+
     // Write the last file if there is one
     if !current_file.is_empty() && !current_content.is_empty() {
         let service_path = output_dir.join(&current_file);
-        fs::write(&service_path, &current_content)
-            .with_context(|| format!("Failed to write {} file: {}", current_file, service_path.display()))?;
+        fs::write(&service_path, &current_content).with_context(|| {
+            format!(
+                "Failed to write {} file: {}",
+                current_file,
+                service_path.display()
+            )
+        })?;
         files_generated.push(service_path.display().to_string());
     }
-    
+
     // Special case: extract the service content before the first FILE marker
     let parts: Vec<&str> = output.split("// FILE: ").collect();
     if parts.len() > 0 {
@@ -451,9 +526,14 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, with_
                 if let Some(newline_pos) = first_marker.find('\n') {
                     let first_file_name = &first_marker[..newline_pos];
                     let service_path = output_dir.join(first_file_name);
-                    fs::write(&service_path, first_service_content)
-                        .with_context(|| format!("Failed to write {} file: {}", first_file_name, service_path.display()))?;
-                    
+                    fs::write(&service_path, first_service_content).with_context(|| {
+                        format!(
+                            "Failed to write {} file: {}",
+                            first_file_name,
+                            service_path.display()
+                        )
+                    })?;
+
                     // Add to files_generated if not already there
                     let file_path_str = service_path.display().to_string();
                     if !files_generated.contains(&file_path_str) {
@@ -463,20 +543,14 @@ fn generate_angular_services(schema: &OpenApiSchema, output_dir: &PathBuf, with_
             }
         }
     }
-    
+
     println!("Generated Angular API files:");
     for file in files_generated {
         println!("  - {}", file);
     }
-    
+
     Ok(())
 }
-
-
-
-
-
-
 
 fn longest_common_suffix(strings: &[String]) -> String {
     if strings.is_empty() {
@@ -486,7 +560,10 @@ fn longest_common_suffix(strings: &[String]) -> String {
     let mut suffix = Vec::new();
     for i in 0..revs[0].len() {
         let c = revs[0][i];
-        if revs.iter().all(|r| r.len() > i && r[i].to_ascii_lowercase() == c.to_ascii_lowercase()) {
+        if revs
+            .iter()
+            .all(|r| r.len() > i && r[i].to_ascii_lowercase() == c.to_ascii_lowercase())
+        {
             suffix.push(c);
         } else {
             break;
@@ -514,7 +591,14 @@ fn update_refs(schemas: &mut IndexMap<String, Schema>, old_names: &[String], new
                     }
                 }
             }
-            Schema::Object { properties, items, all_of, one_of, any_of, .. } => {
+            Schema::Object {
+                properties,
+                items,
+                all_of,
+                one_of,
+                any_of,
+                ..
+            } => {
                 if let Some(props) = properties {
                     for (_k, v) in props.iter_mut() {
                         update_schema_refs(v, old_names, new_name);
@@ -550,7 +634,10 @@ fn json_value_to_schema_pass1(
     value: &serde_json::Value,
     schemas: &mut IndexMap<String, Schema>,
     current_name: &str,
-    struct_hashes: &mut std::collections::HashMap<u64, (String, Vec<String>, Option<String>, Vec<String>)>,
+    struct_hashes: &mut std::collections::HashMap<
+        u64,
+        (String, Vec<String>, Option<String>, Vec<String>),
+    >,
     hash_to_placeholder: &mut std::collections::HashMap<u64, String>,
     parent_key: Option<&str>,
 ) -> Result<Schema> {
@@ -713,14 +800,21 @@ fn json_value_to_schema_pass1(
                     // Handle special cases
                     match name.as_str() {
                         "Item" => format!("{}Item", current_name),
-                        "Data" => format!("{}DataItem", current_name),  
+                        "Data" => format!("{}DataItem", current_name),
                         _ => name,
                     }
                 } else {
                     format!("{}Item", current_name)
                 };
-                
-                let item_schema = json_value_to_schema_pass1(&arr[0], schemas, &item_name, struct_hashes, hash_to_placeholder, Some(&item_name.to_lowercase()))?;
+
+                let item_schema = json_value_to_schema_pass1(
+                    &arr[0],
+                    schemas,
+                    &item_name,
+                    struct_hashes,
+                    hash_to_placeholder,
+                    Some(&item_name.to_lowercase()),
+                )?;
                 Ok(Schema::Object {
                     schema_type: Some("array".to_string()),
                     properties: None,
@@ -775,8 +869,8 @@ fn json_value_to_schema_pass1(
 
             if let Some(placeholder) = hash_to_placeholder.get(&hash) {
                 // Already processed this structure
-                return Ok(Schema::Reference { 
-                    reference: format!("#/components/schemas/{}", placeholder) 
+                return Ok(Schema::Reference {
+                    reference: format!("#/components/schemas/{}", placeholder),
                 });
             }
 
@@ -806,22 +900,36 @@ fn json_value_to_schema_pass1(
                             current_name.to_string()
                         }
                     }
-                    _ => capitalize_first_letter(key)
+                    _ => capitalize_first_letter(key),
                 };
-                
-                let property_schema = json_value_to_schema_pass1(value, schemas, &property_name, struct_hashes, hash_to_placeholder, Some(key))?;
+
+                let property_schema = json_value_to_schema_pass1(
+                    value,
+                    schemas,
+                    &property_name,
+                    struct_hashes,
+                    hash_to_placeholder,
+                    Some(key),
+                )?;
                 properties.insert(key.clone(), property_schema);
                 required.push(key.clone());
             }
 
             let placeholder_name = format!("HASH_{}", hash);
             hash_to_placeholder.insert(hash, placeholder_name.clone());
-            struct_hashes.insert(hash, (current_name.to_string(), required.clone(), None, vec![]));
+            struct_hashes.insert(
+                hash,
+                (current_name.to_string(), required.clone(), None, vec![]),
+            );
 
             let schema = Schema::Object {
                 schema_type: Some("object".to_string()),
                 properties: Some(properties),
-                required: if required.is_empty() { None } else { Some(required) },
+                required: if required.is_empty() {
+                    None
+                } else {
+                    Some(required)
+                },
                 additional_properties: None,
                 items: None,
                 enum_values: None,
@@ -840,11 +948,11 @@ fn json_value_to_schema_pass1(
             };
 
             schemas.insert(current_name.to_string(), schema.clone());
-            
+
             // Only return a reference if this is not the root level object
             if current_name != "Root" && parent_key.is_some() {
-                Ok(Schema::Reference { 
-                    reference: format!("#/components/schemas/{}", current_name) 
+                Ok(Schema::Reference {
+                    reference: format!("#/components/schemas/{}", current_name),
                 })
             } else {
                 Ok(schema)
@@ -853,7 +961,10 @@ fn json_value_to_schema_pass1(
     }
 }
 
-fn resolve_placeholders(schema: &mut Schema, hash_to_final_name: &std::collections::HashMap<String, String>) {
+fn resolve_placeholders(
+    schema: &mut Schema,
+    hash_to_final_name: &std::collections::HashMap<String, String>,
+) {
     match schema {
         Schema::Reference { reference } => {
             for (placeholder, final_name) in hash_to_final_name {
@@ -863,7 +974,14 @@ fn resolve_placeholders(schema: &mut Schema, hash_to_final_name: &std::collectio
                 }
             }
         }
-        Schema::Object { properties, items, all_of, one_of, any_of, .. } => {
+        Schema::Object {
+            properties,
+            items,
+            all_of,
+            one_of,
+            any_of,
+            ..
+        } => {
             if let Some(props) = properties {
                 for (_key, prop_schema) in props.iter_mut() {
                     resolve_placeholders(prop_schema, hash_to_final_name);
@@ -891,16 +1009,33 @@ fn resolve_placeholders(schema: &mut Schema, hash_to_final_name: &std::collectio
     }
 }
 
-fn json_to_openapi_schema_with_root(json_value: serde_json::Value, root_name: &str) -> Result<OpenApiSchema> {
+fn json_to_openapi_schema_with_root(
+    json_value: serde_json::Value,
+    root_name: &str,
+) -> Result<OpenApiSchema> {
     let mut schemas = IndexMap::new();
-    let mut struct_hashes: std::collections::HashMap<u64, (String, Vec<String>, Option<String>, Vec<String>)> = std::collections::HashMap::new();
-    let mut hash_to_placeholder: std::collections::HashMap<u64, String> = std::collections::HashMap::new();
-    let root_schema = json_value_to_schema_pass1(&json_value, &mut schemas, root_name, &mut struct_hashes, &mut hash_to_placeholder, None)?;
+    let mut struct_hashes: std::collections::HashMap<
+        u64,
+        (String, Vec<String>, Option<String>, Vec<String>),
+    > = std::collections::HashMap::new();
+    let mut hash_to_placeholder: std::collections::HashMap<u64, String> =
+        std::collections::HashMap::new();
+    let root_schema = json_value_to_schema_pass1(
+        &json_value,
+        &mut schemas,
+        root_name,
+        &mut struct_hashes,
+        &mut hash_to_placeholder,
+        None,
+    )?;
     schemas.insert(root_name.to_string(), root_schema);
-    let hash_to_final_name: std::collections::HashMap<String, String> = hash_to_placeholder.iter().map(|(h, _)| {
-        let (final_name, _, _, _) = struct_hashes.get(h).unwrap();
-        (format!("HASH_{}", h), final_name.clone())
-    }).collect();
+    let hash_to_final_name: std::collections::HashMap<String, String> = hash_to_placeholder
+        .iter()
+        .map(|(h, _)| {
+            let (final_name, _, _, _) = struct_hashes.get(h).unwrap();
+            (format!("HASH_{}", h), final_name.clone())
+        })
+        .collect();
     for (_k, schema) in schemas.iter_mut() {
         resolve_placeholders(schema, &hash_to_final_name);
     }
@@ -970,9 +1105,12 @@ pub enum JsonSchemaType {
     Multiple(Vec<String>),
 }
 
-fn json_schema_to_openapi_schema(json_schema: JsonSchemaDefinition, root_name: &str) -> Result<OpenApiSchema> {
+fn json_schema_to_openapi_schema(
+    json_schema: JsonSchemaDefinition,
+    root_name: &str,
+) -> Result<OpenApiSchema> {
     let mut schemas = IndexMap::new();
-    
+
     // Process $defs first if they exist
     if let Some(defs) = &json_schema.defs {
         for (name, schema_obj) in defs {
@@ -980,7 +1118,7 @@ fn json_schema_to_openapi_schema(json_schema: JsonSchemaDefinition, root_name: &
             schemas.insert(name.clone(), openapi_schema);
         }
     }
-    
+
     // Process the root schema
     let root_schema = if let Some(ref_path) = &json_schema.reference {
         // Root is a reference to a def
@@ -991,7 +1129,7 @@ fn json_schema_to_openapi_schema(json_schema: JsonSchemaDefinition, root_name: &
         // Root is an inline schema
         json_schema_object_to_openapi_schema(&json_schema.root)?
     };
-    
+
     // Add root schema if it's not just a reference
     if matches!(root_schema, Schema::Object { .. }) {
         schemas.insert(root_name.to_string(), root_schema);
@@ -999,11 +1137,19 @@ fn json_schema_to_openapi_schema(json_schema: JsonSchemaDefinition, root_name: &
         // If root is a reference, we still need to add it under the root name for consistency
         schemas.insert(root_name.to_string(), root_schema);
     }
-    
+
     // Extract metadata from JSON Schema
-    let title = json_schema.root.title.clone().unwrap_or_else(|| "Generated from JSON Schema".to_string());
-    let description = json_schema.root.description.clone().unwrap_or_else(|| "Schema generated from JSON Schema input".to_string());
-    
+    let title = json_schema
+        .root
+        .title
+        .clone()
+        .unwrap_or_else(|| "Generated from JSON Schema".to_string());
+    let description = json_schema
+        .root
+        .description
+        .clone()
+        .unwrap_or_else(|| "Schema generated from JSON Schema input".to_string());
+
     Ok(OpenApiSchema {
         openapi: Some("3.0.0".to_string()),
         info: Some(Info {
@@ -1025,10 +1171,13 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
             reference: convert_json_schema_ref(ref_path)?,
         });
     }
-    
+
     // Handle composition schemas
     if let Some(all_of) = &json_schema.all_of {
-        let schemas: Result<Vec<Schema>> = all_of.iter().map(json_schema_object_to_openapi_schema).collect();
+        let schemas: Result<Vec<Schema>> = all_of
+            .iter()
+            .map(json_schema_object_to_openapi_schema)
+            .collect();
         return Ok(Schema::Object {
             schema_type: None,
             properties: None,
@@ -1050,9 +1199,12 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
             nullable: None,
         });
     }
-    
+
     if let Some(one_of) = &json_schema.one_of {
-        let schemas: Result<Vec<Schema>> = one_of.iter().map(json_schema_object_to_openapi_schema).collect();
+        let schemas: Result<Vec<Schema>> = one_of
+            .iter()
+            .map(json_schema_object_to_openapi_schema)
+            .collect();
         return Ok(Schema::Object {
             schema_type: None,
             properties: None,
@@ -1074,9 +1226,12 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
             nullable: None,
         });
     }
-    
+
     if let Some(any_of) = &json_schema.any_of {
-        let schemas: Result<Vec<Schema>> = any_of.iter().map(json_schema_object_to_openapi_schema).collect();
+        let schemas: Result<Vec<Schema>> = any_of
+            .iter()
+            .map(json_schema_object_to_openapi_schema)
+            .collect();
         return Ok(Schema::Object {
             schema_type: None,
             properties: None,
@@ -1098,17 +1253,15 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
             nullable: None,
         });
     }
-    
+
     // Handle regular schema types
     let (schema_type, nullable) = match &json_schema.schema_type {
-        Some(JsonSchemaType::Single(type_str)) => {
-            (Some(type_str.clone()), false)
-        }
+        Some(JsonSchemaType::Single(type_str)) => (Some(type_str.clone()), false),
         Some(JsonSchemaType::Multiple(types)) => {
             // Handle union types like ["string", "null"]
             let non_null_types: Vec<&String> = types.iter().filter(|t| *t != "null").collect();
             let has_null = types.iter().any(|t| t == "null");
-            
+
             if non_null_types.len() == 1 {
                 (Some(non_null_types[0].clone()), has_null)
             } else if non_null_types.is_empty() {
@@ -1120,25 +1273,30 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
         }
         None => (None, false),
     };
-    
+
     // Convert properties
     let properties = if let Some(props) = &json_schema.properties {
         let mut openapi_props = IndexMap::new();
         for (key, prop_schema) in props {
-            openapi_props.insert(key.clone(), json_schema_object_to_openapi_schema(prop_schema)?);
+            openapi_props.insert(
+                key.clone(),
+                json_schema_object_to_openapi_schema(prop_schema)?,
+            );
         }
         Some(openapi_props)
     } else {
         None
     };
-    
+
     // Handle array items
     let items = if let Some(items_schema) = &json_schema.items {
-        Some(Box::new(json_schema_object_to_openapi_schema(items_schema)?))
+        Some(Box::new(json_schema_object_to_openapi_schema(
+            items_schema,
+        )?))
     } else {
         None
     };
-    
+
     // Convert additional properties
     let additional_properties = match &json_schema.additional_properties {
         Some(serde_json::Value::Bool(false)) => None, // Strict mode in JSON Schema
@@ -1146,7 +1304,7 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
         Some(_) => None, // More complex additional properties schema - skip for now
         None => None,
     };
-    
+
     Ok(Schema::Object {
         schema_type,
         properties,
@@ -1188,7 +1346,7 @@ fn strip_json_comments(content: &str) -> String {
     // This handles /* ... */ style comments that might be in generated JSON Schema files
     let mut result = String::new();
     let mut chars = content.chars().peekable();
-    
+
     while let Some(ch) = chars.next() {
         if ch == '/' {
             if let Some(&'*') = chars.peek() {
@@ -1221,6 +1379,6 @@ fn strip_json_comments(content: &str) -> String {
             result.push(ch);
         }
     }
-    
+
     result
 }

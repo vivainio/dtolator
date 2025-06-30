@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OpenApiSchema {
@@ -119,18 +119,18 @@ impl Schema {
             Schema::Reference { .. } => None,
         }
     }
-    
+
     pub fn is_nullable(&self) -> bool {
         match self {
             Schema::Object { nullable, .. } => nullable.unwrap_or(false),
             Schema::Reference { .. } => false,
         }
     }
-    
+
     pub fn get_reference(&self) -> Option<&str> {
         match self {
             Schema::Reference { reference } => Some(reference),
             Schema::Object { .. } => None,
         }
     }
-} 
+}

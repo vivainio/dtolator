@@ -1,8 +1,8 @@
-use anyhow::Result;
-use crate::openapi::{OpenApiSchema, Schema};
 use crate::generators::Generator;
-use std::collections::{HashMap, HashSet, VecDeque};
+use crate::openapi::{OpenApiSchema, Schema};
+use anyhow::Result;
 use indexmap::IndexMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 pub struct TypeScriptGenerator {
     indent_level: usize,
@@ -12,25 +12,27 @@ impl TypeScriptGenerator {
     pub fn new() -> Self {
         Self { indent_level: 0 }
     }
-    
+
     fn indent(&self) -> String {
         "  ".repeat(self.indent_level)
     }
-    
-    fn with_indent<F>(&self, f: F) -> String 
-    where F: FnOnce(&Self) -> String {
+
+    fn with_indent<F>(&self, f: F) -> String
+    where
+        F: FnOnce(&Self) -> String,
+    {
         let mut generator = self.clone();
         generator.indent_level += 1;
         f(&generator)
     }
-    
+
     // Collect dependencies for a schema
     fn collect_dependencies(&self, schema: &Schema) -> HashSet<String> {
         let mut deps = HashSet::new();
         self.collect_dependencies_recursive(schema, &mut deps);
         deps
     }
-    
+
     fn collect_dependencies_recursive(&self, schema: &Schema, deps: &mut HashSet<String>) {
         match schema {
             Schema::Reference { reference } => {
@@ -38,7 +40,7 @@ impl TypeScriptGenerator {
                     deps.insert(type_name);
                 }
             }
-            Schema::Object { 
+            Schema::Object {
                 properties,
                 items,
                 all_of,
@@ -52,12 +54,12 @@ impl TypeScriptGenerator {
                         self.collect_dependencies_recursive(prop_schema, deps);
                     }
                 }
-                
+
                 // Collect dependencies from array items
                 if let Some(items_schema) = items {
                     self.collect_dependencies_recursive(items_schema, deps);
                 }
-                
+
                 // Collect dependencies from composition schemas
                 if let Some(schemas) = all_of {
                     for s in schemas {
@@ -77,29 +79,30 @@ impl TypeScriptGenerator {
             }
         }
     }
-    
+
     fn extract_type_name(&self, schema: &Schema) -> Option<String> {
         match schema {
-            Schema::Reference { reference } => {
-                Some(reference.strip_prefix("#/components/schemas/")
+            Schema::Reference { reference } => Some(
+                reference
+                    .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference)
-                    .to_string())
-            }
+                    .to_string(),
+            ),
             _ => None,
         }
     }
-    
+
     // Topological sort to order schemas by dependencies
     fn topological_sort(&self, schemas: &IndexMap<String, Schema>) -> Result<Vec<String>> {
         let mut graph: HashMap<String, HashSet<String>> = HashMap::new();
         let mut in_degree: HashMap<String, usize> = HashMap::new();
-        
+
         // Initialize graph and in-degree map
         for name in schemas.keys() {
             graph.insert(name.clone(), HashSet::new());
             in_degree.insert(name.clone(), 0);
         }
-        
+
         // Build dependency graph
         for (name, schema) in schemas {
             let deps = self.collect_dependencies(schema);
@@ -110,13 +113,14 @@ impl TypeScriptGenerator {
                 }
             }
         }
-        
+
         // Kahn's algorithm for topological sorting
         let mut queue = VecDeque::new();
         let mut result = Vec::new();
-        
+
         // Start with nodes that have no incoming edges (sorted for deterministic output)
-        let mut zero_degree_nodes: Vec<_> = in_degree.iter()
+        let mut zero_degree_nodes: Vec<_> = in_degree
+            .iter()
             .filter(|(_, &degree)| degree == 0)
             .map(|(name, _)| name.clone())
             .collect();
@@ -124,13 +128,14 @@ impl TypeScriptGenerator {
         for name in zero_degree_nodes {
             queue.push_back(name);
         }
-        
+
         while let Some(current) = queue.pop_front() {
             result.push(current.clone());
-            
+
             // Reduce in-degree for all dependent nodes (sorted for deterministic output)
             if let Some(dependents) = graph.get(&current) {
-                let mut new_zero_degree: Vec<_> = dependents.iter()
+                let mut new_zero_degree: Vec<_> = dependents
+                    .iter()
                     .filter_map(|dependent| {
                         let degree = in_degree.get_mut(dependent).unwrap();
                         *degree -= 1;
@@ -147,22 +152,22 @@ impl TypeScriptGenerator {
                 }
             }
         }
-        
+
         // Check for circular dependencies
         if result.len() != schemas.len() {
             return Err(anyhow::anyhow!("Circular dependency detected in schemas"));
         }
-        
+
         Ok(result)
     }
-    
+
     fn generate_interface(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
-        
+
         match schema {
-            Schema::Object { 
-                schema_type, 
-                properties, 
+            Schema::Object {
+                schema_type,
+                properties,
                 required,
                 enum_values,
                 all_of,
@@ -173,7 +178,8 @@ impl TypeScriptGenerator {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
                     output.push_str(&format!("export type {} =\n", name));
-                    let enum_strings: Vec<String> = enum_vals.iter()
+                    let enum_strings: Vec<String> = enum_vals
+                        .iter()
                         .filter_map(|v| v.as_str())
                         .map(|s| format!("  | \"{}\"", s))
                         .collect();
@@ -181,11 +187,12 @@ impl TypeScriptGenerator {
                     output.push_str(";\n\n");
                     return Ok(output);
                 }
-                
+
                 // Handle composition types
                 if let Some(all_of_schemas) = all_of {
                     output.push_str(&format!("export type {} =\n", name));
-                    let types: Result<Vec<String>, _> = all_of_schemas.iter()
+                    let types: Result<Vec<String>, _> = all_of_schemas
+                        .iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
                     let type_list = types?;
@@ -200,7 +207,8 @@ impl TypeScriptGenerator {
                     return Ok(output);
                 } else if let Some(one_of_schemas) = one_of {
                     output.push_str(&format!("export type {} =\n", name));
-                    let types: Result<Vec<String>, _> = one_of_schemas.iter()
+                    let types: Result<Vec<String>, _> = one_of_schemas
+                        .iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
                     let type_list = types?;
@@ -215,7 +223,8 @@ impl TypeScriptGenerator {
                     return Ok(output);
                 } else if let Some(any_of_schemas) = any_of {
                     output.push_str(&format!("export type {} =\n", name));
-                    let types: Result<Vec<String>, _> = any_of_schemas.iter()
+                    let types: Result<Vec<String>, _> = any_of_schemas
+                        .iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
                     let type_list = types?;
@@ -229,51 +238,61 @@ impl TypeScriptGenerator {
                     output.push_str(";\n\n");
                     return Ok(output);
                 }
-                
+
                 // Handle object types
                 if schema_type.as_deref() == Some("object") || properties.is_some() {
                     output.push_str(&format!("export interface {} {{\n", name));
-                    
+
                     if let Some(props) = properties {
                         for (prop_name, prop_schema) in props {
                             let prop_type = self.schema_to_typescript(prop_schema)?;
-                            let is_required = required.as_ref()
+                            let is_required = required
+                                .as_ref()
                                 .map(|req| req.contains(prop_name))
                                 .unwrap_or(false);
-                            
+
                             let optional_marker = if is_required { "" } else { "?" };
-                            output.push_str(&format!("  {}{}: {};\n", 
-                                prop_name, optional_marker, prop_type));
+                            output.push_str(&format!(
+                                "  {}{}: {};\n",
+                                prop_name, optional_marker, prop_type
+                            ));
                         }
                     }
-                    
+
                     output.push_str("}\n\n");
                 } else {
                     // Handle primitive type aliases
-                    output.push_str(&format!("export type {} = {};\n\n", 
-                        name, self.schema_to_typescript(schema)?));
+                    output.push_str(&format!(
+                        "export type {} = {};\n\n",
+                        name,
+                        self.schema_to_typescript(schema)?
+                    ));
                 }
             }
             Schema::Reference { .. } => {
                 // For references, create a type alias
-                output.push_str(&format!("export type {} = {};\n\n", 
-                    name, self.schema_to_typescript(schema)?));
+                output.push_str(&format!(
+                    "export type {} = {};\n\n",
+                    name,
+                    self.schema_to_typescript(schema)?
+                ));
             }
         }
-        
+
         Ok(output)
     }
-    
+
     fn schema_to_typescript(&self, schema: &Schema) -> Result<String> {
         match schema {
             Schema::Reference { reference } => {
-                let ref_name = reference.strip_prefix("#/components/schemas/")
+                let ref_name = reference
+                    .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);
                 Ok(ref_name.to_string())
             }
-            Schema::Object { 
-                schema_type, 
-                properties, 
+            Schema::Object {
+                schema_type,
+                properties,
                 required,
                 items,
                 enum_values,
@@ -284,20 +303,23 @@ impl TypeScriptGenerator {
                 ..
             } => {
                 let mut ts_type = String::new();
-                
+
                 // Handle composition types
                 if let Some(all_of_schemas) = all_of {
-                    let types: Result<Vec<String>, _> = all_of_schemas.iter()
+                    let types: Result<Vec<String>, _> = all_of_schemas
+                        .iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
                     ts_type = types?.join(" & ");
                 } else if let Some(one_of_schemas) = one_of {
-                    let types: Result<Vec<String>, _> = one_of_schemas.iter()
+                    let types: Result<Vec<String>, _> = one_of_schemas
+                        .iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
                     ts_type = types?.join(" | ");
                 } else if let Some(any_of_schemas) = any_of {
-                    let types: Result<Vec<String>, _> = any_of_schemas.iter()
+                    let types: Result<Vec<String>, _> = any_of_schemas
+                        .iter()
                         .map(|s| self.schema_to_typescript(s))
                         .collect();
                     ts_type = types?.join(" | ");
@@ -306,7 +328,8 @@ impl TypeScriptGenerator {
                     match schema_type.as_deref() {
                         Some("string") => {
                             if let Some(enum_vals) = enum_values {
-                                let enum_strings: Vec<String> = enum_vals.iter()
+                                let enum_strings: Vec<String> = enum_vals
+                                    .iter()
                                     .filter_map(|v| v.as_str())
                                     .map(|s| format!("\"{}\"", s))
                                     .collect();
@@ -334,15 +357,18 @@ impl TypeScriptGenerator {
                                 let mut object_props = Vec::new();
                                 for (prop_name, prop_schema) in props {
                                     let prop_type = self.schema_to_typescript(prop_schema)?;
-                                    let is_required = required.as_ref()
+                                    let is_required = required
+                                        .as_ref()
                                         .map(|req| req.contains(prop_name))
                                         .unwrap_or(false);
-                                    
+
                                     let optional_marker = if is_required { "" } else { "?" };
-                                    object_props.push(format!("    {}{}: {}", 
-                                        prop_name, optional_marker, prop_type));
+                                    object_props.push(format!(
+                                        "    {}{}: {}",
+                                        prop_name, optional_marker, prop_type
+                                    ));
                                 }
-                                
+
                                 if object_props.is_empty() {
                                     ts_type = "Record<string, unknown>".to_string();
                                 } else {
@@ -357,77 +383,87 @@ impl TypeScriptGenerator {
                         }
                     }
                 }
-                
+
                 // Apply nullable if needed
                 if nullable.unwrap_or(false) {
                     ts_type = format!("{} | null", ts_type);
                 }
-                
+
                 Ok(ts_type)
             }
         }
     }
-    
+
     /// Generate TypeScript interfaces with imports from Zod schemas
-    pub fn generate_with_imports(&self, schema: &OpenApiSchema, command_string: &str) -> Result<String> {
+    pub fn generate_with_imports(
+        &self,
+        schema: &OpenApiSchema,
+        command_string: &str,
+    ) -> Result<String> {
         let mut output = String::new();
-        
+
         // Add header comment
         output.push_str(&format!("// Generated by {}\n", command_string));
         output.push_str("// Do not modify manually\n\n");
-        
+
         if let Some(components) = &schema.components {
             if let Some(schemas) = &components.schemas {
                 if !schemas.is_empty() {
                     let type_names: Vec<String> = schemas.keys().cloned().collect();
-                    
+
                     // Collect actual request and response types from OpenAPI paths
-                    let (request_types_set, response_types_set) = self.collect_request_and_response_types(schema);
-                    
-                    let request_types: Vec<String> = type_names.iter()
+                    let (request_types_set, response_types_set) =
+                        self.collect_request_and_response_types(schema);
+
+                    let request_types: Vec<String> = type_names
+                        .iter()
                         .filter(|name| request_types_set.contains(*name))
                         .cloned()
                         .collect();
-                    
-                    let response_types: Vec<String> = type_names.iter()
+
+                    let response_types: Vec<String> = type_names
+                        .iter()
                         .filter(|name| !request_types_set.contains(*name))
                         .cloned()
                         .collect();
-                    
+
                     // Import only response schemas from schema.ts
                     if !response_types.is_empty() {
                         output.push_str("import {\n");
-                        
+
                         let mut import_lines = Vec::new();
                         for name in &response_types {
                             import_lines.push(format!("  {}Schema,", name));
                         }
-                        
+
                         output.push_str(&import_lines.join("\n"));
                         output.push_str("\n} from \"./schema\";\n");
                         output.push_str("import { z } from \"zod\";\n\n");
                     }
-                    
+
                     // Generate TypeScript interfaces for request types (direct interfaces, not z.infer)
                     if !request_types.is_empty() {
                         let ts_output = self.generate_with_command(schema, command_string)?;
-                        
+
                         // Extract only request type interfaces from the TypeScript output
                         let ts_lines: Vec<&str> = ts_output.lines().collect();
                         let mut i = 0;
                         while i < ts_lines.len() {
                             let line = ts_lines[i].trim();
-                            if line.starts_with("export interface ") || line.starts_with("export type ") {
+                            if line.starts_with("export interface ")
+                                || line.starts_with("export type ")
+                            {
                                 // Check if this is a request type
                                 let mut is_request_type = false;
                                 for request_type in &request_types {
-                                    if line.contains(&format!("interface {}", request_type)) || 
-                                       line.contains(&format!("type {} ", request_type)) {
+                                    if line.contains(&format!("interface {}", request_type))
+                                        || line.contains(&format!("type {} ", request_type))
+                                    {
                                         is_request_type = true;
                                         break;
                                     }
                                 }
-                                
+
                                 if is_request_type {
                                     // Include this interface definition
                                     let mut brace_count = 0;
@@ -436,7 +472,7 @@ impl TypeScriptGenerator {
                                         let current_line = ts_lines[j];
                                         output.push_str(current_line);
                                         output.push_str("\n");
-                                        
+
                                         // Count braces to know when interface ends
                                         for ch in current_line.chars() {
                                             match ch {
@@ -445,7 +481,7 @@ impl TypeScriptGenerator {
                                                 _ => {}
                                             }
                                         }
-                                        
+
                                         j += 1;
                                         if brace_count == 0 && j > i {
                                             break;
@@ -461,7 +497,7 @@ impl TypeScriptGenerator {
                         }
                         output.push_str("\n");
                     }
-                    
+
                     // Generate query parameter types for Angular services
                     use crate::generators::angular::AngularGenerator;
                     let angular_generator = AngularGenerator::new();
@@ -469,13 +505,16 @@ impl TypeScriptGenerator {
                     if !query_param_types.trim().is_empty() {
                         output.push_str(&query_param_types);
                     }
-                    
+
                     // Create and export inferred types from response schemas only
                     for name in &response_types {
-                        output.push_str(&format!("export type {} = z.infer<typeof {}Schema>;\n", name, name));
+                        output.push_str(&format!(
+                            "export type {} = z.infer<typeof {}Schema>;\n",
+                            name, name
+                        ));
                     }
                     output.push_str("\n");
-                    
+
                     // Re-export only response schemas
                     for name in &response_types {
                         output.push_str(&format!("export {{ {}Schema }};\n", name));
@@ -484,15 +523,18 @@ impl TypeScriptGenerator {
                 }
             }
         }
-        
+
         Ok(output)
     }
-    
+
     /// Collect request and response types from OpenAPI paths
-    pub fn collect_request_and_response_types(&self, schema: &OpenApiSchema) -> (HashSet<String>, HashSet<String>) {
+    pub fn collect_request_and_response_types(
+        &self,
+        schema: &OpenApiSchema,
+    ) -> (HashSet<String>, HashSet<String>) {
         let mut request_types = HashSet::new();
         let mut response_types = HashSet::new();
-        
+
         if let Some(paths) = &schema.paths {
             for (_path, path_item) in paths {
                 // Check all HTTP methods
@@ -503,28 +545,32 @@ impl TypeScriptGenerator {
                     &path_item.patch,
                     &path_item.delete,
                 ];
-                
+
                 for operation in operations.into_iter().flatten() {
                     // Collect request body types
                     if let Some(request_body) = &operation.request_body {
                         if let Some(content) = &request_body.content {
                             if let Some(media_type) = content.get("application/json") {
                                 if let Some(schema_ref) = &media_type.schema {
-                                    if let Some(type_name) = self.extract_type_name_from_schema(schema_ref) {
+                                    if let Some(type_name) =
+                                        self.extract_type_name_from_schema(schema_ref)
+                                    {
                                         request_types.insert(type_name);
                                     }
                                 }
                             }
                         }
                     }
-                    
+
                     // Collect response types
                     if let Some(responses) = &operation.responses {
                         for (_status, response) in responses {
                             if let Some(content) = &response.content {
                                 if let Some(media_type) = content.get("application/json") {
                                     if let Some(schema_ref) = &media_type.schema {
-                                        if let Some(type_name) = self.extract_type_name_from_schema(schema_ref) {
+                                        if let Some(type_name) =
+                                            self.extract_type_name_from_schema(schema_ref)
+                                        {
                                             response_types.insert(type_name);
                                         }
                                     }
@@ -535,18 +581,19 @@ impl TypeScriptGenerator {
                 }
             }
         }
-        
+
         (request_types, response_types)
     }
-    
+
     /// Extract type name from schema reference
     pub fn extract_type_name_from_schema(&self, schema: &Schema) -> Option<String> {
         match schema {
-            Schema::Reference { reference } => {
-                Some(reference.strip_prefix("#/components/schemas/")
+            Schema::Reference { reference } => Some(
+                reference
+                    .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference)
-                    .to_string())
-            }
+                    .to_string(),
+            ),
             _ => None,
         }
     }
@@ -556,20 +603,20 @@ impl Generator for TypeScriptGenerator {
     fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
         self.generate_with_command(schema, "dtolator")
     }
-    
+
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
-        
+
         // Add header comment
         output.push_str(&format!("// Generated by {}\n", command));
         output.push_str("// Do not modify manually\n\n");
-        
+
         if let Some(components) = &schema.components {
             if let Some(schemas) = &components.schemas {
                 if !schemas.is_empty() {
                     // Sort schemas topologically
                     let sorted_names = self.topological_sort(schemas)?;
-                    
+
                     // Generate interfaces
                     for name in sorted_names {
                         if let Some(schema_def) = schemas.get(&name) {
@@ -580,7 +627,7 @@ impl Generator for TypeScriptGenerator {
                 }
             }
         }
-        
+
         Ok(output)
     }
 }
@@ -591,4 +638,4 @@ impl Clone for TypeScriptGenerator {
             indent_level: self.indent_level,
         }
     }
-} 
+}
