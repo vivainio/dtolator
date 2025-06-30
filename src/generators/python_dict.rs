@@ -179,7 +179,7 @@ impl PythonDictGenerator {
                         output.push_str(&format!("{}    pass\n", self.indent()));
                     }
 
-                    output.push_str("\n");
+                    output.push('\n');
                 } else {
                     // Handle primitive type aliases
                     let py_type = self.schema_to_python_type(schema)?;

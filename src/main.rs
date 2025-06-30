@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod generators;
 mod openapi;
@@ -374,7 +374,7 @@ fn main() -> Result<()> {
 
 fn generate_angular_services(
     schema: &OpenApiSchema,
-    output_dir: &PathBuf,
+    output_dir: &Path,
     with_zod: bool,
     debug: bool,
     promises: bool,
@@ -414,7 +414,7 @@ fn generate_angular_services(
         let angular_generator = AngularGenerator::new();
         let query_param_types = angular_generator.generate_query_param_types(schema)?;
         if !query_param_types.trim().is_empty() {
-            dto_output.push_str("\n");
+            dto_output.push('\n');
             dto_output.push_str(&query_param_types);
         }
 
@@ -456,7 +456,7 @@ fn generate_angular_services(
             println!("🔍 [DEBUG] Processing line: {}", line);
         }
 
-        if line.starts_with("// FILE: ") {
+        if let Some(stripped) = line.strip_prefix("// FILE: ") {
             if debug {
                 println!("🔍 [DEBUG] Found FILE marker: {}", line);
             }
@@ -483,7 +483,7 @@ fn generate_angular_services(
             }
 
             // Start collecting for the new file
-            current_file = line[9..].to_string(); // Remove "// FILE: "
+            current_file = stripped.to_string();
             current_content.clear();
             in_file_section = true;
 
@@ -518,7 +518,7 @@ fn generate_angular_services(
 
     // Special case: extract the service content before the first FILE marker
     let parts: Vec<&str> = output.split("// FILE: ").collect();
-    if parts.len() > 0 {
+    if !parts.is_empty() {
         let first_service_content = parts[0].trim();
         if !first_service_content.is_empty() && parts.len() > 1 {
             // Extract filename from the first FILE marker
@@ -562,7 +562,7 @@ fn longest_common_suffix(strings: &[String]) -> String {
         let c = revs[0][i];
         if revs
             .iter()
-            .all(|r| r.len() > i && r[i].to_ascii_lowercase() == c.to_ascii_lowercase())
+            .all(|r| r.len() > i && r[i].eq_ignore_ascii_case(&c))
         {
             suffix.push(c);
         } else {
@@ -1030,8 +1030,8 @@ fn json_to_openapi_schema_with_root(
     )?;
     schemas.insert(root_name.to_string(), root_schema);
     let hash_to_final_name: std::collections::HashMap<String, String> = hash_to_placeholder
-        .iter()
-        .map(|(h, _)| {
+        .keys()
+        .map(|h| {
             let (final_name, _, _, _) = struct_hashes.get(h).unwrap();
             (format!("HASH_{}", h), final_name.clone())
         })

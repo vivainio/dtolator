@@ -43,7 +43,7 @@ impl Generator for EndpointsGenerator {
                     if i < schema_names.len() - 1 {
                         output.push_str(",\n");
                     } else {
-                        output.push_str("\n");
+                        output.push('\n');
                     }
                 }
             }

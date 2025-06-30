@@ -627,7 +627,7 @@ impl AngularGenerator {
             }
         }
 
-        service.push_str("\n");
+        service.push('\n');
 
         // Service class
         service.push_str("@Injectable({ providedIn: 'root' })\n");
@@ -637,7 +637,7 @@ impl AngularGenerator {
         // Methods
         for method in &service_data.methods {
             service.push_str(method);
-            service.push_str("\n");
+            service.push('\n');
         }
 
         service.push_str("}\n");

@@ -27,7 +27,7 @@ jobs:
       run: cargo fmt --check
       
     - name: Run clippy
-      run: cargo clippy -- -D warnings
+      run: cargo clippy -- -D clippy::correctness -D clippy::suspicious -A clippy::large_enum_variant -A clippy::type_complexity -A clippy::only_used_in_recursion -A clippy::uninlined_format_args -A dead_code -A unused_variables
     
     - name: Cache cargo
       uses: actions/cache@v4

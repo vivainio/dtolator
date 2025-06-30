@@ -471,7 +471,7 @@ impl TypeScriptGenerator {
                                     while j < ts_lines.len() {
                                         let current_line = ts_lines[j];
                                         output.push_str(current_line);
-                                        output.push_str("\n");
+                                        output.push('\n');
 
                                         // Count braces to know when interface ends
                                         for ch in current_line.chars() {
@@ -495,7 +495,7 @@ impl TypeScriptGenerator {
                                 i += 1;
                             }
                         }
-                        output.push_str("\n");
+                        output.push('\n');
                     }
 
                     // Generate query parameter types for Angular services
@@ -513,13 +513,13 @@ impl TypeScriptGenerator {
                             name, name
                         ));
                     }
-                    output.push_str("\n");
+                    output.push('\n');
 
                     // Re-export only response schemas
                     for name in &response_types {
                         output.push_str(&format!("export {{ {}Schema }};\n", name));
                     }
-                    output.push_str("\n");
+                    output.push('\n');
                 }
             }
         }
