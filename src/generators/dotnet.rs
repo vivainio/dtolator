@@ -108,11 +108,7 @@ impl DotNetGenerator {
                                 // Non-required properties are nullable
                                 let nullable_type =
                                     if !cs_type.ends_with('?') && !cs_type.starts_with("List<") {
-                                        if self.is_value_type(&cs_type) {
-                                            format!("{}?", cs_type)
-                                        } else {
-                                            format!("{}?", cs_type)
-                                        }
+                                        format!("{}?", cs_type)
                                     } else {
                                         cs_type
                                     };
