@@ -636,7 +636,7 @@ fn json_value_to_schema_pass1(
     current_name: &str,
     struct_hashes: &mut std::collections::HashMap<
         u64,
-        (String, Vec<String>, Option<String>, Vec<String>),
+        (String, Vec<String>, Option<String>, Vec<String>, String),
     >,
     hash_to_placeholder: &mut std::collections::HashMap<u64, String>,
     parent_key: Option<&str>,
@@ -867,12 +867,35 @@ fn json_value_to_schema_pass1(
             serialized.hash(&mut hasher);
             let hash = hasher.finish();
 
-            if let Some(placeholder) = hash_to_placeholder.get(&hash) {
-                // Already processed this structure
-                return Ok(Schema::Reference {
-                    reference: format!("#/components/schemas/{}", placeholder),
-                });
-            }
+            let final_hash = if let Some(placeholder) = hash_to_placeholder.get(&hash) {
+                // Check if this is a hash collision by comparing actual content
+                if let Some((_, _, _, _, stored_serialized)) = struct_hashes.get(&hash) {
+                    if stored_serialized == &serialized {
+                        // Same structure, reuse existing schema
+                        return Ok(Schema::Reference {
+                            reference: format!("#/components/schemas/{}", placeholder),
+                        });
+                    }
+                    // Hash collision detected - need to create a new unique hash
+                    // Add current_name to make it unique
+                    let mut collision_hasher = DefaultHasher::new();
+                    serialized.hash(&mut collision_hasher);
+                    current_name.hash(&mut collision_hasher);
+                    let new_hash = collision_hasher.finish();
+
+                    // Use the new hash for this structure
+                    let new_placeholder = format!("HASH_{}", new_hash);
+                    hash_to_placeholder.insert(new_hash, new_placeholder.clone());
+                    new_hash // Use the collision-resistant hash
+                } else {
+                    // This shouldn't happen, but if it does, reuse the existing reference
+                    return Ok(Schema::Reference {
+                        reference: format!("#/components/schemas/{}", placeholder),
+                    });
+                }
+            } else {
+                hash // No collision, use original hash
+            };
 
             // Generate properties
             let mut properties = IndexMap::new();
@@ -915,11 +938,17 @@ fn json_value_to_schema_pass1(
                 required.push(key.clone());
             }
 
-            let placeholder_name = format!("HASH_{}", hash);
-            hash_to_placeholder.insert(hash, placeholder_name.clone());
+            let placeholder_name = format!("HASH_{}", final_hash);
+            hash_to_placeholder.insert(final_hash, placeholder_name.clone());
             struct_hashes.insert(
-                hash,
-                (current_name.to_string(), required.clone(), None, vec![]),
+                final_hash,
+                (
+                    current_name.to_string(),
+                    required.clone(),
+                    None,
+                    vec![],
+                    serialized.clone(),
+                ),
             );
 
             let schema = Schema::Object {
@@ -1016,7 +1045,7 @@ fn json_to_openapi_schema_with_root(
     let mut schemas = IndexMap::new();
     let mut struct_hashes: std::collections::HashMap<
         u64,
-        (String, Vec<String>, Option<String>, Vec<String>),
+        (String, Vec<String>, Option<String>, Vec<String>, String),
     > = std::collections::HashMap::new();
     let mut hash_to_placeholder: std::collections::HashMap<u64, String> =
         std::collections::HashMap::new();
@@ -1032,7 +1061,7 @@ fn json_to_openapi_schema_with_root(
     let hash_to_final_name: std::collections::HashMap<String, String> = hash_to_placeholder
         .keys()
         .map(|h| {
-            let (final_name, _, _, _) = struct_hashes.get(h).unwrap();
+            let (final_name, _, _, _, _) = struct_hashes.get(h).unwrap();
             (format!("HASH_{}", h), final_name.clone())
         })
         .collect();
