@@ -286,7 +286,7 @@ impl PydanticGenerator {
             }
             Schema::Object {
                 schema_type,
-                properties,
+                properties: _properties,
                 items,
                 enum_values,
                 nullable,
@@ -354,12 +354,8 @@ impl PydanticGenerator {
                             }
                         }
                         Some("object") | None => {
-                            if let Some(_props) = properties {
-                                // For inline objects, use Dict[str, Any] as fallback
-                                py_type = "Dict[str, Any]".to_string();
-                            } else {
-                                py_type = "Dict[str, Any]".to_string();
-                            }
+                            // For inline objects, use Dict[str, Any] as fallback
+                            py_type = "Dict[str, Any]".to_string();
                         }
                         _ => {
                             py_type = "Any".to_string();
