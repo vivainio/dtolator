@@ -989,26 +989,32 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
             .iter()
             .map(json_schema_object_to_openapi_schema)
             .collect();
-        return Ok(Schema::Object {
-            schema_type: None,
-            properties: None,
-            required: None,
-            additional_properties: None,
-            items: None,
-            enum_values: None,
-            format: None,
-            description: json_schema.description.clone(),
-            example: json_schema.example.clone(),
-            all_of: Some(schemas?),
-            one_of: None,
-            any_of: None,
-            minimum: json_schema.minimum,
-            maximum: json_schema.maximum,
-            min_length: json_schema.min_length,
-            max_length: json_schema.max_length,
-            pattern: json_schema.pattern.clone(),
-            nullable: None,
-        });
+
+        let mut builder = Schema::object().all_of(schemas?);
+
+        if let Some(desc) = &json_schema.description {
+            builder = builder.description(desc);
+        }
+        if let Some(example) = &json_schema.example {
+            builder = builder.example(example.clone());
+        }
+        if let Some(min) = json_schema.minimum {
+            builder = builder.minimum(min);
+        }
+        if let Some(max) = json_schema.maximum {
+            builder = builder.maximum(max);
+        }
+        if let Some(min_len) = json_schema.min_length {
+            builder = builder.min_length(min_len);
+        }
+        if let Some(max_len) = json_schema.max_length {
+            builder = builder.max_length(max_len);
+        }
+        if let Some(pattern) = &json_schema.pattern {
+            builder = builder.pattern(pattern);
+        }
+
+        return Ok(builder.build());
     }
 
     if let Some(one_of) = &json_schema.one_of {
@@ -1016,26 +1022,32 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
             .iter()
             .map(json_schema_object_to_openapi_schema)
             .collect();
-        return Ok(Schema::Object {
-            schema_type: None,
-            properties: None,
-            required: None,
-            additional_properties: None,
-            items: None,
-            enum_values: None,
-            format: None,
-            description: json_schema.description.clone(),
-            example: json_schema.example.clone(),
-            all_of: None,
-            one_of: Some(schemas?),
-            any_of: None,
-            minimum: json_schema.minimum,
-            maximum: json_schema.maximum,
-            min_length: json_schema.min_length,
-            max_length: json_schema.max_length,
-            pattern: json_schema.pattern.clone(),
-            nullable: None,
-        });
+
+        let mut builder = Schema::object().one_of(schemas?);
+
+        if let Some(desc) = &json_schema.description {
+            builder = builder.description(desc);
+        }
+        if let Some(example) = &json_schema.example {
+            builder = builder.example(example.clone());
+        }
+        if let Some(min) = json_schema.minimum {
+            builder = builder.minimum(min);
+        }
+        if let Some(max) = json_schema.maximum {
+            builder = builder.maximum(max);
+        }
+        if let Some(min_len) = json_schema.min_length {
+            builder = builder.min_length(min_len);
+        }
+        if let Some(max_len) = json_schema.max_length {
+            builder = builder.max_length(max_len);
+        }
+        if let Some(pattern) = &json_schema.pattern {
+            builder = builder.pattern(pattern);
+        }
+
+        return Ok(builder.build());
     }
 
     if let Some(any_of) = &json_schema.any_of {
@@ -1043,26 +1055,32 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
             .iter()
             .map(json_schema_object_to_openapi_schema)
             .collect();
-        return Ok(Schema::Object {
-            schema_type: None,
-            properties: None,
-            required: None,
-            additional_properties: None,
-            items: None,
-            enum_values: None,
-            format: None,
-            description: json_schema.description.clone(),
-            example: json_schema.example.clone(),
-            all_of: None,
-            one_of: None,
-            any_of: Some(schemas?),
-            minimum: json_schema.minimum,
-            maximum: json_schema.maximum,
-            min_length: json_schema.min_length,
-            max_length: json_schema.max_length,
-            pattern: json_schema.pattern.clone(),
-            nullable: None,
-        });
+
+        let mut builder = Schema::object().any_of(schemas?);
+
+        if let Some(desc) = &json_schema.description {
+            builder = builder.description(desc);
+        }
+        if let Some(example) = &json_schema.example {
+            builder = builder.example(example.clone());
+        }
+        if let Some(min) = json_schema.minimum {
+            builder = builder.minimum(min);
+        }
+        if let Some(max) = json_schema.maximum {
+            builder = builder.maximum(max);
+        }
+        if let Some(min_len) = json_schema.min_length {
+            builder = builder.min_length(min_len);
+        }
+        if let Some(max_len) = json_schema.max_length {
+            builder = builder.max_length(max_len);
+        }
+        if let Some(pattern) = &json_schema.pattern {
+            builder = builder.pattern(pattern);
+        }
+
+        return Ok(builder.build());
     }
 
     // Handle regular schema types
@@ -1116,26 +1134,55 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
         None => None,
     };
 
-    Ok(Schema::Object {
-        schema_type,
-        properties,
-        required: json_schema.required.clone(),
-        additional_properties,
-        items,
-        enum_values: json_schema.enum_values.clone(),
-        format: json_schema.format.clone(),
-        description: json_schema.description.clone(),
-        example: json_schema.example.clone(),
-        all_of: None,
-        one_of: None,
-        any_of: None,
-        minimum: json_schema.minimum,
-        maximum: json_schema.maximum,
-        min_length: json_schema.min_length,
-        max_length: json_schema.max_length,
-        pattern: json_schema.pattern.clone(),
-        nullable: if nullable { Some(true) } else { None },
-    })
+    let mut builder = Schema::object();
+
+    if let Some(schema_type) = schema_type {
+        builder = builder.schema_type(schema_type);
+    }
+    if let Some(properties) = properties {
+        builder = builder.properties(properties);
+    }
+    if let Some(required) = json_schema.required.clone() {
+        builder = builder.required(required);
+    }
+    if let Some(additional_properties) = additional_properties {
+        builder = builder.additional_properties(additional_properties);
+    }
+    if let Some(items) = items {
+        builder = builder.items(items);
+    }
+    if let Some(enum_values) = json_schema.enum_values.clone() {
+        builder = builder.enum_values(enum_values);
+    }
+    if let Some(format) = json_schema.format.clone() {
+        builder = builder.format(format);
+    }
+    if let Some(description) = json_schema.description.clone() {
+        builder = builder.description(description);
+    }
+    if let Some(example) = json_schema.example.clone() {
+        builder = builder.example(example);
+    }
+    if let Some(minimum) = json_schema.minimum {
+        builder = builder.minimum(minimum);
+    }
+    if let Some(maximum) = json_schema.maximum {
+        builder = builder.maximum(maximum);
+    }
+    if let Some(min_length) = json_schema.min_length {
+        builder = builder.min_length(min_length);
+    }
+    if let Some(max_length) = json_schema.max_length {
+        builder = builder.max_length(max_length);
+    }
+    if let Some(pattern) = json_schema.pattern.clone() {
+        builder = builder.pattern(pattern);
+    }
+    if nullable {
+        builder = builder.nullable(true);
+    }
+
+    Ok(builder.build())
 }
 
 fn convert_json_schema_ref(json_schema_ref: &str) -> Result<String> {
