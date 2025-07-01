@@ -155,12 +155,7 @@ impl PydanticGenerator {
                                     .unwrap_or(false);
 
                                 // Handle nullable + optional case to avoid double Optional
-                                let field_type =
-                                    if !is_required && base_field_type.starts_with("Optional[") {
-                                        base_field_type // Already wrapped in Optional, don't double-wrap
-                                    } else {
-                                        base_field_type
-                                    };
+                                let field_type = base_field_type;
 
                                 // Add field with validation constraints
                                 let field_def = self.generate_field_definition(
@@ -243,47 +238,44 @@ impl PydanticGenerator {
                         constraints.join(", ")
                     ))
                 }
-            } else {
-                if constraints.is_empty() {
-                    // Check if field_type is already Optional to avoid double-wrapping
-                    if field_type.starts_with("Optional[") {
-                        Ok(format!("{name}: {field_type} = None"))
-                    } else {
-                        Ok(format!("{name}: Optional[{field_type}] = None"))
-                    }
-                } else {
-                    // Check if field_type is already Optional to avoid double-wrapping
-                    if field_type.starts_with("Optional[") {
-                        Ok(format!(
-                            "{}: {} = Field(None, {})",
-                            name,
-                            field_type,
-                            constraints.join(", ")
-                        ))
-                    } else {
-                        Ok(format!(
-                            "{}: Optional[{}] = Field(None, {})",
-                            name,
-                            field_type,
-                            constraints.join(", ")
-                        ))
-                    }
-                }
-            }
-        } else {
-            if is_required {
-                Ok(format!("{name}: {field_type}"))
-            } else {
+            } else if constraints.is_empty() {
                 // Check if field_type is already Optional to avoid double-wrapping
                 if field_type.starts_with("Optional[") {
                     Ok(format!("{name}: {field_type} = None"))
                 } else {
                     Ok(format!("{name}: Optional[{field_type}] = None"))
                 }
+            } else {
+                // Check if field_type is already Optional to avoid double-wrapping
+                if field_type.starts_with("Optional[") {
+                    Ok(format!(
+                        "{}: {} = Field(None, {})",
+                        name,
+                        field_type,
+                        constraints.join(", ")
+                    ))
+                } else {
+                    Ok(format!(
+                        "{}: Optional[{}] = Field(None, {})",
+                        name,
+                        field_type,
+                        constraints.join(", ")
+                    ))
+                }
+            }
+        } else if is_required {
+            Ok(format!("{name}: {field_type}"))
+        } else {
+            // Check if field_type is already Optional to avoid double-wrapping
+            if field_type.starts_with("Optional[") {
+                Ok(format!("{name}: {field_type} = None"))
+            } else {
+                Ok(format!("{name}: Optional[{field_type}] = None"))
             }
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn schema_to_pydantic_type(&self, schema: &Schema) -> Result<String> {
         match schema {
             Schema::Reference { reference } => {
@@ -304,10 +296,10 @@ impl PydanticGenerator {
                 format,
                 ..
             } => {
-                let mut py_type = String::new();
+                let py_type;
 
                 // Handle composition types
-                if let Some(all_of_schemas) = all_of {
+                if let Some(_all_of_schemas) = all_of {
                     // For inline allOf, we'll create an anonymous model
                     py_type = "Dict[str, Any]".to_string(); // Fallback for complex inline types
                 } else if let Some(one_of_schemas) = one_of {
@@ -362,7 +354,7 @@ impl PydanticGenerator {
                             }
                         }
                         Some("object") | None => {
-                            if let Some(props) = properties {
+                            if let Some(_props) = properties {
                                 // For inline objects, use Dict[str, Any] as fallback
                                 py_type = "Dict[str, Any]".to_string();
                             } else {
@@ -376,21 +368,19 @@ impl PydanticGenerator {
                 }
 
                 // Handle nullable types
-                if nullable.unwrap_or(false) {
-                    py_type = format!("Optional[{py_type}]");
-                }
+                let final_type = if nullable.unwrap_or(false) {
+                    format!("Optional[{py_type}]")
+                } else {
+                    py_type
+                };
 
-                Ok(py_type)
+                Ok(final_type)
             }
         }
     }
 }
 
 impl Generator for PydanticGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        self.generate_with_command(schema, "dtolator")
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
 

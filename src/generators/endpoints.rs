@@ -3,27 +3,18 @@ use crate::openapi::{OpenApiSchema, Operation, Parameter};
 use anyhow::Result;
 
 pub struct EndpointsGenerator {
-    include_query_params: bool,
+    // Remove unused include_query_params field
 }
 
 impl EndpointsGenerator {
     pub fn new() -> Self {
-        Self {
-            include_query_params: true,
-        }
+        Self {}
     }
 
-    pub fn with_query_params(mut self, include: bool) -> Self {
-        self.include_query_params = include;
-        self
-    }
+    // Remove unused with_query_params method
 }
 
 impl Generator for EndpointsGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        self.generate_with_command(schema, "dtolator")
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
 
@@ -100,29 +91,27 @@ impl EndpointsGenerator {
         }
 
         // Generate query parameters
-        if self.include_query_params {
-            if let Some(parameters) = &operation.parameters {
-                let query_params: Vec<&Parameter> = parameters
-                    .iter()
-                    .filter(|p| p.location == "query")
-                    .collect();
+        if let Some(parameters) = &operation.parameters {
+            let query_params: Vec<&Parameter> = parameters
+                .iter()
+                .filter(|p| p.location == "query")
+                .collect();
 
-                if !query_params.is_empty() {
-                    output.push_str("    query?: {\n");
-                    for param in query_params {
-                        let param_type = self.get_parameter_type(param);
-                        let optional = if param.required.unwrap_or(false) {
-                            ""
-                        } else {
-                            "?"
-                        };
-                        output.push_str(&format!(
-                            "      {}{}: {};\n",
-                            param.name, optional, param_type
-                        ));
-                    }
-                    output.push_str("    };\n");
+            if !query_params.is_empty() {
+                output.push_str("    query?: {\n");
+                for param in query_params {
+                    let param_type = self.get_parameter_type(param);
+                    let optional = if param.required.unwrap_or(false) {
+                        ""
+                    } else {
+                        "?"
+                    };
+                    output.push_str(&format!(
+                        "      {}{}: {};\n",
+                        param.name, optional, param_type
+                    ));
                 }
+                output.push_str("    };\n");
             }
         }
 
@@ -161,12 +150,12 @@ impl EndpointsGenerator {
 
     fn extract_path_params(&self, path: &str) -> Vec<String> {
         let mut params = Vec::new();
-        let mut chars = path.chars().peekable();
+        let mut chars = path.chars();
 
         while let Some(ch) = chars.next() {
             if ch == '{' {
                 let mut param = String::new();
-                while let Some(ch) = chars.next() {
+                for ch in chars.by_ref() {
                     if ch == '}' {
                         break;
                     }

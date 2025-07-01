@@ -11,6 +11,5 @@ use crate::openapi::OpenApiSchema;
 use anyhow::Result;
 
 pub trait Generator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String>;
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String>;
 }

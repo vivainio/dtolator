@@ -1,9 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
-use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 mod generators;
@@ -17,6 +15,11 @@ use generators::{
 };
 use indexmap::IndexMap;
 use openapi::{Components, Info, OpenApiSchema, Schema};
+
+// Type aliases to reduce complexity
+type StructHashMap =
+    std::collections::HashMap<String, (String, Vec<String>, Option<String>, Vec<String>)>;
+type JsonToPlaceholderMap = std::collections::HashMap<String, String>;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -552,6 +555,7 @@ fn generate_angular_services(
     Ok(())
 }
 
+#[allow(dead_code)]
 fn longest_common_suffix(strings: &[String]) -> String {
     if strings.is_empty() {
         return String::new();
@@ -580,6 +584,7 @@ fn capitalize_first_letter(s: &str) -> String {
     }
 }
 
+#[allow(dead_code)]
 fn update_refs(schemas: &mut IndexMap<String, Schema>, old_names: &[String], new_name: &str) {
     fn update_schema_refs(schema: &mut Schema, old_names: &[String], new_name: &str) {
         match schema {
@@ -634,11 +639,8 @@ fn json_value_to_schema_pass1(
     value: &serde_json::Value,
     schemas: &mut IndexMap<String, Schema>,
     current_name: &str,
-    struct_hashes: &mut std::collections::HashMap<
-        String,
-        (String, Vec<String>, Option<String>, Vec<String>),
-    >,
-    json_to_placeholder: &mut std::collections::HashMap<String, String>,
+    struct_hashes: &mut StructHashMap,
+    json_to_placeholder: &mut JsonToPlaceholderMap,
     parent_key: Option<&str>,
 ) -> Result<Schema> {
     match value {
@@ -827,12 +829,8 @@ fn json_to_openapi_schema_with_root(
     root_name: &str,
 ) -> Result<OpenApiSchema> {
     let mut schemas = IndexMap::new();
-    let mut struct_hashes: std::collections::HashMap<
-        String,
-        (String, Vec<String>, Option<String>, Vec<String>),
-    > = std::collections::HashMap::new();
-    let mut json_to_placeholder: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
+    let mut struct_hashes: StructHashMap = std::collections::HashMap::new();
+    let mut json_to_placeholder: JsonToPlaceholderMap = std::collections::HashMap::new();
     let root_schema = json_value_to_schema_pass1(
         &json_value,
         &mut schemas,
@@ -1206,31 +1204,23 @@ fn strip_json_comments(content: &str) -> String {
     let mut chars = content.chars().peekable();
 
     while let Some(ch) = chars.next() {
-        if ch == '/' {
-            if let Some(&'*') = chars.peek() {
-                // Start of /* comment - skip until we find */
-                chars.next(); // consume the *
-                let mut found_end = false;
-                while let Some(comment_ch) = chars.next() {
-                    if comment_ch == '*' {
-                        if let Some(&'/') = chars.peek() {
-                            chars.next(); // consume the /
-                            found_end = true;
-                            break;
-                        }
-                    }
+        if ch == '/' && chars.peek() == Some(&'*') {
+            // Start of /* comment - skip until we find */
+            chars.next(); // consume the *
+            let mut prev_was_star = false;
+            for comment_ch in chars.by_ref() {
+                if prev_was_star && comment_ch == '/' {
+                    break;
                 }
-                // Skip any trailing whitespace/newlines after comment
-                while let Some(&whitespace_ch) = chars.peek() {
-                    if whitespace_ch.is_whitespace() {
-                        chars.next();
-                    } else {
-                        break;
-                    }
+                prev_was_star = comment_ch == '*';
+            }
+            // Skip any trailing whitespace/newlines after comment
+            while let Some(&whitespace_ch) = chars.peek() {
+                if whitespace_ch.is_whitespace() {
+                    chars.next();
+                } else {
+                    break;
                 }
-            } else {
-                // Not a comment start, keep the character
-                result.push(ch);
             }
         } else {
             // Regular character, keep it

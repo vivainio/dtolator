@@ -13,19 +13,6 @@ impl TypeScriptGenerator {
         Self { indent_level: 0 }
     }
 
-    fn indent(&self) -> String {
-        "  ".repeat(self.indent_level)
-    }
-
-    fn with_indent<F>(&self, f: F) -> String
-    where
-        F: FnOnce(&Self) -> String,
-    {
-        let mut generator = self.clone();
-        generator.indent_level += 1;
-        f(&generator)
-    }
-
     // Collect dependencies for a schema
     fn collect_dependencies(&self, schema: &Schema) -> HashSet<String> {
         let mut deps = HashSet::new();
@@ -35,7 +22,7 @@ impl TypeScriptGenerator {
 
     fn collect_dependencies_recursive(&self, schema: &Schema, deps: &mut HashSet<String>) {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference: _ } => {
                 if let Some(type_name) = self.extract_type_name(schema) {
                     deps.insert(type_name);
                 }
@@ -279,6 +266,7 @@ impl TypeScriptGenerator {
         Ok(output)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn schema_to_typescript(&self, schema: &Schema) -> Result<String> {
         match schema {
             Schema::Reference { reference } => {
@@ -299,6 +287,7 @@ impl TypeScriptGenerator {
                 any_of,
                 ..
             } => {
+                #[allow(unused_assignments)]
                 let mut ts_type = String::new();
 
                 // Handle composition types
@@ -408,7 +397,7 @@ impl TypeScriptGenerator {
                     let type_names: Vec<String> = schemas.keys().cloned().collect();
 
                     // Collect actual request and response types from OpenAPI paths
-                    let (request_types_set, response_types_set) =
+                    let (request_types_set, _response_types_set) =
                         self.collect_request_and_response_types(schema);
 
                     let request_types: Vec<String> = type_names
@@ -595,10 +584,6 @@ impl TypeScriptGenerator {
 }
 
 impl Generator for TypeScriptGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        self.generate_with_command(schema, "dtolator")
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
 

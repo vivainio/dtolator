@@ -77,6 +77,7 @@ pub enum AdditionalProperties {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum Schema {
     Reference {
         #[serde(rename = "$ref")]
@@ -117,20 +118,6 @@ impl Schema {
         match self {
             Schema::Object { schema_type, .. } => schema_type.as_deref(),
             Schema::Reference { .. } => None,
-        }
-    }
-
-    pub fn is_nullable(&self) -> bool {
-        match self {
-            Schema::Object { nullable, .. } => nullable.unwrap_or(false),
-            Schema::Reference { .. } => false,
-        }
-    }
-
-    pub fn get_reference(&self) -> Option<&str> {
-        match self {
-            Schema::Reference { reference } => Some(reference),
-            Schema::Object { .. } => None,
         }
     }
 
@@ -216,23 +203,9 @@ impl SchemaObjectBuilder {
         self
     }
 
-    /// Add a single property
-    pub fn property(mut self, name: impl Into<String>, schema: Schema) -> Self {
-        let properties = self.properties.get_or_insert_with(IndexMap::new);
-        properties.insert(name.into(), schema);
-        self
-    }
-
     /// Set required fields
     pub fn required(mut self, required: Vec<String>) -> Self {
         self.required = Some(required);
-        self
-    }
-
-    /// Add a single required field
-    pub fn require(mut self, field: impl Into<String>) -> Self {
-        let required = self.required.get_or_insert_with(Vec::new);
-        required.push(field.into());
         self
     }
 

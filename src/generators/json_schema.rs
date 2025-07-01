@@ -14,19 +14,6 @@ impl JsonSchemaGenerator {
         Self { indent_level: 0 }
     }
 
-    fn indent(&self) -> String {
-        "  ".repeat(self.indent_level)
-    }
-
-    fn with_indent<F>(&self, f: F) -> String
-    where
-        F: FnOnce(&Self) -> String,
-    {
-        let mut generator = self.clone();
-        generator.indent_level += 1;
-        f(&generator)
-    }
-
     // Collect dependencies for a schema
     fn collect_dependencies(&self, schema: &Schema) -> HashSet<String> {
         let mut deps = HashSet::new();
@@ -36,7 +23,7 @@ impl JsonSchemaGenerator {
 
     fn collect_dependencies_recursive(&self, schema: &Schema, deps: &mut HashSet<String>) {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference: _ } => {
                 if let Some(type_name) = self.extract_type_name(schema) {
                     deps.insert(type_name);
                 }
@@ -162,6 +149,7 @@ impl JsonSchemaGenerator {
         Ok(result)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn schema_to_json_schema(&self, schema: &Schema) -> Result<Value> {
         match schema {
             Schema::Reference { reference } => {
@@ -382,11 +370,6 @@ impl JsonSchemaGenerator {
 }
 
 impl Generator for JsonSchemaGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        let json_schema = self.generate_full_schema(schema)?;
-        Ok(serde_json::to_string_pretty(&json_schema)?)
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let json_schema = self.generate_full_schema(schema)?;
         let mut output = String::new();

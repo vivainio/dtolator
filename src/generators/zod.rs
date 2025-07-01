@@ -17,15 +17,6 @@ impl ZodGenerator {
         "  ".repeat(self.indent_level)
     }
 
-    fn with_indent<F>(&self, f: F) -> String
-    where
-        F: FnOnce(&Self) -> String,
-    {
-        let mut generator = self.clone();
-        generator.indent_level += 1;
-        f(&generator)
-    }
-
     // Collect dependencies for a schema
     fn collect_dependencies(&self, schema: &Schema) -> HashSet<String> {
         let mut deps = HashSet::new();
@@ -35,7 +26,7 @@ impl ZodGenerator {
 
     fn collect_dependencies_recursive(&self, schema: &Schema, deps: &mut HashSet<String>) {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference: _ } => {
                 if let Some(type_name) = self.extract_type_name(schema) {
                     deps.insert(type_name);
                 }
@@ -149,63 +140,6 @@ impl ZodGenerator {
         Ok(result)
     }
 
-    fn collect_request_and_response_types(
-        &self,
-        schema: &OpenApiSchema,
-    ) -> (
-        std::collections::HashSet<String>,
-        std::collections::HashSet<String>,
-    ) {
-        let mut request_types = std::collections::HashSet::new();
-        let mut response_types = std::collections::HashSet::new();
-
-        if let Some(paths) = &schema.paths {
-            for (_path, path_item) in paths {
-                // Check all HTTP methods
-                let operations = [
-                    &path_item.get,
-                    &path_item.post,
-                    &path_item.put,
-                    &path_item.patch,
-                    &path_item.delete,
-                ];
-
-                for operation in operations.into_iter().flatten() {
-                    // Collect request body types
-                    if let Some(request_body) = &operation.request_body {
-                        if let Some(content) = &request_body.content {
-                            if let Some(media_type) = content.get("application/json") {
-                                if let Some(schema_ref) = &media_type.schema {
-                                    if let Some(type_name) = self.extract_type_name(schema_ref) {
-                                        request_types.insert(type_name);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Collect response types
-                    if let Some(responses) = &operation.responses {
-                        for (_status, response) in responses {
-                            if let Some(content) = &response.content {
-                                if let Some(media_type) = content.get("application/json") {
-                                    if let Some(schema_ref) = &media_type.schema {
-                                        if let Some(type_name) = self.extract_type_name(schema_ref)
-                                        {
-                                            response_types.insert(type_name);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        (request_types, response_types)
-    }
-
     fn extract_type_name(&self, schema: &crate::openapi::Schema) -> Option<String> {
         match schema {
             crate::openapi::Schema::Reference { reference } => Some(
@@ -236,6 +170,7 @@ impl ZodGenerator {
         Ok(output)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn schema_to_zod(&self, schema: &Schema) -> Result<String> {
         match schema {
             Schema::Reference { reference } => {
@@ -262,6 +197,7 @@ impl ZodGenerator {
                 pattern,
                 ..
             } => {
+                #[allow(unused_assignments)]
                 let mut zod_schema = String::new();
 
                 // Handle allOf, oneOf, anyOf
@@ -390,10 +326,6 @@ impl ZodGenerator {
 }
 
 impl Generator for ZodGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        self.generate_with_command(schema, "dtolator")
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
 

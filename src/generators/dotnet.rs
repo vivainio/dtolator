@@ -232,10 +232,6 @@ impl DotNetGenerator {
 }
 
 impl Generator for DotNetGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        self.generate_with_command(schema, "dtolator")
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
 

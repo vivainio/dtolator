@@ -196,6 +196,7 @@ impl PythonDictGenerator {
         Ok(output)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn schema_to_python_type(&self, schema: &Schema) -> Result<String> {
         match schema {
             Schema::Object {
@@ -300,10 +301,6 @@ impl PythonDictGenerator {
 }
 
 impl Generator for PythonDictGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        self.generate_with_command(schema, "dtolator")
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
 

@@ -4,7 +4,6 @@ use anyhow::Result;
 use std::collections::BTreeMap;
 
 pub struct AngularGenerator {
-    base_url: String,
     with_zod: bool,
     debug: bool,
     promises: bool,
@@ -13,16 +12,10 @@ pub struct AngularGenerator {
 impl AngularGenerator {
     pub fn new() -> Self {
         Self {
-            base_url: "environment.apiUrl".to_string(),
             with_zod: false,
             debug: false,
             promises: false,
         }
-    }
-
-    pub fn with_base_url(mut self, base_url: String) -> Self {
-        self.base_url = base_url;
-        self
     }
 
     pub fn with_zod_validation(mut self, with_zod: bool) -> Self {
@@ -42,10 +35,6 @@ impl AngularGenerator {
 }
 
 impl Generator for AngularGenerator {
-    fn generate(&self, schema: &OpenApiSchema) -> Result<String> {
-        self.generate_with_command(schema, "dtolator")
-    }
-
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut services = BTreeMap::new();
 
@@ -57,7 +46,7 @@ impl Generator for AngularGenerator {
         if let Some(paths) = &schema.paths {
             for (path, path_item) in paths {
                 if self.debug {
-                    println!("🔍 [DEBUG] Processing path: {}", path);
+                    println!("🔍 [DEBUG] Processing path: {path}");
                 }
 
                 // Handle different HTTP methods
@@ -69,7 +58,7 @@ impl Generator for AngularGenerator {
                             .as_ref()
                             .and_then(|tags| tags.first())
                             .unwrap_or(&default_tag);
-                        println!("🔍 [DEBUG] GET {} -> tag: {}", path, tag);
+                        println!("🔍 [DEBUG] GET {path} -> tag: {tag}");
                     }
                     self.add_operation_to_services(&mut services, "GET", path, operation)?;
                 }
@@ -81,7 +70,7 @@ impl Generator for AngularGenerator {
                             .as_ref()
                             .and_then(|tags| tags.first())
                             .unwrap_or(&default_tag);
-                        println!("🔍 [DEBUG] POST {} -> tag: {}", path, tag);
+                        println!("🔍 [DEBUG] POST {path} -> tag: {tag}");
                     }
                     self.add_operation_to_services(&mut services, "POST", path, operation)?;
                 }
@@ -93,7 +82,7 @@ impl Generator for AngularGenerator {
                             .as_ref()
                             .and_then(|tags| tags.first())
                             .unwrap_or(&default_tag);
-                        println!("🔍 [DEBUG] PUT {} -> tag: {}", path, tag);
+                        println!("🔍 [DEBUG] PUT {path} -> tag: {tag}");
                     }
                     self.add_operation_to_services(&mut services, "PUT", path, operation)?;
                 }
@@ -105,7 +94,7 @@ impl Generator for AngularGenerator {
                             .as_ref()
                             .and_then(|tags| tags.first())
                             .unwrap_or(&default_tag);
-                        println!("🔍 [DEBUG] DELETE {} -> tag: {}", path, tag);
+                        println!("🔍 [DEBUG] DELETE {path} -> tag: {tag}");
                     }
                     self.add_operation_to_services(&mut services, "DELETE", path, operation)?;
                 }
@@ -117,7 +106,7 @@ impl Generator for AngularGenerator {
                             .as_ref()
                             .and_then(|tags| tags.first())
                             .unwrap_or(&default_tag);
-                        println!("🔍 [DEBUG] PATCH {} -> tag: {}", path, tag);
+                        println!("🔍 [DEBUG] PATCH {path} -> tag: {tag}");
                     }
                     self.add_operation_to_services(&mut services, "PATCH", path, operation)?;
                 }
@@ -142,7 +131,7 @@ impl Generator for AngularGenerator {
         let mut output = String::new();
         for (tag, service_data) in services {
             if self.debug {
-                println!("🔍 [DEBUG] Generating service for tag: {}", tag);
+                println!("🔍 [DEBUG] Generating service for tag: {tag}");
             }
             output.push_str(&self.generate_service_with_command(&tag, &service_data, command)?);
             output.push_str("\n\n");
@@ -225,13 +214,11 @@ impl AngularGenerator {
         // For void types or when promises flag is set, return Promise instead of Observable
         if return_type == "void" || self.promises {
             method.push_str(&format!(
-                "  {}({}): Promise<{}> {{\n",
-                method_name, parameters, return_type
+                "  {method_name}({parameters}): Promise<{return_type}> {{\n"
             ));
         } else {
             method.push_str(&format!(
-                "  {}({}): Observable<{}> {{\n",
-                method_name, parameters, return_type
+                "  {method_name}({parameters}): Observable<{return_type}> {{\n"
             ));
         }
 
@@ -240,95 +227,87 @@ impl AngularGenerator {
         let query_params = self.get_query_params(operation)?;
 
         method.push_str(&format!(
-            "    const url = fillUrl('{}', {}, {});\n",
-            path, url_params, query_params
+            "    const url = fillUrl('{path}', {url_params}, {query_params});\n"
         ));
 
         // Generate HTTP call
         let request_body = self.get_request_body(operation)?;
 
         let http_call = match http_method {
-            "GET" => format!("this.http.get<{}>(url)", return_type),
+            "GET" => format!("this.http.get<{return_type}>(url)"),
             "POST" => {
                 if request_body.is_empty() {
-                    format!("this.http.post<{}>(url, null)", return_type)
+                    format!("this.http.post<{return_type}>(url, null)")
                 } else {
-                    format!("this.http.post<{}>(url{})", return_type, request_body)
+                    format!("this.http.post<{return_type}>(url{request_body})")
                 }
             }
             "PUT" => {
                 if request_body.is_empty() {
-                    format!("this.http.put<{}>(url, null)", return_type)
+                    format!("this.http.put<{return_type}>(url, null)")
                 } else {
-                    format!("this.http.put<{}>(url{})", return_type, request_body)
+                    format!("this.http.put<{return_type}>(url{request_body})")
                 }
             }
-            "DELETE" => format!("this.http.delete<{}>(url)", return_type),
+            "DELETE" => format!("this.http.delete<{return_type}>(url)"),
             "PATCH" => {
                 if request_body.is_empty() {
-                    format!("this.http.patch<{}>(url, null)", return_type)
+                    format!("this.http.patch<{return_type}>(url, null)")
                 } else {
-                    format!("this.http.patch<{}>(url{})", return_type, request_body)
+                    format!("this.http.patch<{return_type}>(url{request_body})")
                 }
             }
-            _ => format!(
-                "this.http.request<{}>('{}', {{ url }})",
-                return_type, http_method
-            ),
+            _ => format!("this.http.request<{return_type}>('{http_method}', {{ url }})"),
         };
 
         // Add Zod validation for response if enabled (but not for requests)
         if self.with_zod {
             // Skip validation for void types - they shouldn't be validated
             if return_type == "void" {
-                method.push_str(&format!("    return lastValueFrom({});\n", http_call));
+                method.push_str(&format!("    return lastValueFrom({http_call});\n"));
             } else {
                 let response_schema_name = if return_type == "unknown[]" {
                     // For unknown arrays, we can't validate the schema, so just skip validation
-                    format!("z.array(z.unknown())")
+                    "z.array(z.unknown())".to_string()
                 } else if return_type.ends_with("[]") {
                     // For typed arrays, create array schema
                     let base_type = &return_type[..return_type.len() - 2];
-                    format!("z.array({}Schema)", base_type)
+                    format!("z.array({base_type}Schema)")
                 } else {
                     // For single types, use the standard schema
-                    format!("{}Schema", return_type)
+                    format!("{return_type}Schema")
                 };
 
                 if self.promises {
                     // When promises flag is set, wrap the observable with lastValueFrom
-                    method.push_str(&format!("    return lastValueFrom({}\n", http_call));
+                    method.push_str(&format!("    return lastValueFrom({http_call}\n"));
                     method.push_str("      .pipe(\n");
 
                     if return_type == "unknown[]" {
                         // For unknown arrays, just cast to the expected type without validation
                         method.push_str(&format!(
-                            "        map(response => response as {})\n",
-                            return_type
+                            "        map(response => response as {return_type})\n"
                         ));
                     } else {
                         method.push_str(&format!(
-                            "        map(response => {}.parse(response))\n",
-                            response_schema_name
+                            "        map(response => {response_schema_name}.parse(response))\n"
                         ));
                     }
 
                     method.push_str("      ));\n");
                 } else {
                     // Original observable behavior
-                    method.push_str(&format!("    return {}\n", http_call));
+                    method.push_str(&format!("    return {http_call}\n"));
                     method.push_str("      .pipe(\n");
 
                     if return_type == "unknown[]" {
                         // For unknown arrays, just cast to the expected type without validation
                         method.push_str(&format!(
-                            "        map(response => response as {})\n",
-                            return_type
+                            "        map(response => response as {return_type})\n"
                         ));
                     } else {
                         method.push_str(&format!(
-                            "        map(response => {}.parse(response))\n",
-                            response_schema_name
+                            "        map(response => {response_schema_name}.parse(response))\n"
                         ));
                     }
 
@@ -338,9 +317,9 @@ impl AngularGenerator {
         } else {
             // For void types or when promises flag is set, convert Observable to Promise
             if return_type == "void" || self.promises {
-                method.push_str(&format!("    return lastValueFrom({});\n", http_call));
+                method.push_str(&format!("    return lastValueFrom({http_call});\n"));
             } else {
-                method.push_str(&format!("    return {};\n", http_call));
+                method.push_str(&format!("    return {http_call};\n"));
             }
         }
 
@@ -397,7 +376,7 @@ impl AngularGenerator {
 
             if !query_params.is_empty() {
                 if let Some(type_name) = self.get_query_param_type_name(operation) {
-                    params.push(format!("queryParams?: {}", type_name));
+                    params.push(format!("queryParams?: {type_name}"));
                 } else {
                     // Fallback to inline type if no good name can be generated
                     let mut query_type = "{ ".to_string();
@@ -414,7 +393,7 @@ impl AngularGenerator {
                         }
                     }
                     query_type.push_str(" }");
-                    params.push(format!("queryParams?: {}", query_type));
+                    params.push(format!("queryParams?: {query_type}"));
                 }
             }
         }
@@ -425,7 +404,7 @@ impl AngularGenerator {
                 if let Some(media_type) = content.get("application/json") {
                     if let Some(schema) = &media_type.schema {
                         let type_name = self.get_schema_type_name(schema);
-                        params.push(format!("dto: {}", type_name));
+                        params.push(format!("dto: {type_name}"));
                     }
                 }
             }
@@ -478,7 +457,7 @@ impl AngularGenerator {
     }
 
     fn get_request_body(&self, operation: &Operation) -> Result<String> {
-        if let Some(_) = &operation.request_body {
+        if operation.request_body.is_some() {
             Ok(", dto".to_string())
         } else {
             Ok("".to_string())
@@ -559,6 +538,7 @@ impl AngularGenerator {
         }
     }
 
+    #[allow(dead_code)]
     fn generate_service(&self, tag: &str, service_data: &ServiceData) -> Result<String> {
         self.generate_service_with_command(tag, service_data, "dtolator")
     }
@@ -569,16 +549,16 @@ impl AngularGenerator {
         service_data: &ServiceData,
         command: &str,
     ) -> Result<String> {
-        let class_name = format!("{}Api", tag);
-        let file_name = self.to_kebab_case(&format!("{}-api", tag));
+        let class_name = format!("{tag}Api");
+        let file_name = self.to_kebab_case(&format!("{tag}-api"));
 
         let mut service = String::new();
 
         // Add file marker BEFORE the content for proper splitting
-        service.push_str(&format!("// FILE: {}.ts\n", file_name));
+        service.push_str(&format!("// FILE: {file_name}.ts\n"));
 
         // Header comment
-        service.push_str(&format!("// Generated by {}\n", command));
+        service.push_str(&format!("// Generated by {command}\n"));
         service.push_str("// Do not modify manually\n\n");
 
         // Imports
@@ -610,10 +590,10 @@ impl AngularGenerator {
                 // Import types and schemas from dto.ts (which has inferred types and re-exported schemas)
                 service.push_str("import {\n");
                 for import in &imports {
-                    service.push_str(&format!("  {},\n", import));
+                    service.push_str(&format!("  {import},\n"));
                     // Only import schemas for response types, not request types
                     if service_data.response_types.contains(import) {
-                        service.push_str(&format!("  {}Schema,\n", import));
+                        service.push_str(&format!("  {import}Schema,\n"));
                     }
                 }
                 service.push_str("} from './dto';\n");
@@ -621,7 +601,7 @@ impl AngularGenerator {
                 // Import only types in multi-line format
                 service.push_str("import {\n");
                 for import in &imports {
-                    service.push_str(&format!("  {},\n", import));
+                    service.push_str(&format!("  {import},\n"));
                 }
                 service.push_str("} from './dto';\n");
             }
@@ -631,7 +611,7 @@ impl AngularGenerator {
 
         // Service class
         service.push_str("@Injectable({ providedIn: 'root' })\n");
-        service.push_str(&format!("export class {} {{\n", class_name));
+        service.push_str(&format!("export class {class_name} {{\n"));
         service.push_str("  constructor(private http: HttpClient) {}\n\n");
 
         // Methods
@@ -672,12 +652,12 @@ impl AngularGenerator {
     // Helper methods
     fn extract_path_params(&self, path: &str) -> Vec<String> {
         let mut params = Vec::new();
-        let mut chars = path.chars().peekable();
+        let mut chars = path.chars();
 
         while let Some(ch) = chars.next() {
             if ch == '{' {
                 let mut param = String::new();
-                while let Some(ch) = chars.next() {
+                for ch in chars.by_ref() {
                     if ch == '}' {
                         break;
                     }
@@ -701,6 +681,7 @@ impl AngularGenerator {
         }
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn get_schema_type_name(&self, schema: &crate::openapi::Schema) -> String {
         match schema {
             crate::openapi::Schema::Reference { reference } => reference
