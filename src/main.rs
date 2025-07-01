@@ -635,10 +635,10 @@ fn json_value_to_schema_pass1(
     schemas: &mut IndexMap<String, Schema>,
     current_name: &str,
     struct_hashes: &mut std::collections::HashMap<
-        u64,
-        (String, Vec<String>, Option<String>, Vec<String>, String),
+        String,
+        (String, Vec<String>, Option<String>, Vec<String>),
     >,
-    hash_to_placeholder: &mut std::collections::HashMap<u64, String>,
+    json_to_placeholder: &mut std::collections::HashMap<String, String>,
     parent_key: Option<&str>,
 ) -> Result<Schema> {
     match value {
@@ -812,7 +812,7 @@ fn json_value_to_schema_pass1(
                     schemas,
                     &item_name,
                     struct_hashes,
-                    hash_to_placeholder,
+                    json_to_placeholder,
                     Some(&item_name.to_lowercase()),
                 )?;
                 Ok(Schema::Object {
@@ -861,41 +861,15 @@ fn json_value_to_schema_pass1(
                 });
             }
 
-            // Create hash for deduplication
-            let mut hasher = DefaultHasher::new();
+            // Use JSON content for deduplication
             let serialized = serde_json::to_string(obj)?;
-            serialized.hash(&mut hasher);
-            let hash = hasher.finish();
 
-            let final_hash = if let Some(placeholder) = hash_to_placeholder.get(&hash) {
-                // Check if this is a hash collision by comparing actual content
-                if let Some((_, _, _, _, stored_serialized)) = struct_hashes.get(&hash) {
-                    if stored_serialized == &serialized {
-                        // Same structure, reuse existing schema
-                        return Ok(Schema::Reference {
-                            reference: format!("#/components/schemas/{placeholder}"),
-                        });
-                    }
-                    // Hash collision detected - need to create a new unique hash
-                    // Add current_name to make it unique
-                    let mut collision_hasher = DefaultHasher::new();
-                    serialized.hash(&mut collision_hasher);
-                    current_name.hash(&mut collision_hasher);
-                    let new_hash = collision_hasher.finish();
-
-                    // Use the new hash for this structure
-                    let new_placeholder = format!("HASH_{new_hash}");
-                    hash_to_placeholder.insert(new_hash, new_placeholder.clone());
-                    new_hash // Use the collision-resistant hash
-                } else {
-                    // This shouldn't happen, but if it does, reuse the existing reference
-                    return Ok(Schema::Reference {
-                        reference: format!("#/components/schemas/{placeholder}"),
-                    });
-                }
-            } else {
-                hash // No collision, use original hash
-            };
+            if let Some(placeholder) = json_to_placeholder.get(&serialized) {
+                // Same structure, reuse existing schema
+                return Ok(Schema::Reference {
+                    reference: format!("#/components/schemas/{placeholder}"),
+                });
+            }
 
             // Generate properties
             let mut properties = IndexMap::new();
@@ -931,24 +905,18 @@ fn json_value_to_schema_pass1(
                     schemas,
                     &property_name,
                     struct_hashes,
-                    hash_to_placeholder,
+                    json_to_placeholder,
                     Some(key),
                 )?;
                 properties.insert(key.clone(), property_schema);
                 required.push(key.clone());
             }
 
-            let placeholder_name = format!("HASH_{final_hash}");
-            hash_to_placeholder.insert(final_hash, placeholder_name.clone());
+            let placeholder_name = current_name.to_string();
+            json_to_placeholder.insert(serialized.clone(), placeholder_name.clone());
             struct_hashes.insert(
-                final_hash,
-                (
-                    current_name.to_string(),
-                    required.clone(),
-                    None,
-                    vec![],
-                    serialized.clone(),
-                ),
+                serialized.clone(),
+                (current_name.to_string(), required.clone(), None, vec![]),
             );
 
             let schema = Schema::Object {
@@ -1044,29 +1012,29 @@ fn json_to_openapi_schema_with_root(
 ) -> Result<OpenApiSchema> {
     let mut schemas = IndexMap::new();
     let mut struct_hashes: std::collections::HashMap<
-        u64,
-        (String, Vec<String>, Option<String>, Vec<String>, String),
+        String,
+        (String, Vec<String>, Option<String>, Vec<String>),
     > = std::collections::HashMap::new();
-    let mut hash_to_placeholder: std::collections::HashMap<u64, String> =
+    let mut json_to_placeholder: std::collections::HashMap<String, String> =
         std::collections::HashMap::new();
     let root_schema = json_value_to_schema_pass1(
         &json_value,
         &mut schemas,
         root_name,
         &mut struct_hashes,
-        &mut hash_to_placeholder,
+        &mut json_to_placeholder,
         None,
     )?;
     schemas.insert(root_name.to_string(), root_schema);
-    let hash_to_final_name: std::collections::HashMap<String, String> = hash_to_placeholder
-        .keys()
-        .map(|h| {
-            let (final_name, _, _, _, _) = struct_hashes.get(h).unwrap();
-            (format!("HASH_{h}"), final_name.clone())
+    let json_to_final_name: std::collections::HashMap<String, String> = json_to_placeholder
+        .iter()
+        .map(|(json_key, placeholder)| {
+            let (final_name, _, _, _) = struct_hashes.get(json_key).unwrap();
+            (placeholder.clone(), final_name.clone())
         })
         .collect();
     for (_k, schema) in schemas.iter_mut() {
-        resolve_placeholders(schema, &hash_to_final_name);
+        resolve_placeholders(schema, &json_to_final_name);
     }
     Ok(OpenApiSchema {
         openapi: Some("3.0.0".to_string()),

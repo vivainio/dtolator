@@ -874,9 +874,9 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
 
                                     // Add JSDoc comment for the interface
                                     if let Some(summary) = &operation.summary {
-                                                            types.push_str(&format!(
-                        "/**\n * Query parameters for {summary}\n */\n"
-                    ));
+                                        types.push_str(&format!(
+                                            "/**\n * Query parameters for {summary}\n */\n"
+                                        ));
                                     }
 
                                     types.push_str(&format!("export interface {type_name} {{\n"));
@@ -1001,14 +1001,10 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
                     "   * @returns {return_wrapper}<{return_type}> - {response_desc}\n"
                 ));
             } else {
-                comment.push_str(&format!(
-                    "   * @returns {return_wrapper}<{return_type}>\n"
-                ));
+                comment.push_str(&format!("   * @returns {return_wrapper}<{return_type}>\n"));
             }
         } else {
-            comment.push_str(&format!(
-                "   * @returns {return_wrapper}<{return_type}>\n"
-            ));
+            comment.push_str(&format!("   * @returns {return_wrapper}<{return_type}>\n"));
         }
 
         comment.push_str("   */\n");

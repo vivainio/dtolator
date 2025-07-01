@@ -319,8 +319,7 @@ impl ZodGenerator {
 
                                 // Add pattern constraint
                                 if let Some(pat) = pattern {
-                                    zod_schema
-                                        .push_str(&format!(".regex(new RegExp(\"{pat}\"))"));
+                                    zod_schema.push_str(&format!(".regex(new RegExp(\"{pat}\"))"));
                                 }
                             }
                         }
