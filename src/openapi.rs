@@ -133,4 +133,220 @@ impl Schema {
             Schema::Object { .. } => None,
         }
     }
+
+    /// Create a new builder for Schema::Object
+    pub fn object() -> SchemaObjectBuilder {
+        SchemaObjectBuilder::new()
+    }
+
+    /// Create a reference schema
+    pub fn reference(reference: impl Into<String>) -> Self {
+        Schema::Reference {
+            reference: reference.into(),
+        }
+    }
+
+    // Convenience methods for common schema types
+    pub fn string() -> Self {
+        Schema::object().schema_type("string").build()
+    }
+
+    pub fn integer() -> Self {
+        Schema::object().schema_type("integer").build()
+    }
+
+    pub fn number() -> Self {
+        Schema::object().schema_type("number").build()
+    }
+
+    pub fn boolean() -> Self {
+        Schema::object().schema_type("boolean").build()
+    }
+
+    pub fn null() -> Self {
+        Schema::object().schema_type("null").nullable(true).build()
+    }
+
+    pub fn array(items: Schema) -> Self {
+        Schema::object()
+            .schema_type("array")
+            .items(Box::new(items))
+            .build()
+    }
+}
+
+/// Builder for Schema::Object
+#[derive(Debug, Clone, Default)]
+pub struct SchemaObjectBuilder {
+    schema_type: Option<String>,
+    properties: Option<IndexMap<String, Schema>>,
+    required: Option<Vec<String>>,
+    additional_properties: Option<AdditionalProperties>,
+    items: Option<Box<Schema>>,
+    enum_values: Option<Vec<serde_json::Value>>,
+    format: Option<String>,
+    description: Option<String>,
+    example: Option<serde_json::Value>,
+    all_of: Option<Vec<Schema>>,
+    one_of: Option<Vec<Schema>>,
+    any_of: Option<Vec<Schema>>,
+    minimum: Option<f64>,
+    maximum: Option<f64>,
+    min_length: Option<usize>,
+    max_length: Option<usize>,
+    pattern: Option<String>,
+    nullable: Option<bool>,
+}
+
+impl SchemaObjectBuilder {
+    /// Create a new builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the schema type
+    pub fn schema_type(mut self, schema_type: impl Into<String>) -> Self {
+        self.schema_type = Some(schema_type.into());
+        self
+    }
+
+    /// Set properties
+    pub fn properties(mut self, properties: IndexMap<String, Schema>) -> Self {
+        self.properties = Some(properties);
+        self
+    }
+
+    /// Add a single property
+    pub fn property(mut self, name: impl Into<String>, schema: Schema) -> Self {
+        let properties = self.properties.get_or_insert_with(IndexMap::new);
+        properties.insert(name.into(), schema);
+        self
+    }
+
+    /// Set required fields
+    pub fn required(mut self, required: Vec<String>) -> Self {
+        self.required = Some(required);
+        self
+    }
+
+    /// Add a single required field
+    pub fn require(mut self, field: impl Into<String>) -> Self {
+        let required = self.required.get_or_insert_with(Vec::new);
+        required.push(field.into());
+        self
+    }
+
+    /// Set additional properties
+    pub fn additional_properties(mut self, additional_properties: AdditionalProperties) -> Self {
+        self.additional_properties = Some(additional_properties);
+        self
+    }
+
+    /// Set items for array types
+    pub fn items(mut self, items: Box<Schema>) -> Self {
+        self.items = Some(items);
+        self
+    }
+
+    /// Set enum values
+    pub fn enum_values(mut self, enum_values: Vec<serde_json::Value>) -> Self {
+        self.enum_values = Some(enum_values);
+        self
+    }
+
+    /// Set format
+    pub fn format(mut self, format: impl Into<String>) -> Self {
+        self.format = Some(format.into());
+        self
+    }
+
+    /// Set description
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    /// Set example
+    pub fn example(mut self, example: serde_json::Value) -> Self {
+        self.example = Some(example);
+        self
+    }
+
+    /// Set allOf schemas
+    pub fn all_of(mut self, all_of: Vec<Schema>) -> Self {
+        self.all_of = Some(all_of);
+        self
+    }
+
+    /// Set oneOf schemas
+    pub fn one_of(mut self, one_of: Vec<Schema>) -> Self {
+        self.one_of = Some(one_of);
+        self
+    }
+
+    /// Set anyOf schemas
+    pub fn any_of(mut self, any_of: Vec<Schema>) -> Self {
+        self.any_of = Some(any_of);
+        self
+    }
+
+    /// Set minimum value
+    pub fn minimum(mut self, minimum: f64) -> Self {
+        self.minimum = Some(minimum);
+        self
+    }
+
+    /// Set maximum value
+    pub fn maximum(mut self, maximum: f64) -> Self {
+        self.maximum = Some(maximum);
+        self
+    }
+
+    /// Set minimum length
+    pub fn min_length(mut self, min_length: usize) -> Self {
+        self.min_length = Some(min_length);
+        self
+    }
+
+    /// Set maximum length
+    pub fn max_length(mut self, max_length: usize) -> Self {
+        self.max_length = Some(max_length);
+        self
+    }
+
+    /// Set pattern
+    pub fn pattern(mut self, pattern: impl Into<String>) -> Self {
+        self.pattern = Some(pattern.into());
+        self
+    }
+
+    /// Set nullable
+    pub fn nullable(mut self, nullable: bool) -> Self {
+        self.nullable = Some(nullable);
+        self
+    }
+
+    /// Build the Schema::Object
+    pub fn build(self) -> Schema {
+        Schema::Object {
+            schema_type: self.schema_type,
+            properties: self.properties,
+            required: self.required,
+            additional_properties: self.additional_properties,
+            items: self.items,
+            enum_values: self.enum_values,
+            format: self.format,
+            description: self.description,
+            example: self.example,
+            all_of: self.all_of,
+            one_of: self.one_of,
+            any_of: self.any_of,
+            minimum: self.minimum,
+            maximum: self.maximum,
+            min_length: self.min_length,
+            max_length: self.max_length,
+            pattern: self.pattern,
+            nullable: self.nullable,
+        }
+    }
 }

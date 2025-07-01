@@ -642,152 +642,21 @@ fn json_value_to_schema_pass1(
     parent_key: Option<&str>,
 ) -> Result<Schema> {
     match value {
-        serde_json::Value::Null => Ok(Schema::Object {
-            schema_type: Some("null".to_string()),
-            properties: None,
-            required: None,
-            additional_properties: None,
-            items: None,
-            enum_values: None,
-            format: None,
-            description: None,
-            example: None,
-            all_of: None,
-            one_of: None,
-            any_of: None,
-            minimum: None,
-            maximum: None,
-            min_length: None,
-            max_length: None,
-            pattern: None,
-            nullable: Some(true),
-        }),
-        serde_json::Value::Bool(_) => Ok(Schema::Object {
-            schema_type: Some("boolean".to_string()),
-            properties: None,
-            required: None,
-            additional_properties: None,
-            items: None,
-            enum_values: None,
-            format: None,
-            description: None,
-            example: None,
-            all_of: None,
-            one_of: None,
-            any_of: None,
-            minimum: None,
-            maximum: None,
-            min_length: None,
-            max_length: None,
-            pattern: None,
-            nullable: None,
-        }),
+        serde_json::Value::Null => Ok(Schema::null()),
+        serde_json::Value::Bool(_) => Ok(Schema::boolean()),
         serde_json::Value::Number(n) => {
             if n.is_i64() || n.is_u64() {
-                Ok(Schema::Object {
-                    schema_type: Some("integer".to_string()),
-                    properties: None,
-                    required: None,
-                    additional_properties: None,
-                    items: None,
-                    enum_values: None,
-                    format: None,
-                    description: None,
-                    example: None,
-                    all_of: None,
-                    one_of: None,
-                    any_of: None,
-                    minimum: None,
-                    maximum: None,
-                    min_length: None,
-                    max_length: None,
-                    pattern: None,
-                    nullable: None,
-                })
+                Ok(Schema::integer())
             } else {
-                Ok(Schema::Object {
-                    schema_type: Some("number".to_string()),
-                    properties: None,
-                    required: None,
-                    additional_properties: None,
-                    items: None,
-                    enum_values: None,
-                    format: None,
-                    description: None,
-                    example: None,
-                    all_of: None,
-                    one_of: None,
-                    any_of: None,
-                    minimum: None,
-                    maximum: None,
-                    min_length: None,
-                    max_length: None,
-                    pattern: None,
-                    nullable: None,
-                })
+                Ok(Schema::number())
             }
         }
-        serde_json::Value::String(_) => Ok(Schema::Object {
-            schema_type: Some("string".to_string()),
-            properties: None,
-            required: None,
-            additional_properties: None,
-            items: None,
-            enum_values: None,
-            format: None,
-            description: None,
-            example: None,
-            all_of: None,
-            one_of: None,
-            any_of: None,
-            minimum: None,
-            maximum: None,
-            min_length: None,
-            max_length: None,
-            pattern: None,
-            nullable: None,
-        }),
+        serde_json::Value::String(_) => Ok(Schema::string()),
         serde_json::Value::Array(arr) => {
             if arr.is_empty() {
-                Ok(Schema::Object {
-                    schema_type: Some("array".to_string()),
-                    properties: None,
-                    required: None,
-                    additional_properties: None,
-                    items: Some(Box::new(Schema::Object {
-                        schema_type: Some("object".to_string()),
-                        properties: None,
-                        required: None,
-                        additional_properties: None,
-                        items: None,
-                        enum_values: None,
-                        format: None,
-                        description: None,
-                        example: None,
-                        all_of: None,
-                        one_of: None,
-                        any_of: None,
-                        minimum: None,
-                        maximum: None,
-                        min_length: None,
-                        max_length: None,
-                        pattern: None,
-                        nullable: None,
-                    })),
-                    enum_values: None,
-                    format: None,
-                    description: None,
-                    example: None,
-                    all_of: None,
-                    one_of: None,
-                    any_of: None,
-                    minimum: None,
-                    maximum: None,
-                    min_length: None,
-                    max_length: None,
-                    pattern: None,
-                    nullable: None,
-                })
+                Ok(Schema::array(
+                    Schema::object().schema_type("object").build(),
+                ))
             } else {
                 // Create a meaningful name for the array item type
                 let item_name = if let Some(parent_key) = parent_key {
@@ -815,50 +684,12 @@ fn json_value_to_schema_pass1(
                     json_to_placeholder,
                     Some(&item_name.to_lowercase()),
                 )?;
-                Ok(Schema::Object {
-                    schema_type: Some("array".to_string()),
-                    properties: None,
-                    required: None,
-                    additional_properties: None,
-                    items: Some(Box::new(item_schema)),
-                    enum_values: None,
-                    format: None,
-                    description: None,
-                    example: None,
-                    all_of: None,
-                    one_of: None,
-                    any_of: None,
-                    minimum: None,
-                    maximum: None,
-                    min_length: None,
-                    max_length: None,
-                    pattern: None,
-                    nullable: None,
-                })
+                Ok(Schema::array(item_schema))
             }
         }
         serde_json::Value::Object(obj) => {
             if obj.is_empty() {
-                return Ok(Schema::Object {
-                    schema_type: Some("object".to_string()),
-                    properties: None,
-                    required: None,
-                    additional_properties: None,
-                    items: None,
-                    enum_values: None,
-                    format: None,
-                    description: None,
-                    example: None,
-                    all_of: None,
-                    one_of: None,
-                    any_of: None,
-                    minimum: None,
-                    maximum: None,
-                    min_length: None,
-                    max_length: None,
-                    pattern: None,
-                    nullable: None,
-                });
+                return Ok(Schema::object().schema_type("object").build());
             }
 
             // Use JSON content for deduplication
@@ -866,9 +697,9 @@ fn json_value_to_schema_pass1(
 
             if let Some(placeholder) = json_to_placeholder.get(&serialized) {
                 // Same structure, reuse existing schema
-                return Ok(Schema::Reference {
-                    reference: format!("#/components/schemas/{placeholder}"),
-                });
+                return Ok(Schema::reference(format!(
+                    "#/components/schemas/{placeholder}"
+                )));
             }
 
             // Generate properties
@@ -919,38 +750,23 @@ fn json_value_to_schema_pass1(
                 (current_name.to_string(), required.clone(), None, vec![]),
             );
 
-            let schema = Schema::Object {
-                schema_type: Some("object".to_string()),
-                properties: Some(properties),
-                required: if required.is_empty() {
-                    None
-                } else {
-                    Some(required)
-                },
-                additional_properties: None,
-                items: None,
-                enum_values: None,
-                format: None,
-                description: None,
-                example: None,
-                all_of: None,
-                one_of: None,
-                any_of: None,
-                minimum: None,
-                maximum: None,
-                min_length: None,
-                max_length: None,
-                pattern: None,
-                nullable: None,
-            };
+            let mut builder = Schema::object()
+                .schema_type("object")
+                .properties(properties);
+
+            if !required.is_empty() {
+                builder = builder.required(required);
+            }
+
+            let schema = builder.build();
 
             schemas.insert(current_name.to_string(), schema.clone());
 
             // Only return a reference if this is not the root level object
             if current_name != "Root" && parent_key.is_some() {
-                Ok(Schema::Reference {
-                    reference: format!("#/components/schemas/{current_name}"),
-                })
+                Ok(Schema::reference(format!(
+                    "#/components/schemas/{current_name}"
+                )))
             } else {
                 Ok(schema)
             }
@@ -1164,9 +980,7 @@ fn json_schema_to_openapi_schema(
 fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Result<Schema> {
     // Handle references first
     if let Some(ref_path) = &json_schema.reference {
-        return Ok(Schema::Reference {
-            reference: convert_json_schema_ref(ref_path)?,
-        });
+        return Ok(Schema::reference(convert_json_schema_ref(ref_path)?));
     }
 
     // Handle composition schemas
