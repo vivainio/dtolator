@@ -177,11 +177,11 @@ impl TypeScriptGenerator {
             } => {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
-                    output.push_str(&format!("export type {} =\n", name));
+                    output.push_str(&format!("export type {name} =\n"));
                     let enum_strings: Vec<String> = enum_vals
                         .iter()
                         .filter_map(|v| v.as_str())
-                        .map(|s| format!("  | \"{}\"", s))
+                        .map(|s| format!("  | \"{s}\""))
                         .collect();
                     output.push_str(&enum_strings.join("\n"));
                     output.push_str(";\n\n");
@@ -190,7 +190,7 @@ impl TypeScriptGenerator {
 
                 // Handle composition types
                 if let Some(all_of_schemas) = all_of {
-                    output.push_str(&format!("export type {} =\n", name));
+                    output.push_str(&format!("export type {name} =\n"));
                     let types: Result<Vec<String>, _> = all_of_schemas
                         .iter()
                         .map(|s| self.schema_to_typescript(s))
@@ -198,15 +198,15 @@ impl TypeScriptGenerator {
                     let type_list = types?;
                     for (i, type_str) in type_list.iter().enumerate() {
                         if i == 0 {
-                            output.push_str(&format!("  {}", type_str));
+                            output.push_str(&format!("  {type_str}"));
                         } else {
-                            output.push_str(&format!("\n  & {}", type_str));
+                            output.push_str(&format!("\n  & {type_str}"));
                         }
                     }
                     output.push_str(";\n\n");
                     return Ok(output);
                 } else if let Some(one_of_schemas) = one_of {
-                    output.push_str(&format!("export type {} =\n", name));
+                    output.push_str(&format!("export type {name} =\n"));
                     let types: Result<Vec<String>, _> = one_of_schemas
                         .iter()
                         .map(|s| self.schema_to_typescript(s))
@@ -214,15 +214,15 @@ impl TypeScriptGenerator {
                     let type_list = types?;
                     for (i, type_str) in type_list.iter().enumerate() {
                         if i == 0 {
-                            output.push_str(&format!("  {}", type_str));
+                            output.push_str(&format!("  {type_str}"));
                         } else {
-                            output.push_str(&format!("\n  | {}", type_str));
+                            output.push_str(&format!("\n  | {type_str}"));
                         }
                     }
                     output.push_str(";\n\n");
                     return Ok(output);
                 } else if let Some(any_of_schemas) = any_of {
-                    output.push_str(&format!("export type {} =\n", name));
+                    output.push_str(&format!("export type {name} =\n"));
                     let types: Result<Vec<String>, _> = any_of_schemas
                         .iter()
                         .map(|s| self.schema_to_typescript(s))
@@ -230,9 +230,9 @@ impl TypeScriptGenerator {
                     let type_list = types?;
                     for (i, type_str) in type_list.iter().enumerate() {
                         if i == 0 {
-                            output.push_str(&format!("  {}", type_str));
+                            output.push_str(&format!("  {type_str}"));
                         } else {
-                            output.push_str(&format!("\n  | {}", type_str));
+                            output.push_str(&format!("\n  | {type_str}"));
                         }
                     }
                     output.push_str(";\n\n");
@@ -241,7 +241,7 @@ impl TypeScriptGenerator {
 
                 // Handle object types
                 if schema_type.as_deref() == Some("object") || properties.is_some() {
-                    output.push_str(&format!("export interface {} {{\n", name));
+                    output.push_str(&format!("export interface {name} {{\n"));
 
                     if let Some(props) = properties {
                         for (prop_name, prop_schema) in props {
@@ -253,8 +253,7 @@ impl TypeScriptGenerator {
 
                             let optional_marker = if is_required { "" } else { "?" };
                             output.push_str(&format!(
-                                "  {}{}: {};\n",
-                                prop_name, optional_marker, prop_type
+                                "  {prop_name}{optional_marker}: {prop_type};\n"
                             ));
                         }
                     }
@@ -263,8 +262,7 @@ impl TypeScriptGenerator {
                 } else {
                     // Handle primitive type aliases
                     output.push_str(&format!(
-                        "export type {} = {};\n\n",
-                        name,
+                        "export type {name} = {};\n\n",
                         self.schema_to_typescript(schema)?
                     ));
                 }
@@ -272,8 +270,7 @@ impl TypeScriptGenerator {
             Schema::Reference { .. } => {
                 // For references, create a type alias
                 output.push_str(&format!(
-                    "export type {} = {};\n\n",
-                    name,
+                    "export type {name} = {};\n\n",
                     self.schema_to_typescript(schema)?
                 ));
             }
@@ -331,7 +328,7 @@ impl TypeScriptGenerator {
                                 let enum_strings: Vec<String> = enum_vals
                                     .iter()
                                     .filter_map(|v| v.as_str())
-                                    .map(|s| format!("\"{}\"", s))
+                                    .map(|s| format!("\"{s}\""))
                                     .collect();
                                 ts_type = enum_strings.join(" | ");
                             } else {
@@ -347,7 +344,7 @@ impl TypeScriptGenerator {
                         Some("array") => {
                             if let Some(items_schema) = items {
                                 let item_type = self.schema_to_typescript(items_schema)?;
-                                ts_type = format!("{}[]", item_type);
+                                ts_type = format!("{item_type}[]");
                             } else {
                                 ts_type = "unknown[]".to_string();
                             }
@@ -364,8 +361,7 @@ impl TypeScriptGenerator {
 
                                     let optional_marker = if is_required { "" } else { "?" };
                                     object_props.push(format!(
-                                        "    {}{}: {}",
-                                        prop_name, optional_marker, prop_type
+                                        "    {prop_name}{optional_marker}: {prop_type}"
                                     ));
                                 }
 
@@ -386,7 +382,7 @@ impl TypeScriptGenerator {
 
                 // Apply nullable if needed
                 if nullable.unwrap_or(false) {
-                    ts_type = format!("{} | null", ts_type);
+                    ts_type = format!("{ts_type} | null");
                 }
 
                 Ok(ts_type)
@@ -403,7 +399,7 @@ impl TypeScriptGenerator {
         let mut output = String::new();
 
         // Add header comment
-        output.push_str(&format!("// Generated by {}\n", command_string));
+        output.push_str(&format!("// Generated by {command_string}\n"));
         output.push_str("// Do not modify manually\n\n");
 
         if let Some(components) = &schema.components {
@@ -433,7 +429,7 @@ impl TypeScriptGenerator {
 
                         let mut import_lines = Vec::new();
                         for name in &response_types {
-                            import_lines.push(format!("  {}Schema,", name));
+                            import_lines.push(format!("  {name}Schema,"));
                         }
 
                         output.push_str(&import_lines.join("\n"));
@@ -456,8 +452,8 @@ impl TypeScriptGenerator {
                                 // Check if this is a request type
                                 let mut is_request_type = false;
                                 for request_type in &request_types {
-                                    if line.contains(&format!("interface {}", request_type))
-                                        || line.contains(&format!("type {} ", request_type))
+                                    if line.contains(&format!("interface {request_type}"))
+                                        || line.contains(&format!("type {request_type} "))
                                     {
                                         is_request_type = true;
                                         break;
@@ -509,15 +505,14 @@ impl TypeScriptGenerator {
                     // Create and export inferred types from response schemas only
                     for name in &response_types {
                         output.push_str(&format!(
-                            "export type {} = z.infer<typeof {}Schema>;\n",
-                            name, name
+                            "export type {name} = z.infer<typeof {name}Schema>;\n"
                         ));
                     }
                     output.push('\n');
 
                     // Re-export only response schemas
                     for name in &response_types {
-                        output.push_str(&format!("export {{ {}Schema }};\n", name));
+                        output.push_str(&format!("export {{ {name}Schema }};\n"));
                     }
                     output.push('\n');
                 }
@@ -608,7 +603,7 @@ impl Generator for TypeScriptGenerator {
         let mut output = String::new();
 
         // Add header comment
-        output.push_str(&format!("// Generated by {}\n", command));
+        output.push_str(&format!("// Generated by {command}\n"));
         output.push_str("// Do not modify manually\n\n");
 
         if let Some(components) = &schema.components {

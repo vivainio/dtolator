@@ -91,7 +91,7 @@ impl Cli {
                 .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or("unknown");
-            parts.push(format!("--from-openapi {}", filename));
+            parts.push(format!("--from-openapi {filename}"));
         }
 
         if let Some(json_path) = &self.from_json {
@@ -99,7 +99,7 @@ impl Cli {
                 .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or("unknown");
-            parts.push(format!("--from-json {}", filename));
+            parts.push(format!("--from-json {filename}"));
         }
 
         if let Some(json_schema_path) = &self.from_json_schema {
@@ -107,7 +107,7 @@ impl Cli {
                 .file_name()
                 .and_then(|name| name.to_str())
                 .unwrap_or("unknown");
-            parts.push(format!("--from-json-schema {}", filename));
+            parts.push(format!("--from-json-schema {filename}"));
         }
 
         // Skip output directory in command string as it's usually a temp directory
@@ -365,7 +365,7 @@ fn main() -> Result<()> {
                 generator.generate_with_command(&schema, &command_string)?
             };
 
-            println!("{}", output);
+            println!("{output}");
         }
     }
 
@@ -442,7 +442,7 @@ fn generate_angular_services(
     if debug {
         println!("🔍 [DEBUG] Raw Angular generator output:");
         println!("--- START OUTPUT ---");
-        println!("{}", output);
+        println!("{output}");
         println!("--- END OUTPUT ---");
     }
 
@@ -453,12 +453,12 @@ fn generate_angular_services(
 
     for line in output.lines() {
         if debug {
-            println!("🔍 [DEBUG] Processing line: {}", line);
+            println!("🔍 [DEBUG] Processing line: {line}");
         }
 
         if let Some(stripped) = line.strip_prefix("// FILE: ") {
             if debug {
-                println!("🔍 [DEBUG] Found FILE marker: {}", line);
+                println!("🔍 [DEBUG] Found FILE marker: {line}");
             }
 
             // If we were collecting content for a previous file, write it now
@@ -488,7 +488,7 @@ fn generate_angular_services(
             in_file_section = true;
 
             if debug {
-                println!("🔍 [DEBUG] Started collecting for file: {}", current_file);
+                println!("🔍 [DEBUG] Started collecting for file: {current_file}");
             }
         } else if in_file_section {
             // If we haven't hit a FILE marker yet, this line belongs to the current file
@@ -498,7 +498,7 @@ fn generate_angular_services(
             current_content.push_str(line);
 
             if debug {
-                println!("🔍 [DEBUG] Added line to {}: {}", current_file, line);
+                println!("🔍 [DEBUG] Added line to {current_file}: {line}");
             }
         }
     }
@@ -546,7 +546,7 @@ fn generate_angular_services(
 
     println!("Generated Angular API files:");
     for file in files_generated {
-        println!("  - {}", file);
+        println!("  - {file}");
     }
 
     Ok(())
@@ -585,9 +585,9 @@ fn update_refs(schemas: &mut IndexMap<String, Schema>, old_names: &[String], new
         match schema {
             Schema::Reference { reference } => {
                 for old in old_names {
-                    let old_ref = format!("#/components/schemas/{}", old);
+                    let old_ref = format!("#/components/schemas/{old}");
                     if reference == &old_ref {
-                        *reference = format!("#/components/schemas/{}", new_name);
+                        *reference = format!("#/components/schemas/{new_name}");
                     }
                 }
             }
@@ -799,12 +799,12 @@ fn json_value_to_schema_pass1(
                     }
                     // Handle special cases
                     match name.as_str() {
-                        "Item" => format!("{}Item", current_name),
-                        "Data" => format!("{}DataItem", current_name),
+                        "Item" => format!("{current_name}Item"),
+                        "Data" => format!("{current_name}DataItem"),
                         _ => name,
                     }
                 } else {
-                    format!("{}Item", current_name)
+                    format!("{current_name}Item")
                 };
 
                 let item_schema = json_value_to_schema_pass1(
@@ -873,7 +873,7 @@ fn json_value_to_schema_pass1(
                     if stored_serialized == &serialized {
                         // Same structure, reuse existing schema
                         return Ok(Schema::Reference {
-                            reference: format!("#/components/schemas/{}", placeholder),
+                            reference: format!("#/components/schemas/{placeholder}"),
                         });
                     }
                     // Hash collision detected - need to create a new unique hash
@@ -884,13 +884,13 @@ fn json_value_to_schema_pass1(
                     let new_hash = collision_hasher.finish();
 
                     // Use the new hash for this structure
-                    let new_placeholder = format!("HASH_{}", new_hash);
+                    let new_placeholder = format!("HASH_{new_hash}");
                     hash_to_placeholder.insert(new_hash, new_placeholder.clone());
                     new_hash // Use the collision-resistant hash
                 } else {
                     // This shouldn't happen, but if it does, reuse the existing reference
                     return Ok(Schema::Reference {
-                        reference: format!("#/components/schemas/{}", placeholder),
+                        reference: format!("#/components/schemas/{placeholder}"),
                     });
                 }
             } else {
@@ -911,7 +911,7 @@ fn json_value_to_schema_pass1(
                         if base_name.len() > 2 && !base_name.ends_with("s") {
                             base_name
                         } else {
-                            format!("{}{}", current_name, base_name)
+                            format!("{current_name}{base_name}")
                         }
                     }
                     serde_json::Value::Array(arr) => {
@@ -938,7 +938,7 @@ fn json_value_to_schema_pass1(
                 required.push(key.clone());
             }
 
-            let placeholder_name = format!("HASH_{}", final_hash);
+            let placeholder_name = format!("HASH_{final_hash}");
             hash_to_placeholder.insert(final_hash, placeholder_name.clone());
             struct_hashes.insert(
                 final_hash,
@@ -981,7 +981,7 @@ fn json_value_to_schema_pass1(
             // Only return a reference if this is not the root level object
             if current_name != "Root" && parent_key.is_some() {
                 Ok(Schema::Reference {
-                    reference: format!("#/components/schemas/{}", current_name),
+                    reference: format!("#/components/schemas/{current_name}"),
                 })
             } else {
                 Ok(schema)
@@ -997,9 +997,9 @@ fn resolve_placeholders(
     match schema {
         Schema::Reference { reference } => {
             for (placeholder, final_name) in hash_to_final_name {
-                let placeholder_ref = format!("#/components/schemas/{}", placeholder);
+                let placeholder_ref = format!("#/components/schemas/{placeholder}");
                 if reference == &placeholder_ref {
-                    *reference = format!("#/components/schemas/{}", final_name);
+                    *reference = format!("#/components/schemas/{final_name}");
                 }
             }
         }
@@ -1062,7 +1062,7 @@ fn json_to_openapi_schema_with_root(
         .keys()
         .map(|h| {
             let (final_name, _, _, _, _) = struct_hashes.get(h).unwrap();
-            (format!("HASH_{}", h), final_name.clone())
+            (format!("HASH_{h}"), final_name.clone())
         })
         .collect();
     for (_k, schema) in schemas.iter_mut() {
@@ -1360,10 +1360,10 @@ fn convert_json_schema_ref(json_schema_ref: &str) -> Result<String> {
     // Convert JSON Schema $ref format to OpenAPI format
     // JSON Schema: "#/$defs/MyType" -> OpenAPI: "#/components/schemas/MyType"
     if let Some(def_name) = json_schema_ref.strip_prefix("#/$defs/") {
-        Ok(format!("#/components/schemas/{}", def_name))
+        Ok(format!("#/components/schemas/{def_name}"))
     } else if let Some(def_name) = json_schema_ref.strip_prefix("#/definitions/") {
         // Also support older JSON Schema format
-        Ok(format!("#/components/schemas/{}", def_name))
+        Ok(format!("#/components/schemas/{def_name}"))
     } else {
         // Pass through other reference formats
         Ok(json_schema_ref.to_string())
