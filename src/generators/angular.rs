@@ -234,30 +234,30 @@ impl AngularGenerator {
         let request_body = self.get_request_body(operation)?;
 
         let http_call = match http_method {
-            "GET" => format!("this.http.get<{return_type}>(url)"),
+            "GET" => format!("this.http.get<{return_type}>(url, {{ headers }})"),
             "POST" => {
                 if request_body.is_empty() {
-                    format!("this.http.post<{return_type}>(url, null)")
+                    format!("this.http.post<{return_type}>(url, null, {{ headers }})")
                 } else {
-                    format!("this.http.post<{return_type}>(url{request_body})")
+                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
                 }
             }
             "PUT" => {
                 if request_body.is_empty() {
-                    format!("this.http.put<{return_type}>(url, null)")
+                    format!("this.http.put<{return_type}>(url, null, {{ headers }})")
                 } else {
-                    format!("this.http.put<{return_type}>(url{request_body})")
+                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
                 }
             }
-            "DELETE" => format!("this.http.delete<{return_type}>(url)"),
+            "DELETE" => format!("this.http.delete<{return_type}>(url, {{ headers }})"),
             "PATCH" => {
                 if request_body.is_empty() {
-                    format!("this.http.patch<{return_type}>(url, null)")
+                    format!("this.http.patch<{return_type}>(url, null, {{ headers }})")
                 } else {
-                    format!("this.http.patch<{return_type}>(url{request_body})")
+                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
                 }
             }
-            _ => format!("this.http.request<{return_type}>('{http_method}', {{ url }})"),
+            _ => format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})"),
         };
 
         // Add Zod validation for response if enabled (but not for requests)
@@ -409,6 +409,9 @@ impl AngularGenerator {
                 }
             }
         }
+
+        // Always add optional headers parameter at the end
+        params.push("headers?: HttpHeaders".to_string());
 
         Ok(params.join(", "))
     }
@@ -562,7 +565,7 @@ impl AngularGenerator {
         service.push_str("// Do not modify manually\n\n");
 
         // Imports
-        service.push_str("import { HttpClient } from '@angular/common/http';\n");
+        service.push_str("import { HttpClient, HttpHeaders } from '@angular/common/http';\n");
         service.push_str("import { Injectable } from '@angular/core';\n");
 
         // Import Observable only if not using promises
@@ -967,6 +970,9 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
                 }
             }
         }
+
+        // Document headers parameter
+        comment.push_str("   * @param headers - Optional custom HTTP headers\n");
 
         // Document return type
         let return_wrapper = if return_type == "void" || self.promises {

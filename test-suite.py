@@ -540,6 +540,38 @@ export interface HttpErrorResponse extends HttpResponse<any> {
   name: string;
 }
 
+export class HttpHeaders {
+  constructor(headers?: string | { [name: string]: string | string[] }) {}
+  
+  has(name: string): boolean {
+    return false;
+  }
+  
+  get(name: string): string | null {
+    return null;
+  }
+  
+  keys(): string[] {
+    return [];
+  }
+  
+  getAll(name: string): string[] | null {
+    return null;
+  }
+  
+  append(name: string, value: string | string[]): HttpHeaders {
+    return new HttpHeaders();
+  }
+  
+  set(name: string, value: string | string[]): HttpHeaders {
+    return new HttpHeaders();
+  }
+  
+  delete(name: string, value?: string | string[]): HttpHeaders {
+    return new HttpHeaders();
+  }
+}
+
 export class HttpClient {
   get<T>(url: string, options?: any): Observable<T> {
     return new Observable<T>();
@@ -877,6 +909,38 @@ export interface HttpErrorResponse extends HttpResponse<any> {
   error: any | null;
   message: string;
   name: string;
+}
+
+export class HttpHeaders {
+  constructor(headers?: string | { [name: string]: string | string[] }) {}
+  
+  has(name: string): boolean {
+    return false;
+  }
+  
+  get(name: string): string | null {
+    return null;
+  }
+  
+  keys(): string[] {
+    return [];
+  }
+  
+  getAll(name: string): string[] | null {
+    return null;
+  }
+  
+  append(name: string, value: string | string[]): HttpHeaders {
+    return new HttpHeaders();
+  }
+  
+  set(name: string, value: string | string[]): HttpHeaders {
+    return new HttpHeaders();
+  }
+  
+  delete(name: string, value?: string | string[]): HttpHeaders {
+    return new HttpHeaders();
+  }
 }
 
 export class HttpClient {
