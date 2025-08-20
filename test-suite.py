@@ -413,7 +413,7 @@ class TestSuite:
                 "private": True,
                 "dependencies": {
                     "typescript": "^5.3.0",
-                    "zod": "^3.22.0",
+                    "zod": "^4.0.0",
                     "@types/node": "^18.0.0"
                 }
             }
@@ -721,7 +721,7 @@ interface Observer<T> {
                 "private": True,
                 "dependencies": {
                     "typescript": "^5.3.0",
-                    "zod": "^3.22.0"
+                    "zod": "^4.0.0"
                 }
             }
             
@@ -729,12 +729,12 @@ interface Observer<T> {
                 # Only include basic dependencies + real Zod, we'll create fake Angular types
                 package_json["dependencies"].update({
                     "@types/node": "^18.0.0",
-                    "zod": "^3.22.0"
+                    "zod": "^4.0.0"
                 })
             else:
                 # For non-Angular projects, just Zod
                 package_json["dependencies"].update({
-                    "zod": "^3.22.0"
+                    "zod": "^4.0.0"
                 })
             
             # Write package.json
