@@ -233,7 +233,7 @@ impl ZodGenerator {
                             } else {
                                 zod_schema = "z.string()".to_string();
 
-                                // Handle format validations - special case for uuid which should use z.uuid() instead of z.string().uuid()
+                                // Handle format validations - special case for uuid which should use z.uuid() instead of deprecated z.string().uuid()
                                 if let Some(fmt) = format {
                                     match fmt.as_str() {
                                         "uuid" => {
