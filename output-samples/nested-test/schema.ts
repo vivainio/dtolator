@@ -15,11 +15,11 @@ export const AddressSchema = z.object({
 export type Address = z.infer<typeof AddressSchema>;
 
 export const CategorySchema = z.object({
-  id: z.uuid(),
+  id: z.string().uuid(),
   name: z.string().min(1).max(100),
   slug: z.string().regex(new RegExp("^[a-z0-9-]+$")),
   description: z.string().max(500).optional(),
-  parentId: z.uuid().nullable().optional(),
+  parentId: z.string().uuid().nullable().optional(),
   isActive: z.boolean().optional()
 });
 
@@ -29,7 +29,7 @@ export const CreateCategoryRequestSchema = z.object({
   name: z.string().min(1).max(100),
   slug: z.string().regex(new RegExp("^[a-z0-9-]+$")),
   description: z.string().max(500).optional(),
-  parentId: z.uuid().optional()
+  parentId: z.string().uuid().optional()
 });
 
 export type CreateCategoryRequest = z.infer<typeof CreateCategoryRequestSchema>;
@@ -42,7 +42,7 @@ export const ErrorResponseSchema = z.object({
   field: z.string().optional(),
   message: z.string().optional()
 })).optional(),
-  requestId: z.uuid().optional(),
+  requestId: z.string().uuid().optional(),
   timestamp: z.string().datetime().optional()
 })
 });
@@ -111,7 +111,7 @@ export const ProductAnalyticsSchema = z.object({
   activeProducts: z.number().min(0).int(),
   categoryBreakdown: z.object({}).optional(),
   lowStockProducts: z.array(z.object({
-  productId: z.uuid().optional(),
+  productId: z.string().uuid().optional(),
   productName: z.string().optional(),
   currentStock: z.number().int().optional(),
   threshold: z.number().int().optional()
@@ -129,7 +129,7 @@ export const SalesAnalyticsSchema = z.object({
   totalOrders: z.number().min(0).int(),
   averageOrderValue: z.number().min(0),
   topProducts: z.array(z.object({
-  productId: z.uuid().optional(),
+  productId: z.string().uuid().optional(),
   productName: z.string().optional(),
   revenue: z.number().optional(),
   unitsSold: z.number().int().optional()
@@ -166,7 +166,7 @@ export type UserProfile = z.infer<typeof UserProfileSchema>;
 
 export const InventoryResponseSchema = z.object({
   data: z.array(z.object({
-  productId: z.uuid(),
+  productId: z.string().uuid(),
   productName: z.string().optional(),
   inventory: InventorySchema
 }))
@@ -192,7 +192,7 @@ export type UpdateOrderStatusRequest = z.infer<typeof UpdateOrderStatusRequestSc
 
 export const CreateOrderRequestSchema = z.object({
   items: z.array(z.object({
-  productId: z.uuid(),
+  productId: z.string().uuid(),
   quantity: z.number().min(1).int()
 })),
   shippingAddress: AddressSchema,
@@ -203,7 +203,7 @@ export const CreateOrderRequestSchema = z.object({
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
 export const ProductSchema = z.object({
-  id: z.uuid(),
+  id: z.string().uuid(),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).nullable().optional(),
   price: PriceSchema,
@@ -238,7 +238,7 @@ export const CreateUserRequestSchema = z.object({
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
 export const UserSchema = z.object({
-  id: z.uuid(),
+  id: z.string().uuid(),
   email: z.string().email(),
   profile: UserProfileSchema,
   preferences: UserPreferencesSchema.optional(),
@@ -251,7 +251,7 @@ export const UserSchema = z.object({
 export type User = z.infer<typeof UserSchema>;
 
 export const OrderItemSchema = z.object({
-  productId: z.uuid(),
+  productId: z.string().uuid(),
   quantity: z.number().min(1).int(),
   price: PriceSchema,
   productSnapshot: ProductSchema.optional()
@@ -281,8 +281,8 @@ export const UserListResponseSchema = z.object({
 export type UserListResponse = z.infer<typeof UserListResponseSchema>;
 
 export const OrderSchema = z.object({
-  id: z.uuid(),
-  userId: z.uuid(),
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
   items: z.array(OrderItemSchema),
   total: PriceSchema,
   status: OrderStatusSchema,

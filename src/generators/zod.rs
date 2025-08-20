@@ -233,14 +233,12 @@ impl ZodGenerator {
                             } else {
                                 zod_schema = "z.string()".to_string();
 
-                                // Handle format validations - special case for uuid which should use z.uuid() instead of z.string().uuid()
+                                // Add format validations
                                 if let Some(fmt) = format {
                                     match fmt.as_str() {
-                                        "uuid" => {
-                                            zod_schema = "z.uuid()".to_string();
-                                        }
                                         "email" => zod_schema.push_str(".email()"),
                                         "uri" => zod_schema.push_str(".url()"),
+                                        "uuid" => zod_schema.push_str(".uuid()"),
                                         "date" => zod_schema.push_str(".date()"),
                                         "date-time" => zod_schema.push_str(".datetime()"),
                                         _ => {}
