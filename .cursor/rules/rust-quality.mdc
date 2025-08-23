@@ -1,0 +1,85 @@
+---
+alwaysApply: true
+globs: "*.rs"
+description: "Rust code quality and formatting requirements for dtolator project"
+---
+
+# Rust Code Quality Guidelines
+
+## Pre-Commit Quality Workflow
+
+### 1. Format Your Code
+Before committing any Rust code changes, always run:
+```bash
+cargo fmt
+```
+
+This will automatically format all Rust files in the project according to the standard Rust formatting rules.
+
+### 2. Run Clippy Linting
+Check for code quality issues and common mistakes:
+```bash
+cargo clippy
+```
+
+To treat warnings as errors (recommended for CI):
+```bash
+cargo clippy -- -D warnings
+```
+
+### 3. Complete Quality Check
+Run both checks together:
+```bash
+cargo fmt --check && cargo clippy -- -D warnings
+```
+
+## Project Structure
+- Main entry point: [src/main.rs](mdc:src/main.rs)
+- Project configuration: [Cargo.toml](mdc:Cargo.toml)
+- CI configuration: [.github/workflows/ci.yml](mdc:.github/workflows/ci.yml)
+
+## Generator Modules
+All generator modules must follow consistent formatting and linting standards:
+- [src/generators/angular.rs](mdc:src/generators/angular.rs)
+- [src/generators/typescript.rs](mdc:src/generators/typescript.rs)
+- [src/generators/zod.rs](mdc:src/generators/zod.rs)
+- [src/generators/pydantic.rs](mdc:src/generators/pydantic.rs)
+- [src/generators/dotnet.rs](mdc:src/generators/dotnet.rs)
+- [src/generators/python_dict.rs](mdc:src/generators/python_dict.rs)
+- [src/generators/json_schema.rs](mdc:src/generators/json_schema.rs)
+- [src/generators/endpoints.rs](mdc:src/generators/endpoints.rs)
+
+## CI Integration
+The CI pipeline in [.github/workflows/ci.yml](mdc:.github/workflows/ci.yml) includes both formatting and linting checks:
+- **Format Check**: Runs `cargo fmt --check` to ensure consistent code formatting
+- **Clippy Linting**: Runs `cargo clippy -- -D warnings` to catch code quality issues
+
+## Common Clippy Issues to Fix
+
+### Performance
+- Use `&str` instead of `String` for function parameters when possible
+- Use `Vec::with_capacity()` when you know the size
+- Avoid unnecessary cloning with `.clone()`
+
+### Idiomatic Rust
+- Use `if let` instead of `match` for single pattern matching
+- Use `unwrap_or_else()` instead of `unwrap_or()` for expensive operations
+- Prefer `Iterator` methods over manual loops
+
+### Code Quality
+- Remove unused imports and variables
+- Use meaningful variable names
+- Avoid deep nesting with early returns
+
+## DO NOT Loop More Than 3 Times
+When fixing linter errors:
+- If you cannot fix clippy warnings within 3 attempts on the same file
+- Stop and ask the user what to do next
+- Avoid making uneducated guesses
+
+## Template Integration
+When modifying Rust generator code that affects templates:
+1. Run `cargo fmt` and `cargo clippy` first
+2. Test template changes with the test suite
+3. Fix any formatting issues in templates (see [template-formatting.mdc](mdc:.cursor/rules/template-formatting.mdc))
+4. Do not refresh test suite outputs - fix the underlying issues

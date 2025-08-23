@@ -1,0 +1,62 @@
+---
+alwaysApply: true
+description: Windows CMD Command Preference Rule
+---
+
+# Windows CMD Commands Only
+
+**CRITICAL RULE: Always use Windows CMD (Command Prompt) syntax for all terminal operations.**
+
+## Required Command Syntax
+
+### ✅ Use These Windows CMD Commands:
+- `dir` - List directory contents
+- `type filename` - Display file contents  
+- `copy source dest` - Copy files
+- `move source dest` - Move/rename files
+- `del filename` - Delete files
+- `rmdir dirname` - Remove directories
+- `mkdir dirname` - Create directories
+- `cd path` - Change directory
+- `ren oldname newname` - Rename files
+- `echo text` - Display text
+- `cls` - Clear screen
+
+### ❌ NEVER Use These PowerShell Commands:
+- `Get-ChildItem` (use `dir` instead)
+- `Remove-Item` (use `del` instead)  
+- `New-Item` (use `mkdir` or `echo` instead)
+- `Set-Location` (use `cd` instead)
+- `Rename-Item` (use `ren` instead)
+- Any command starting with `Get-`, `Set-`, `New-`, `Remove-`
+- Any syntax containing `$_`, `$`, `-ErrorAction`, `ForEach-Object`
+- Any PowerShell-specific operators or cmdlets
+
+### File Operations Examples:
+```cmd
+REM List files
+dir
+
+REM Copy file  
+copy file1.txt file2.txt
+
+REM Rename file
+ren oldfile.txt newfile.txt
+
+REM Delete file
+del unwantedfile.txt
+
+REM Create directory
+mkdir newfolder
+
+REM Batch rename (use simple FOR loops)
+for %%f in (*.html) do ren "%%f" "%%~nf.txt"
+```
+
+## Rationale
+- Windows CMD commands work universally on all Windows systems
+- PowerShell commands can fail due to execution policies or version differences  
+- CMD syntax is more predictable and reliable for basic file operations
+- Simpler syntax reduces errors in automated operations
+
+**This rule applies to ALL terminal command suggestions in this codebase.**
