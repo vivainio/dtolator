@@ -59,8 +59,8 @@ jobs:
       with:
         node-version: '18'
     
-    - name: Install TypeScript
-      run: npm install -g typescript
+    - name: Install npm dependencies
+      run: npm ci
     
     - name: Run integration tests
       run: python test-suite.py --typecheck
