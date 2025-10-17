@@ -57,7 +57,7 @@ jobs:
     - name: Setup Node.js for TypeScript checking
       uses: actions/setup-node@v5
       with:
-        node-version: '20'
+        node-version: '24'
     
     - name: Install npm dependencies
       run: npm ci
