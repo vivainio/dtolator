@@ -231,20 +231,18 @@ impl ZodGenerator {
                                     .collect();
                                 zod_schema = format!("z.enum([{}])", enum_strings.join(", "));
                             } else {
-                                zod_schema = "z.string()".to_string();
-
-                                // Handle format validations - special case for uuid which should use z.uuid() instead of deprecated z.string().uuid()
+                                // Handle format validations using Zod v4 syntax
                                 if let Some(fmt) = format {
-                                    match fmt.as_str() {
-                                        "uuid" => {
-                                            zod_schema = "z.uuid()".to_string();
-                                        }
-                                        "email" => zod_schema.push_str(".email()"),
-                                        "uri" => zod_schema.push_str(".url()"),
-                                        "date" => zod_schema.push_str(".date()"),
-                                        "date-time" => zod_schema.push_str(".datetime()"),
-                                        _ => {}
-                                    }
+                                    zod_schema = match fmt.as_str() {
+                                        "uuid" => "z.uuid()".to_string(),
+                                        "email" => "z.email()".to_string(),
+                                        "uri" => "z.url()".to_string(),
+                                        "date" => "z.iso.date()".to_string(),
+                                        "date-time" => "z.iso.datetime()".to_string(),
+                                        _ => "z.string()".to_string(),
+                                    };
+                                } else {
+                                    zod_schema = "z.string()".to_string();
                                 }
 
                                 // Add length constraints

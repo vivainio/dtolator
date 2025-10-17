@@ -43,14 +43,14 @@ export const ErrorResponseSchema = z.object({
   message: z.string().optional()
 })).optional(),
   requestId: z.uuid().optional(),
-  timestamp: z.string().datetime().optional()
+  timestamp: z.iso.datetime().optional()
 })
 });
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
 export const ImageUrlSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   alt: z.string().optional(),
   width: z.number().min(1).int().optional(),
   height: z.number().min(1).int().optional()
@@ -135,8 +135,8 @@ export const SalesAnalyticsSchema = z.object({
   unitsSold: z.number().int().optional()
 })).optional(),
   period: z.object({
-  startDate: z.string().date().optional(),
-  endDate: z.string().date().optional()
+  startDate: z.iso.date().optional(),
+  endDate: z.iso.date().optional()
 }).optional()
 });
 
@@ -156,7 +156,7 @@ export type UserRole = z.infer<typeof UserRoleSchema>;
 export const UserProfileSchema = z.object({
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
-  dateOfBirth: z.string().date().nullable().optional(),
+  dateOfBirth: z.iso.date().nullable().optional(),
   phoneNumber: z.string().regex(new RegExp("^\+?[1-9]\d{1,14}$")).nullable().optional(),
   avatar: ImageUrlSchema.optional(),
   address: AddressSchema.optional()
@@ -213,7 +213,7 @@ export const ProductSchema = z.object({
   inventory: InventorySchema.optional(),
   specifications: z.object({}).optional(),
   isActive: z.boolean().optional(),
-  createdAt: z.string().datetime().optional()
+  createdAt: z.iso.datetime().optional()
 });
 
 export type Product = z.infer<typeof ProductSchema>;
@@ -229,7 +229,7 @@ export const UpdateProductRequestSchema = z.object({
 export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
 
 export const CreateUserRequestSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(8).max(128).regex(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]")),
   profile: UserProfileSchema,
   preferences: UserPreferencesSchema.optional()
@@ -239,11 +239,11 @@ export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
 export const UserSchema = z.object({
   id: z.uuid(),
-  email: z.string().email(),
+  email: z.email(),
   profile: UserProfileSchema,
   preferences: UserPreferencesSchema.optional(),
-  createdAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime().optional(),
+  createdAt: z.iso.datetime().optional(),
+  updatedAt: z.iso.datetime().optional(),
   isActive: z.boolean().optional(),
   roles: z.array(UserRoleSchema).optional()
 });
@@ -289,8 +289,8 @@ export const OrderSchema = z.object({
   shippingAddress: AddressSchema.optional(),
   billingAddress: AddressSchema.optional(),
   paymentMethod: PaymentMethodSchema.optional(),
-  orderDate: z.string().datetime().optional(),
-  estimatedDelivery: z.string().date().nullable().optional(),
+  orderDate: z.iso.datetime().optional(),
+  estimatedDelivery: z.iso.date().nullable().optional(),
   trackingNumber: z.string().nullable().optional()
 });
 

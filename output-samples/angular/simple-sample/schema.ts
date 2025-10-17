@@ -17,14 +17,14 @@ export const UserProfileSchema = z.object({
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
   phoneNumber: z.string().regex(new RegExp("^\+?[1-9]\d{1,14}$")).nullable().optional(),
-  avatar: z.string().url().nullable().optional(),
+  avatar: z.url().nullable().optional(),
   bio: z.string().max(500).nullable().optional()
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
 export const CreateUserRequestSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().min(1).max(100),
   age: z.number().min(0).max(150).int().nullable().optional(),
   profile: UserProfileSchema,
@@ -35,7 +35,7 @@ export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
 export const UserSchema = z.object({
   id: z.number().int(),
-  email: z.string().email(),
+  email: z.email(),
   name: z.string().min(1).max(100),
   age: z.number().min(0).max(150).int().optional(),
   isActive: z.boolean().optional(),
