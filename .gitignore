@@ -35,4 +35,9 @@ Thumbs.db
 *.dylib
 
 # Test artifacts
-*.profraw 
+*.profraw
+
+# Node.js/TypeScript
+node_modules/
+dist/
+*.tsbuildinfo 

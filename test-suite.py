@@ -369,705 +369,56 @@ class TestSuite:
             ),
         ]
     
-    def check_npm_availability(self) -> bool:
+    def check_typescript_environment(self) -> bool:
         """
-        Check if npm is available in the system
+        Check if the static TypeScript environment is set up correctly
         """
-        # Try both npm and npm.cmd (for Windows)
-        npm_commands = ["npm", "npm.cmd"]
+        # Check if required files exist
+        package_json = self.project_root / "package.json"
+        node_modules = self.project_root / "node_modules"
+        tsconfig = self.project_root / "tsconfig.json"
         
-        for npm_cmd in npm_commands:
-            try:
-                success, stdout, stderr = run_command([npm_cmd, "--version"])
-                if success:
-                    return True
-            except Exception:
-                continue
+        if not package_json.exists():
+            print_colored("   ERROR: package.json not found", Colors.RED)
+            return False
+            
+        if not node_modules.exists():
+            print_colored("   ERROR: node_modules not found. Run 'npm install' first.", Colors.RED)
+            return False
+            
+        if not tsconfig.exists():
+            print_colored("   ERROR: tsconfig.json not found", Colors.RED)
+            return False
         
-        return False
-    
+        # Check if TypeScript is available
+        tsc_binary = node_modules / ".bin" / "tsc.cmd" if os.name == 'nt' else node_modules / ".bin" / "tsc"
+        if not tsc_binary.exists():
+            print_colored("   ERROR: TypeScript compiler not found in node_modules", Colors.RED)
+            return False
+            
+        return True
+            
     def setup_shared_typescript_environment(self) -> bool:
         """
-        Setup a shared TypeScript environment that will be reused for all tests
+        Use the static TypeScript environment (no setup needed)
         """
         if not self.enable_typescript_check:
             return True
             
-        print_colored(f"Setting up shared TypeScript environment...", Colors.BLUE)
+        print_colored(f"Checking static TypeScript environment...", Colors.BLUE)
         
-        # Check if npm is available
-        if not self.check_npm_availability():
-            print_colored(f"   ERROR: npm is not available. Please install Node.js and npm to enable TypeScript checking.", Colors.RED)
-            print_colored(f"   INFO: Download from: https://nodejs.org/", Colors.YELLOW)
+        # Check if the static TypeScript environment is ready
+        if not self.check_typescript_environment():
+            print_colored(f"   ERROR: Static TypeScript environment not ready.", Colors.RED)
+            print_colored(f"   INFO: Run 'npm install' to set up dependencies.", Colors.YELLOW)
             return False
+            
+        # Use the project root as the shared environment
+        self.shared_ts_env = self.project_root
         
-        # Create shared temp directory
-        import tempfile
-        self.shared_ts_env = Path(tempfile.mkdtemp(prefix="dtolator_shared_ts_"))
-        
-        try:
-            # Create package.json with required dependencies
-            package_json = {
-                "name": "dtolator-typecheck-shared",
-                "version": "1.0.0",
-                "private": True,
-                "dependencies": {
-                    "typescript": "^5.3.0",
-                    "zod": "^4.0.0",
-                    "@types/node": "^18.0.0"
-                }
-            }
+        print_colored(f"   SUCCESS: Static TypeScript environment ready", Colors.GREEN)
+        return True
             
-            package_json_path = self.shared_ts_env / "package.json"
-            with open(package_json_path, 'w', encoding='utf-8') as f:
-                json.dump(package_json, f, indent=2)
-            
-            # Create base tsconfig.json with all TypeScript configurations
-            tsconfig = {
-                "compilerOptions": {
-                    "target": "ES2020",
-                    "module": "commonjs",
-                    "lib": ["ES2020", "DOM"],
-                    "strict": False,
-                    "esModuleInterop": True,
-                    "skipLibCheck": True,
-                    "forceConsistentCasingInFileNames": True,
-                    "moduleResolution": "node",
-                    "declaration": True,
-                    "outDir": "./dist",
-                    "rootDir": "./",
-                    "resolveJsonModule": True,
-                    "allowSyntheticDefaultImports": True,
-                    "experimentalDecorators": True,
-                    "emitDecoratorMetadata": True,
-                    "noImplicitAny": False,
-                    "strictPropertyInitialization": False,
-                    "strictNullChecks": False,
-                    "noImplicitReturns": False,
-                    "noImplicitThis": False,
-                    "noImplicitOverride": False,
-                    "noPropertyAccessFromIndexSignature": False,
-                    "noUncheckedIndexedAccess": False,
-                    "allowJs": True,
-                    "baseUrl": ".",
-                    "paths": {
-                        "@angular/core": ["./ts-stubs/angular-core"],
-                        "@angular/common/http": ["./ts-stubs/angular-http"],
-                        "rxjs": ["./ts-stubs/rxjs-stubs"],
-                        "rxjs/operators": ["./ts-stubs/rxjs-operators"]
-                    }
-                },
-                "include": ["*.ts", "**/*.ts"],
-                "exclude": ["node_modules", "dist"]
-            }
-            
-            # Create TypeScript stubs for Angular
-            stubs_dir = self.shared_ts_env / "ts-stubs"
-            stubs_dir.mkdir()
-            
-            # Create angular-core.ts stub
-            angular_core_stub = """// Angular Core stubs
-export interface ModuleWithProviders<T = any> {
-  ngModule: any;
-  providers?: any[];
-}
-
-export interface Injectable {
-  providedIn?: 'root' | 'platform' | 'any' | null;
-}
-
-export function Injectable(options?: Injectable): (target: any) => any {
-  return (target: any) => target;
-}
-
-export class Type<T = any> {
-  constructor(public name: string) {}
-}
-
-export interface OnInit {
-  ngOnInit(): void;
-}
-
-export interface OnDestroy {
-  ngOnDestroy(): void;
-}
-
-export class EventEmitter<T = any> {
-  emit(value?: T): void {}
-  subscribe(next?: (value: T) => void, error?: (error: any) => void, complete?: () => void): any {}
-}
-
-export function Component(options: any): (target: any) => any {
-  return (target: any) => target;
-}
-
-export function Directive(options: any): (target: any) => any {
-  return (target: any) => target;
-}
-
-export function Input(bindingPropertyName?: string): any {
-  return function (target: any, propertyKey: string) {};
-}
-
-export function Output(bindingPropertyName?: string): any {
-  return function (target: any, propertyKey: string) {};
-}
-"""
-            (stubs_dir / "angular-core.ts").write_text(angular_core_stub)
-            
-            # Create angular-http.ts stub
-            angular_http_stub = """// Angular HTTP stubs
-import { Observable } from './rxjs-stubs';
-
-export interface HttpRequest<T = any> {
-  body: T | null;
-  headers: any;
-  method: string;
-  url: string;
-}
-
-export interface HttpResponse<T = any> {
-  body: T | null;
-  headers: any;
-  status: number;
-  statusText: string;
-  url: string | null;
-}
-
-export interface HttpErrorResponse extends HttpResponse<any> {
-  error: any | null;
-  message: string;
-  name: string;
-}
-
-export class HttpHeaders {
-  constructor(headers?: string | { [name: string]: string | string[] }) {}
-  
-  has(name: string): boolean {
-    return false;
-  }
-  
-  get(name: string): string | null {
-    return null;
-  }
-  
-  keys(): string[] {
-    return [];
-  }
-  
-  getAll(name: string): string[] | null {
-    return null;
-  }
-  
-  append(name: string, value: string | string[]): HttpHeaders {
-    return new HttpHeaders();
-  }
-  
-  set(name: string, value: string | string[]): HttpHeaders {
-    return new HttpHeaders();
-  }
-  
-  delete(name: string, value?: string | string[]): HttpHeaders {
-    return new HttpHeaders();
-  }
-}
-
-export class HttpClient {
-  get<T>(url: string, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  post<T>(url: string, body: any, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  put<T>(url: string, body: any, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  delete<T>(url: string, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  patch<T>(url: string, body: any, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-}
-"""
-            (stubs_dir / "angular-http.ts").write_text(angular_http_stub)
-            
-            # Create rxjs-stubs.ts with lastValueFrom
-            rxjs_stub = """// RxJS stubs
-export class Observable<T = any> {
-  constructor(subscribe?: (observer: Observer<T>) => TeardownLogic) {}
-  
-  pipe<A>(op1: OperatorFunction<T, A>): Observable<A>;
-  pipe<A, B>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>): Observable<B>;
-  pipe<A, B, C>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>): Observable<C>;
-  pipe(...operations: OperatorFunction<any, any>[]): Observable<any> {
-    return new Observable();
-  }
-}
-
-export interface Observer<T> {
-  next: (value: T) => void;
-  error: (err: any) => void;
-  complete: () => void;
-}
-
-export interface TeardownLogic {
-  unsubscribe(): void;
-}
-
-export interface OperatorFunction<T, R> {
-  (source: Observable<T>): Observable<R>;
-}
-
-// Add missing RxJS functions
-export function lastValueFrom<T>(source: Observable<T>): Promise<T> {
-  return Promise.resolve({} as T);
-}
-
-export function firstValueFrom<T>(source: Observable<T>): Promise<T> {
-  return Promise.resolve({} as T);
-}
-"""
-            (stubs_dir / "rxjs-stubs.ts").write_text(rxjs_stub)
-            
-            # Create rxjs-operators.ts stub
-            rxjs_operators_stub = """// RxJS operators stubs
-import { Observable, OperatorFunction } from './rxjs-stubs';
-
-export function map<T, R>(project: (value: T, index?: number) => R): OperatorFunction<T, R> {
-  return (source: Observable<T>) => new Observable<R>();
-}
-
-export function catchError<T, R>(selector: (err: any, caught: Observable<T>) => Observable<R>): OperatorFunction<T, T | R> {
-  return (source: Observable<T>) => new Observable<T | R>();
-}
-
-export function tap<T>(observer?: Partial<Observer<T>>): OperatorFunction<T, T>;
-export function tap<T>(next: (value: T) => void): OperatorFunction<T, T>;
-export function tap<T>(next?: any): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-export function switchMap<T, R>(project: (value: T, index: number) => Observable<R>): OperatorFunction<T, R> {
-  return (source: Observable<T>) => new Observable<R>();
-}
-
-export function mergeMap<T, R>(project: (value: T, index: number) => Observable<R>): OperatorFunction<T, R> {
-  return (source: Observable<T>) => new Observable<R>();
-}
-
-export function filter<T>(predicate: (value: T, index: number) => boolean): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-export function take<T>(count: number): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-export function first<T>(): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-interface Observer<T> {
-  next: (value: T) => void;
-  error: (err: any) => void;
-  complete: () => void;
-}
-"""
-            (stubs_dir / "rxjs-operators.ts").write_text(rxjs_operators_stub)
-            
-            tsconfig_path = self.shared_ts_env / "tsconfig.json"
-            with open(tsconfig_path, 'w', encoding='utf-8') as f:
-                json.dump(tsconfig, f, indent=2)
-            
-            print_colored(f"   Installing TypeScript dependencies...", Colors.BLUE)
-            
-            # Determine npm command
-            npm_cmd = "npm.cmd" if os.name == 'nt' else "npm"
-            success, stdout, stderr = run_command([npm_cmd, "install", "--loglevel=warn"], cwd=str(self.shared_ts_env))
-            
-            if not success:
-                print_colored(f"   ERROR: Failed to install dependencies: {stderr}", Colors.RED)
-                print_colored(f"   npm stdout: {stdout}", Colors.YELLOW)
-                return False
-            
-            print_colored(f"   SUCCESS: Shared TypeScript environment ready", Colors.GREEN)
-            return True
-            
-        except Exception as e:
-            print_colored(f"   ERROR: Failed to setup shared TypeScript environment: {e}", Colors.RED)
-            return False
-    
-    def setup_typescript_environment(self, temp_dir: Path, is_angular: bool = False) -> bool:
-        """
-        DEPRECATED: This method is replaced by setup_shared_typescript_environment for better performance.
-        Setup a minimal TypeScript environment for type checking in a temporary directory
-        """
-        # Check if npm is available
-        if not self.check_npm_availability():
-            print_colored(f"   ERROR: npm is not available. Please install Node.js and npm to enable TypeScript checking.", Colors.RED)
-            print_colored(f"   INFO: Download from: https://nodejs.org/", Colors.YELLOW)
-            return False
-        
-        try:
-            # Create package.json with required dependencies
-            package_json = {
-                "name": "dtolator-typecheck",
-                "version": "1.0.0",
-                "private": True,
-                "dependencies": {
-                    "typescript": "^5.3.0",
-                    "zod": "^4.0.0"
-                }
-            }
-            
-            if is_angular:
-                # Only include basic dependencies + real Zod, we'll create fake Angular types
-                package_json["dependencies"].update({
-                    "@types/node": "^18.0.0",
-                    "zod": "^4.0.0"
-                })
-            else:
-                # For non-Angular projects, just Zod
-                package_json["dependencies"].update({
-                    "zod": "^4.0.0"
-                })
-            
-            # Write package.json
-            package_json_path = temp_dir / "package.json"
-            with open(package_json_path, 'w', encoding='utf-8') as f:
-                json.dump(package_json, f, indent=2)
-            
-            # Create tsconfig.json for type checking
-            tsconfig = {
-                "compilerOptions": {
-                    "target": "ES2020",
-                    "module": "ESNext",
-                    "moduleResolution": "node",
-                    "strict": True,
-                    "noEmit": True,  # Type check only, don't generate files
-                    "skipLibCheck": True,
-                    "esModuleInterop": True,
-                    "allowSyntheticDefaultImports": True,
-                    "forceConsistentCasingInFileNames": True,
-                    "declaration": False,
-                    "declarationMap": False,
-                    "sourceMap": False
-                },
-                "include": ["**/*.ts"],
-                "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]
-            }
-            
-            if is_angular:
-                tsconfig["compilerOptions"].update({
-                    "experimentalDecorators": True,
-                    "emitDecoratorMetadata": True,
-                    "noImplicitAny": False,  # Allow implicit any for Angular callback parameters
-                    "strictPropertyInitialization": False,
-                    "strictNullChecks": False,
-                    "noImplicitReturns": False,
-                    "noImplicitThis": False,
-                    "noImplicitOverride": False,
-                    "noPropertyAccessFromIndexSignature": False,
-                    "noUncheckedIndexedAccess": False,
-                    "strict": False,  # Disable all strict checks
-
-                    "skipLibCheck": True,  # Skip type checking of declaration files
-                    "allowJs": True,  # Allow JavaScript files
-                    "baseUrl": ".",
-                    "paths": {
-                        "@angular/core": ["./ts-stubs/angular-core"],
-                        "@angular/common/http": ["./ts-stubs/angular-http"],
-                        "rxjs": ["./ts-stubs/rxjs-stubs"],
-                        "rxjs/operators": ["./ts-stubs/rxjs-operators"]
-                    }
-                })
-            
-            # Write tsconfig.json
-            tsconfig_path = temp_dir / "tsconfig.json"
-            with open(tsconfig_path, 'w', encoding='utf-8') as f:
-                json.dump(tsconfig, f, indent=2)
-            
-                        # Set up global API_URL for Angular projects
-            if is_angular:
-                # Create global setup file
-                global_setup_content = """// Global setup for API_URL (environment imports removed)
-declare global {
-  interface Window {
-    API_URL: string;
-  }
-  var window: Window & typeof globalThis;
-}
-
-// Set up API_URL for testing
-if (typeof window !== 'undefined') {
-  (window as any).API_URL = 'http://localhost:3000/api';
-} else {
-  // Node.js environment - create minimal window mock
-  (globalThis as any).window = { API_URL: 'http://localhost:3000/api' };
-}
-
-export {};
-"""
-                global_setup_file = temp_dir / "global-setup.ts"
-                with open(global_setup_file, 'w', encoding='utf-8') as f:
-                    f.write(global_setup_content)
-                
-                # Update tsconfig to handle fake modules
-                tsconfig["compilerOptions"]["lib"] = ["ES2020", "DOM"]
-                tsconfig["compilerOptions"]["moduleResolution"] = "node"
-                tsconfig["compilerOptions"]["baseUrl"] = "."
-                tsconfig["files"] = ["global-setup.ts"]
-            else:
-                # For non-Angular projects, Zod will be installed via npm (already in package.json)
-                pass
-            
-            # Rewrite tsconfig.json
-            with open(tsconfig_path, 'w', encoding='utf-8') as f:
-                json.dump(tsconfig, f, indent=2)
-            
-            # Create TypeScript stubs for Angular before npm install
-            if is_angular:
-                # Create ts-stubs directory with stub files
-                stubs_dir = temp_dir / "ts-stubs"
-                stubs_dir.mkdir()
-                
-                # Create angular-core.ts stub
-                angular_core_stub = """// Angular Core stubs
-export interface ModuleWithProviders<T = any> {
-  ngModule: any;
-  providers?: any[];
-}
-
-export interface Injectable {
-  providedIn?: 'root' | 'platform' | 'any' | null;
-}
-
-export function Injectable(options?: Injectable): (target: any) => any {
-  return (target: any) => target;
-}
-
-export class Type<T = any> {
-  constructor(public name: string) {}
-}
-
-export interface OnInit {
-  ngOnInit(): void;
-}
-
-export interface OnDestroy {
-  ngOnDestroy(): void;
-}
-
-export class EventEmitter<T = any> {
-  emit(value?: T): void {}
-  subscribe(next?: (value: T) => void, error?: (error: any) => void, complete?: () => void): any {}
-}
-
-export function Component(options: any): (target: any) => any {
-  return (target: any) => target;
-}
-
-export function Directive(options: any): (target: any) => any {
-  return (target: any) => target;
-}
-
-export function Input(bindingPropertyName?: string): any {
-  return function (target: any, propertyKey: string) {};
-}
-
-export function Output(bindingPropertyName?: string): any {
-  return function (target: any, propertyKey: string) {};
-}
-"""
-                (stubs_dir / "angular-core.ts").write_text(angular_core_stub)
-                
-                # Create angular-http.ts stub
-                angular_http_stub = """// Angular HTTP stubs
-import { Observable } from './rxjs-stubs';
-
-export interface HttpRequest<T = any> {
-  body: T | null;
-  headers: any;
-  method: string;
-  url: string;
-}
-
-export interface HttpResponse<T = any> {
-  body: T | null;
-  headers: any;
-  status: number;
-  statusText: string;
-  url: string | null;
-}
-
-export interface HttpErrorResponse extends HttpResponse<any> {
-  error: any | null;
-  message: string;
-  name: string;
-}
-
-export class HttpHeaders {
-  constructor(headers?: string | { [name: string]: string | string[] }) {}
-  
-  has(name: string): boolean {
-    return false;
-  }
-  
-  get(name: string): string | null {
-    return null;
-  }
-  
-  keys(): string[] {
-    return [];
-  }
-  
-  getAll(name: string): string[] | null {
-    return null;
-  }
-  
-  append(name: string, value: string | string[]): HttpHeaders {
-    return new HttpHeaders();
-  }
-  
-  set(name: string, value: string | string[]): HttpHeaders {
-    return new HttpHeaders();
-  }
-  
-  delete(name: string, value?: string | string[]): HttpHeaders {
-    return new HttpHeaders();
-  }
-}
-
-export class HttpClient {
-  get<T>(url: string, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  post<T>(url: string, body: any, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  put<T>(url: string, body: any, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  delete<T>(url: string, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-  
-  patch<T>(url: string, body: any, options?: any): Observable<T> {
-    return new Observable<T>();
-  }
-}
-"""
-                (stubs_dir / "angular-http.ts").write_text(angular_http_stub)
-                
-                # Create rxjs-stubs.ts with lastValueFrom
-                rxjs_stub = """// RxJS stubs
-export class Observable<T = any> {
-  constructor(subscribe?: (observer: Observer<T>) => TeardownLogic) {}
-  
-  pipe<A>(op1: OperatorFunction<T, A>): Observable<A>;
-  pipe<A, B>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>): Observable<B>;
-  pipe<A, B, C>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>): Observable<C>;
-  pipe(...operations: OperatorFunction<any, any>[]): Observable<any> {
-    return new Observable();
-  }
-}
-
-export interface Observer<T> {
-  next: (value: T) => void;
-  error: (err: any) => void;
-  complete: () => void;
-}
-
-export interface TeardownLogic {
-  unsubscribe(): void;
-}
-
-export interface OperatorFunction<T, R> {
-  (source: Observable<T>): Observable<R>;
-}
-
-// Add missing RxJS functions
-export function lastValueFrom<T>(source: Observable<T>): Promise<T> {
-  return Promise.resolve({} as T);
-}
-
-export function firstValueFrom<T>(source: Observable<T>): Promise<T> {
-  return Promise.resolve({} as T);
-}
-"""
-                (stubs_dir / "rxjs-stubs.ts").write_text(rxjs_stub)
-                
-                # Create rxjs-operators.ts stub
-                rxjs_operators_stub = """// RxJS operators stubs
-import { Observable, OperatorFunction } from './rxjs-stubs';
-
-export function map<T, R>(project: (value: T, index?: number) => R): OperatorFunction<T, R> {
-  return (source: Observable<T>) => new Observable<R>();
-}
-
-export function catchError<T, R>(selector: (err: any, caught: Observable<T>) => Observable<R>): OperatorFunction<T, T | R> {
-  return (source: Observable<T>) => new Observable<T | R>();
-}
-
-export function tap<T>(observer?: Partial<Observer<T>>): OperatorFunction<T, T>;
-export function tap<T>(next: (value: T) => void): OperatorFunction<T, T>;
-export function tap<T>(next?: any): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-export function switchMap<T, R>(project: (value: T, index: number) => Observable<R>): OperatorFunction<T, R> {
-  return (source: Observable<T>) => new Observable<R>();
-}
-
-export function mergeMap<T, R>(project: (value: T, index: number) => Observable<R>): OperatorFunction<T, R> {
-  return (source: Observable<T>) => new Observable<R>();
-}
-
-export function filter<T>(predicate: (value: T, index: number) => boolean): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-export function take<T>(count: number): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-export function first<T>(): OperatorFunction<T, T> {
-  return (source: Observable<T>) => new Observable<T>();
-}
-
-interface Observer<T> {
-  next: (value: T) => void;
-  error: (err: any) => void;
-  complete: () => void;
-}
-"""
-                (stubs_dir / "rxjs-operators.ts").write_text(rxjs_operators_stub)
-            
-            print_colored(f"   Installing TypeScript dependencies...", Colors.BLUE)
-            
-            # Determine npm command
-            npm_cmd = "npm.cmd" if os.name == 'nt' else "npm"
-            success, stdout, stderr = run_command([npm_cmd, "install", "--loglevel=warn"], cwd=str(temp_dir))
-            
-            if not success:
-                print_colored(f"   ERROR: Failed to install dependencies: {stderr}", Colors.RED)
-                print_colored(f"   npm stdout: {stdout}", Colors.YELLOW)
-                return False
-            
-            print_colored(f"   SUCCESS: Dependencies installed successfully", Colors.GREEN)
-            return True
-            
-        except Exception as e:
-            print_colored(f"   ERROR: Error setting up TypeScript environment: {str(e)}", Colors.RED)
-            return False
     
     def format_typescript_errors(self, tsc_output: str) -> str:
         """
@@ -1091,15 +442,14 @@ interface Observer<T> {
     
     def execute_typescript_check(self, project_dir: Path) -> Tuple[bool, str]:
         """
-        Execute TypeScript type checking in the given project directory
+        Execute TypeScript type checking using the local tsc binary
         """
         try:
-            # Determine npm command for running tsc
-            npm_cmd = "npm.cmd" if os.name == 'nt' else "npm"
-            npx_cmd = "npx.cmd" if os.name == 'nt' else "npx"
+            # Use the local tsc binary from node_modules
+            tsc_binary = project_dir / "node_modules" / ".bin" / ("tsc.cmd" if os.name == 'nt' else "tsc")
             
             print_colored(f"   Running TypeScript type check...", Colors.BLUE)
-            success, stdout, stderr = run_command([npx_cmd, "tsc", "--noEmit"], cwd=str(project_dir))
+            success, stdout, stderr = run_command([str(tsc_binary), "--noEmit"], cwd=str(project_dir))
             
             if success:
                 return True, "No type errors found"
@@ -1561,9 +911,9 @@ def main():
     
     # Check TypeScript checking prerequisites
     if typecheck_enabled:
-        if not test_suite.check_npm_availability():
-            print_colored("ERROR: TypeScript checking requires npm to be installed", Colors.RED)
-            print_colored("INFO: Please install Node.js and npm from: https://nodejs.org/", Colors.YELLOW)
+        if not test_suite.check_typescript_environment():
+            print_colored("ERROR: Static TypeScript environment not ready", Colors.RED)
+            print_colored("INFO: Run 'npm install' in the project root to set up dependencies", Colors.YELLOW)
             print_colored("Disabling TypeScript checking for this run", Colors.YELLOW)
             test_suite.enable_typescript_check = False
             typecheck_enabled = False
@@ -1609,13 +959,8 @@ def main():
             else:
                 test_suite.failed_tests += 1
     finally:
-        # Clean up shared TypeScript environment
-        if test_suite.shared_ts_env and test_suite.shared_ts_env.exists():
-            try:
-                import shutil
-                shutil.rmtree(test_suite.shared_ts_env)
-            except Exception as e:
-                print_colored(f"WARNING: Failed to clean up shared environment: {e}", Colors.YELLOW)
+        # No cleanup needed for static TypeScript environment
+        pass
     
     # Print summary and exit
     test_suite.print_summary()

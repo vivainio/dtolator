@@ -1,0 +1,20 @@
+{
+  "name": "dtolator-typecheck",
+  "version": "1.0.0",
+  "description": "TypeScript type checking environment for dtolator test suite",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch"
+  },
+  "dependencies": {
+    "typescript": "^5.3.0",
+    "zod": "^3.22.0",
+    "@types/node": "^18.0.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}

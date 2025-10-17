@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020", "DOM"],
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "noImplicitAny": false,
+    "strictPropertyInitialization": false,
+    "strictNullChecks": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noImplicitOverride": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false,
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@angular/core": ["./ts-stubs/angular-core"],
+      "@angular/common/http": ["./ts-stubs/angular-http"],
+      "rxjs": ["./ts-stubs/rxjs-stubs"],
+      "rxjs/operators": ["./ts-stubs/rxjs-operators"]
+    }
+  },
+  "include": ["*.ts", "**/*.ts", "ts-stubs/**/*.ts"],
+  "exclude": ["node_modules", "dist", "target"]
+}
