@@ -775,22 +775,13 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
   params?: Record<string, ParamValue>,
   queryParams?: T,
 ): string {
-  // Substitute path parameters - more efficient than regex for simple replacements
+  // Substitute path parameters using {param} format
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value != null) {
-        // Replace :param patterns, handling both end-of-string and followed by /
-        const paramPattern = `:${key}`;
-        let index = url.indexOf(paramPattern);
-        while (index !== -1) {
-          const nextChar = url[index + paramPattern.length];
-          if (nextChar === undefined || nextChar === '/') {
-            url = url.slice(0, index) + String(value) + url.slice(index + paramPattern.length);
-            index = url.indexOf(paramPattern, index + String(value).length);
-          } else {
-            index = url.indexOf(paramPattern, index + 1);
-          }
-        }
+        // Replace {param} patterns - the closing brace prevents prefix ambiguity
+        const paramPattern = `{${key}}`;
+        url = url.replace(paramPattern, String(value));
       }
     }
   }
