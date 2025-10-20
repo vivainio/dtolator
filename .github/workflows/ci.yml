@@ -55,7 +55,7 @@ jobs:
         python-version: '3.11'
     
     - name: Setup Node.js for TypeScript checking
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       with:
         node-version: '24'
     
