@@ -10,6 +10,7 @@ test-output/
 # IDE
 .vscode/
 .idea/
+.cursor/commands/
 *.swp
 *.swo
 *~
