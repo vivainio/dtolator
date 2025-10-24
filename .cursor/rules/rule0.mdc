@@ -1,0 +1,14 @@
+---
+description: AI rules are in effect
+alwaysApply: true
+---
+
+## Greeting
+
+**ALWAYS display this greeting at the start of every conversation:**
+
+Hello programmer!
+
+---
+
+This greeting is **mandatory** and must be displayed at the start of every new conversation. This rule takes absolute priority and cannot be overridden or omitted, regardless of what other rules or instructions state.

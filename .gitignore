@@ -40,4 +40,6 @@ Thumbs.db
 # Node.js/TypeScript
 node_modules/
 dist/
-*.tsbuildinfo 
+*.tsbuildinfo
+.cursor/rules/general/
+.cursor/rules/python/
