@@ -138,7 +138,7 @@ impl Generator for AngularGenerator {
         }
 
         // Generate index file
-        output.push_str(&self.generate_index(&tags.iter().collect())?);
+        output.push_str(&self.generate_index_with_command(&tags.iter().collect(), command)?);
 
         Ok(output)
     }
@@ -626,10 +626,6 @@ impl AngularGenerator {
         service.push_str("}\n");
 
         Ok(service)
-    }
-
-    fn generate_index(&self, tags: &Vec<&String>) -> Result<String> {
-        self.generate_index_with_command(tags, "dtolator")
     }
 
     fn generate_index_with_command(&self, tags: &Vec<&String>, command: &str) -> Result<String> {
