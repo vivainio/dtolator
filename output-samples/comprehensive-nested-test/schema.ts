@@ -8,7 +8,7 @@ export const AddressSchema = z.object({
   street2: z.string().max(100).nullable().optional(),
   city: z.string().min(1).max(50),
   state: z.string().max(50).nullable().optional(),
-  country: z.string().regex(new RegExp("^[A-Z]{2}$")),
+  country: z.string().regex(/^[A-Z]{2}$/),
   postalCode: z.string().min(3).max(10)
 });
 
@@ -17,7 +17,7 @@ export type Address = z.infer<typeof AddressSchema>;
 export const CategorySchema = z.object({
   id: z.uuid(),
   name: z.string().min(1).max(100),
-  slug: z.string().regex(new RegExp("^[a-z0-9-]+$")),
+  slug: z.string().regex(/^[a-z0-9-]+$/),
   description: z.string().max(500).optional(),
   parentId: z.uuid().nullable().optional(),
   isActive: z.boolean().optional()
@@ -27,7 +27,7 @@ export type Category = z.infer<typeof CategorySchema>;
 
 export const CreateCategoryRequestSchema = z.object({
   name: z.string().min(1).max(100),
-  slug: z.string().regex(new RegExp("^[a-z0-9-]+$")),
+  slug: z.string().regex(/^[a-z0-9-]+$/),
   description: z.string().max(500).optional(),
   parentId: z.uuid().optional()
 });
@@ -92,7 +92,7 @@ export type PaginationInfo = z.infer<typeof PaginationInfoSchema>;
 
 export const PaymentMethodSchema = z.object({
   type: z.enum(["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"]),
-  last4: z.string().regex(new RegExp("^[0-9]{4}$")).optional(),
+  last4: z.string().regex(/^[0-9]{4}$/).optional(),
   brand: z.enum(["visa", "mastercard", "amex", "discover"]).optional()
 });
 
@@ -157,7 +157,7 @@ export const UserProfileSchema = z.object({
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
   dateOfBirth: z.iso.date().nullable().optional(),
-  phoneNumber: z.string().regex(new RegExp("^\+?[1-9]\d{1,14}$")).nullable().optional(),
+  phoneNumber: z.string().regex(/^\\+?[1-9]\\d{1,14}$/).nullable().optional(),
   avatar: ImageUrlSchema.optional(),
   address: AddressSchema.optional()
 });
@@ -230,7 +230,7 @@ export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
 
 export const CreateUserRequestSchema = z.object({
   email: z.email(),
-  password: z.string().min(8).max(128).regex(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]")),
+  password: z.string().min(8).max(128).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]/),
   profile: UserProfileSchema,
   preferences: UserPreferencesSchema.optional()
 });

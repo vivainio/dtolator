@@ -152,6 +152,10 @@ impl ZodGenerator {
         }
     }
 
+    fn escape_regex_pattern(pattern: &str) -> String {
+        pattern.replace('\\', "\\\\").replace('/', "\\/")
+    }
+
     fn generate_schema(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
 
@@ -255,7 +259,8 @@ impl ZodGenerator {
 
                                 // Add pattern constraint
                                 if let Some(pat) = pattern {
-                                    zod_schema.push_str(&format!(".regex(new RegExp(\"{pat}\"))"));
+                                    let escaped_pattern = Self::escape_regex_pattern(pat);
+                                    zod_schema.push_str(&format!(".regex(/{escaped_pattern}/)"));
                                 }
                             }
                         }

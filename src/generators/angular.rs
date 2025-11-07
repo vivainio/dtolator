@@ -286,7 +286,9 @@ impl AngularGenerator {
                     if headers_var == "headers" {
                         format!("this.http.put<{return_type}>(url, null, {{ headers }})")
                     } else {
-                        format!("this.http.put<{return_type}>(url, null, {{ headers: {headers_var} }})")
+                        format!(
+                            "this.http.put<{return_type}>(url, null, {{ headers: {headers_var} }})"
+                        )
                     }
                 } else {
                     if headers_var == "headers" {
@@ -485,7 +487,8 @@ impl AngularGenerator {
                         } else {
                             "?"
                         };
-                        header_type.push_str(&format!("\"{}\"{}:{}", param.name, optional, param_type));
+                        header_type
+                            .push_str(&format!("\"{}\"{}:{}", param.name, optional, param_type));
                         if i < header_params.len() - 1 {
                             header_type.push_str(", ");
                         }
