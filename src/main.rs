@@ -404,7 +404,22 @@ fn generate_angular_services(
 
         // Generate TypeScript interfaces that re-export from schema.ts
         let ts_generator = TypeScriptGenerator::new();
-        let ts_output = ts_generator.generate_with_imports(schema, command_string)?;
+        let mut ts_output = ts_generator.generate_with_imports(schema, command_string)?;
+
+        // Add query parameter types for Angular services
+        let angular_generator = AngularGenerator::new();
+        let query_param_types = angular_generator.generate_query_param_types(schema)?;
+        if !query_param_types.trim().is_empty() {
+            ts_output.push('\n');
+            ts_output.push_str(&query_param_types);
+        }
+
+        // Add header parameter types for Angular services
+        let header_param_types = angular_generator.generate_header_param_types(schema)?;
+        if !header_param_types.trim().is_empty() {
+            ts_output.push('\n');
+            ts_output.push_str(&header_param_types);
+        }
 
         fs::write(&dto_path, ts_output)
             .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
@@ -419,6 +434,13 @@ fn generate_angular_services(
         if !query_param_types.trim().is_empty() {
             dto_output.push('\n');
             dto_output.push_str(&query_param_types);
+        }
+
+        // Add header parameter types for Angular services
+        let header_param_types = angular_generator.generate_header_param_types(schema)?;
+        if !header_param_types.trim().is_empty() {
+            dto_output.push('\n');
+            dto_output.push_str(&header_param_types);
         }
 
         fs::write(&dto_path, dto_output)

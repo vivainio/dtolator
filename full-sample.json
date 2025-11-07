@@ -55,6 +55,15 @@
               "maximum": 100,
               "default": 20
             }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "description": "API key for authentication",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

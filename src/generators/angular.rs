@@ -169,6 +169,7 @@ impl AngularGenerator {
                     request_types: std::collections::HashSet::new(),
                     query_param_types: std::collections::HashSet::new(),
                     has_void_methods: false,
+                    has_header_params: false,
                 },
             );
         }
@@ -179,6 +180,13 @@ impl AngularGenerator {
         let return_type = self.get_return_type(operation)?;
         if return_type == "void" {
             service_data.has_void_methods = true;
+        }
+
+        // Check if this operation has header parameters
+        if let Some(parameters) = &operation.parameters {
+            if parameters.iter().any(|p| p.location == "header") {
+                service_data.has_header_params = true;
+            }
         }
 
         // Generate method
@@ -230,34 +238,93 @@ impl AngularGenerator {
             "    const url = fillUrl('{path}', {url_params}, {query_params});\n"
         ));
 
+        // Check if there are any header parameters
+        let has_header_params = if let Some(parameters) = &operation.parameters {
+            parameters.iter().any(|p| p.location == "header")
+        } else {
+            false
+        };
+
+        // Merge custom headers if there are header parameters
+        if has_header_params {
+            method.push_str("    const finalHeaders = mergeHeaders(headers, customHeaders);\n\n");
+        }
+
         // Generate HTTP call
         let request_body = self.get_request_body(operation)?;
+        let headers_var = if has_header_params {
+            "finalHeaders".to_string()
+        } else {
+            "headers".to_string()
+        };
 
         let http_call = match http_method {
-            "GET" => format!("this.http.get<{return_type}>(url, {{ headers }})"),
+            "GET" => {
+                if headers_var == "headers" {
+                    format!("this.http.get<{return_type}>(url, {{ headers }})")
+                } else {
+                    format!("this.http.get<{return_type}>(url, {{ headers: {headers_var} }})")
+                }
+            }
             "POST" => {
                 if request_body.is_empty() {
-                    format!("this.http.post<{return_type}>(url, null, {{ headers }})")
+                    if headers_var == "headers" {
+                        format!("this.http.post<{return_type}>(url, null, {{ headers }})")
+                    } else {
+                        format!("this.http.post<{return_type}>(url, null, {{ headers: {headers_var} }})")
+                    }
                 } else {
-                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
+                    if headers_var == "headers" {
+                        format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
+                    } else {
+                        format!("this.http.post<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
+                    }
                 }
             }
             "PUT" => {
                 if request_body.is_empty() {
-                    format!("this.http.put<{return_type}>(url, null, {{ headers }})")
+                    if headers_var == "headers" {
+                        format!("this.http.put<{return_type}>(url, null, {{ headers }})")
+                    } else {
+                        format!("this.http.put<{return_type}>(url, null, {{ headers: {headers_var} }})")
+                    }
                 } else {
-                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
+                    if headers_var == "headers" {
+                        format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
+                    } else {
+                        format!("this.http.put<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
+                    }
                 }
             }
-            "DELETE" => format!("this.http.delete<{return_type}>(url, {{ headers }})"),
+            "DELETE" => {
+                if headers_var == "headers" {
+                    format!("this.http.delete<{return_type}>(url, {{ headers }})")
+                } else {
+                    format!("this.http.delete<{return_type}>(url, {{ headers: {headers_var} }})")
+                }
+            }
             "PATCH" => {
                 if request_body.is_empty() {
-                    format!("this.http.patch<{return_type}>(url, null, {{ headers }})")
+                    if headers_var == "headers" {
+                        format!("this.http.patch<{return_type}>(url, null, {{ headers }})")
+                    } else {
+                        format!("this.http.patch<{return_type}>(url, null, {{ headers: {headers_var} }})")
+                    }
                 } else {
-                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
+                    if headers_var == "headers" {
+                        format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
+                    } else {
+                        format!("this.http.patch<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
+                    }
                 }
             }
-            _ => format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})"),
+            _ => {
+                if headers_var == "headers" {
+                    format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})")
+                } else {
+                    format!("this.http.request<{return_type}>('{http_method}', {{ url, headers: {headers_var} }})")
+                }
+            }
         };
 
         // Add Zod validation for response if enabled (but not for requests)
@@ -398,6 +465,37 @@ impl AngularGenerator {
             }
         }
 
+        // Header parameters (with named types)
+        if let Some(parameters) = &operation.parameters {
+            let header_params: Vec<&Parameter> = parameters
+                .iter()
+                .filter(|p| p.location == "header")
+                .collect();
+
+            if !header_params.is_empty() {
+                if let Some(type_name) = self.get_header_param_type_name(operation) {
+                    params.push(format!("customHeaders?: {type_name}"));
+                } else {
+                    // Fallback to inline type if no good name can be generated
+                    let mut header_type = "{ ".to_string();
+                    for (i, param) in header_params.iter().enumerate() {
+                        let param_type = self.get_parameter_type(param);
+                        let optional = if param.required.unwrap_or(false) {
+                            ""
+                        } else {
+                            "?"
+                        };
+                        header_type.push_str(&format!("\"{}\"{}:{}", param.name, optional, param_type));
+                        if i < header_params.len() - 1 {
+                            header_type.push_str(", ");
+                        }
+                    }
+                    header_type.push_str(" }");
+                    params.push(format!("customHeaders?: {header_type}"));
+                }
+            }
+        }
+
         // Request body
         if let Some(request_body) = &operation.request_body {
             if let Some(content) = &request_body.content {
@@ -517,6 +615,19 @@ impl AngularGenerator {
                 }
             }
 
+            // Collect header parameter types
+            let header_params: Vec<&Parameter> = parameters
+                .iter()
+                .filter(|p| p.location == "header")
+                .collect();
+
+            if !header_params.is_empty() {
+                if let Some(type_name) = self.get_header_param_type_name(operation) {
+                    service_data.imports.insert(type_name.clone());
+                    service_data.query_param_types.insert(type_name);
+                }
+            }
+
             for parameter in parameters {
                 if let Some(schema) = &parameter.schema {
                     if let Some(type_name) = self.extract_type_name(schema) {
@@ -559,7 +670,7 @@ impl AngularGenerator {
 
         // Add file marker BEFORE the content for proper splitting
         service.push_str("// FILE: ");
-        service.push_str(&self.to_kebab_case(&format!("{tag}-api")));
+        service.push_str(&file_name);
         service.push_str(".ts\n");
 
         service.push_str(&format!("// Generated by {command}\n"));
@@ -584,7 +695,11 @@ impl AngularGenerator {
             service.push_str("import { z } from 'zod';\n");
         }
 
-        service.push_str("import { fillUrl } from './fill-url';\n");
+        if service_data.has_header_params {
+            service.push_str("import { fillUrl, mergeHeaders } from './fill-url';\n");
+        } else {
+            service.push_str("import { fillUrl } from './fill-url';\n");
+        }
 
         if !service_data.imports.is_empty() {
             let mut imports: Vec<String> = service_data.imports.iter().cloned().collect();
@@ -760,10 +875,28 @@ impl AngularGenerator {
         }
     }
 
+    fn get_header_param_type_name(&self, operation: &Operation) -> Option<String> {
+        if let Some(summary) = &operation.summary {
+            let clean_summary = summary
+                .replace("Get ", "")
+                .replace("Create ", "")
+                .replace("Update ", "")
+                .replace("Delete ", "")
+                .replace("Retrieve ", "")
+                .replace("Fetch ", "");
+            let pascal_name = self.to_pascal_case(&clean_summary);
+            Some(format!("{pascal_name}Headers"))
+        } else {
+            None
+        }
+    }
+
     /// Generate the fill-url utility function
     pub fn generate_fill_url_func(&self, command_string: &str) -> String {
         let template = r#"// Generated by COMMAND_PLACEHOLDER
 // Do not modify manually
+
+import { HttpHeaders } from '@angular/common/http';
 
 type ParamValue = string | number | boolean | null | undefined;
 
@@ -814,6 +947,28 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
   
   return `${baseUrl}${path}`;
 }
+
+/**
+ * Merges custom header parameters with base headers
+ * @param baseHeaders - Optional base HttpHeaders to merge into
+ * @param customHeaders - Optional custom headers object to merge
+ * @returns Merged HttpHeaders instance
+ */
+export function mergeHeaders(
+  baseHeaders: HttpHeaders | undefined,
+  customHeaders?: Record<string, any>,
+): HttpHeaders {
+  let finalHeaders = baseHeaders;
+  if (customHeaders) {
+    finalHeaders = baseHeaders || new HttpHeaders();
+    Object.entries(customHeaders).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        finalHeaders = finalHeaders!.set(key, String(value));
+      }
+    });
+  }
+  return finalHeaders;
+}
 "#;
         template.replace("COMMAND_PLACEHOLDER", command_string)
     }
@@ -862,6 +1017,64 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
 
                                         types.push_str(&format!(
                                             "  {}{}: {};\n",
+                                            param.name, optional, param_type
+                                        ));
+                                    }
+                                    types.push_str("}\n\n");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(types)
+    }
+
+    pub fn generate_header_param_types(&self, schema: &OpenApiSchema) -> Result<String> {
+        let mut types = String::new();
+        let mut generated_types = std::collections::HashSet::new();
+
+        if let Some(paths) = &schema.paths {
+            for (_path, path_item) in paths {
+                let operations = [
+                    &path_item.get,
+                    &path_item.post,
+                    &path_item.put,
+                    &path_item.delete,
+                    &path_item.patch,
+                ];
+
+                for operation in operations.into_iter().flatten() {
+                    if let Some(parameters) = &operation.parameters {
+                        let header_params: Vec<&Parameter> = parameters
+                            .iter()
+                            .filter(|p| p.location == "header")
+                            .collect();
+
+                        if !header_params.is_empty() {
+                            if let Some(type_name) = self.get_header_param_type_name(operation) {
+                                if !generated_types.contains(&type_name) {
+                                    generated_types.insert(type_name.clone());
+
+                                    if let Some(summary) = &operation.summary {
+                                        types.push_str(&format!(
+                                            "/**\n * Header parameters for {summary}\n */\n"
+                                        ));
+                                    }
+
+                                    types.push_str(&format!("export interface {type_name} {{\n"));
+                                    for param in &header_params {
+                                        let param_type = self.get_parameter_type(param);
+                                        let optional = if param.required.unwrap_or(false) {
+                                            ""
+                                        } else {
+                                            "?"
+                                        };
+
+                                        types.push_str(&format!(
+                                            "  \"{}\"{}: {};\n",
                                             param.name, optional, param_type
                                         ));
                                     }
@@ -940,6 +1153,30 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
             }
         }
 
+        // Document header parameters
+        if let Some(parameters) = &operation.parameters {
+            let header_params: Vec<&Parameter> = parameters
+                .iter()
+                .filter(|p| p.location == "header")
+                .collect();
+
+            if !header_params.is_empty() {
+                comment.push_str("   * @param customHeaders - Custom header parameters\n");
+                for param in header_params {
+                    let required = if param.required.unwrap_or(false) {
+                        "required"
+                    } else {
+                        "optional"
+                    };
+                    let param_type = self.get_parameter_type(param);
+                    comment.push_str(&format!(
+                        "   * @param customHeaders.{} - {} header of type {}\n",
+                        param.name, required, param_type
+                    ));
+                }
+            }
+        }
+
         // Document request body
         if let Some(request_body) = &operation.request_body {
             if let Some(content) = &request_body.content {
@@ -996,4 +1233,5 @@ struct ServiceData {
     request_types: std::collections::HashSet<String>,
     query_param_types: std::collections::HashSet<String>,
     has_void_methods: bool,
+    has_header_params: bool,
 }

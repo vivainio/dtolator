@@ -6,8 +6,9 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
-import { fillUrl } from './fill-url';
+import { fillUrl, mergeHeaders } from './fill-url';
 import {
+  AllUsersWithPaginationHeaders,
   AllUsersWithPaginationQueryParams,
   CreateUserRequest,
   User,
@@ -28,12 +29,16 @@ export class UsersApi {
    * @param queryParams - Query parameters object
    * @param queryParams.page - optional parameter of type number
    * @param queryParams.limit - optional parameter of type number
+   * @param customHeaders - Custom header parameters
+   * @param customHeaders.X-API-Key - optional header of type string
    * @param headers - Optional custom HTTP headers
    * @returns Observable<UserListResponse> - Successful response
    */
-  getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams, headers?: HttpHeaders): Observable<UserListResponse> {
+  getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams, customHeaders?: AllUsersWithPaginationHeaders, headers?: HttpHeaders): Observable<UserListResponse> {
     const url = fillUrl('/users', {}, queryParams || {});
-    return this.http.get<UserListResponse>(url, { headers })
+    const finalHeaders = mergeHeaders(headers, customHeaders);
+
+    return this.http.get<UserListResponse>(url, { headers: finalHeaders })
       .pipe(
         map(response => UserListResponseSchema.parse(response))
       );
