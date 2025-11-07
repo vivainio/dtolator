@@ -107,6 +107,10 @@ impl ZodValue {
     }
 
     fn object_to_zod(props: &[(String, ZodValue, bool)]) -> String {
+        if props.is_empty() {
+            return "z.object({})".to_string();
+        }
+
         let prop_strs: Vec<String> = props
             .iter()
             .map(|(name, zod_val, required)| {
