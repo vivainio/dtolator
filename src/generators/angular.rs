@@ -170,6 +170,7 @@ impl AngularGenerator {
                     query_param_types: std::collections::HashSet::new(),
                     has_void_methods: false,
                     has_header_params: false,
+                    uses_z_methods: false,
                 },
             );
         }
@@ -180,6 +181,11 @@ impl AngularGenerator {
         let return_type = self.get_return_type(operation)?;
         if return_type == "void" {
             service_data.has_void_methods = true;
+        }
+
+        // Check if this method uses z.array() (for array return types)
+        if self.with_zod && return_type.ends_with("[]") {
+            service_data.uses_z_methods = true;
         }
 
         // Check if this operation has header parameters
@@ -695,7 +701,9 @@ impl AngularGenerator {
 
         if self.with_zod {
             service.push_str("import { map } from 'rxjs/operators';\n");
-            service.push_str("import { z } from 'zod';\n");
+            if service_data.uses_z_methods {
+                service.push_str("import { z } from 'zod';\n");
+            }
         }
 
         if service_data.has_header_params {
@@ -1237,4 +1245,5 @@ struct ServiceData {
     query_param_types: std::collections::HashSet<String>,
     has_void_methods: bool,
     has_header_params: bool,
+    uses_z_methods: bool,
 }
