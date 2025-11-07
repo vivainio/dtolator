@@ -717,19 +717,30 @@ impl AngularGenerator {
             imports.sort();
 
             if self.with_zod {
-                // Import types and schemas from dto.ts (which has inferred types and re-exported schemas)
-                service.push_str("import {\n");
+                // Import types from dto.ts with 'import type' for type-only imports
+                service.push_str("import type {\n");
                 for import in &imports {
                     service.push_str(&format!("  {import},\n"));
-                    // Only import schemas for response types, not request types
-                    if service_data.response_types.contains(import) {
-                        service.push_str(&format!("  {import}Schema,\n"));
-                    }
                 }
                 service.push_str("} from './dto';\n");
+
+                // Import schemas separately (these are runtime values)
+                let response_types_to_import: Vec<_> = imports
+                    .iter()
+                    .filter(|name| service_data.response_types.contains(*name))
+                    .cloned()
+                    .collect();
+
+                if !response_types_to_import.is_empty() {
+                    service.push_str("import {\n");
+                    for import in &response_types_to_import {
+                        service.push_str(&format!("  {import}Schema,\n"));
+                    }
+                    service.push_str("} from './dto';\n");
+                }
             } else {
-                // Import only types in multi-line format
-                service.push_str("import {\n");
+                // Import only types with 'import type'
+                service.push_str("import type {\n");
                 for import in &imports {
                     service.push_str(&format!("  {import},\n"));
                 }

@@ -412,18 +412,27 @@ impl TypeScriptGenerator {
                         .cloned()
                         .collect();
 
-                    // Import response schemas and types from schema.ts
+                    // Import response types from schema.ts using 'import type'
                     if !response_types.is_empty() {
-                        output.push_str("import {\n");
+                        output.push_str("import type {\n");
 
                         let mut import_lines = Vec::new();
                         for name in &response_types {
                             import_lines.push(format!("  {name},"));
-                            import_lines.push(format!("  {name}Schema,"));
                         }
 
                         output.push_str(&import_lines.join("\n"));
                         output.push_str("\n} from \"./schema\";\n");
+
+                        // Import schemas as runtime values
+                        output.push_str("import {\n");
+                        let mut schema_lines = Vec::new();
+                        for name in &response_types {
+                            schema_lines.push(format!("  {name}Schema,"));
+                        }
+                        output.push_str(&schema_lines.join("\n"));
+                        output.push_str("\n} from \"./schema\";\n");
+
                         output.push_str("import { z } from \"zod\";\n\n");
                     }
 
