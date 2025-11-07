@@ -2,28 +2,51 @@
 // Do not modify manually
 
 import {
+  User,
   UserSchema,
+  UserProfile,
   UserProfileSchema,
+  UserPreferences,
   UserPreferencesSchema,
+  NotificationSettings,
   NotificationSettingsSchema,
+  UserRole,
   UserRoleSchema,
+  Address,
   AddressSchema,
+  ImageUrl,
   ImageUrlSchema,
+  Product,
   ProductSchema,
+  Price,
   PriceSchema,
+  ProductCategory,
   ProductCategorySchema,
+  Inventory,
   InventorySchema,
+  Order,
   OrderSchema,
+  OrderItem,
   OrderItemSchema,
+  OrderStatus,
   OrderStatusSchema,
+  PaymentMethod,
   PaymentMethodSchema,
+  UserListResponse,
   UserListResponseSchema,
+  ProductListResponse,
   ProductListResponseSchema,
+  PaginationInfo,
   PaginationInfoSchema,
+  ErrorResponse,
   ErrorResponseSchema,
+  Category,
   CategorySchema,
+  InventoryResponse,
   InventoryResponseSchema,
+  SalesAnalytics,
   SalesAnalyticsSchema,
+  ProductAnalytics,
   ProductAnalyticsSchema,
 } from "./schema";
 import { z } from "zod";
@@ -97,29 +120,29 @@ export interface SalesAnalyticsQueryParams {
   endDate?: string;
 }
 
-export type User = z.infer<typeof UserSchema>;
-export type UserProfile = z.infer<typeof UserProfileSchema>;
-export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
-export type NotificationSettings = z.infer<typeof NotificationSettingsSchema>;
-export type UserRole = z.infer<typeof UserRoleSchema>;
-export type Address = z.infer<typeof AddressSchema>;
-export type ImageUrl = z.infer<typeof ImageUrlSchema>;
-export type Product = z.infer<typeof ProductSchema>;
-export type Price = z.infer<typeof PriceSchema>;
-export type ProductCategory = z.infer<typeof ProductCategorySchema>;
-export type Inventory = z.infer<typeof InventorySchema>;
-export type Order = z.infer<typeof OrderSchema>;
-export type OrderItem = z.infer<typeof OrderItemSchema>;
-export type OrderStatus = z.infer<typeof OrderStatusSchema>;
-export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
-export type UserListResponse = z.infer<typeof UserListResponseSchema>;
-export type ProductListResponse = z.infer<typeof ProductListResponseSchema>;
-export type PaginationInfo = z.infer<typeof PaginationInfoSchema>;
-export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
-export type Category = z.infer<typeof CategorySchema>;
-export type InventoryResponse = z.infer<typeof InventoryResponseSchema>;
-export type SalesAnalytics = z.infer<typeof SalesAnalyticsSchema>;
-export type ProductAnalytics = z.infer<typeof ProductAnalyticsSchema>;
+export type { User };
+export type { UserProfile };
+export type { UserPreferences };
+export type { NotificationSettings };
+export type { UserRole };
+export type { Address };
+export type { ImageUrl };
+export type { Product };
+export type { Price };
+export type { ProductCategory };
+export type { Inventory };
+export type { Order };
+export type { OrderItem };
+export type { OrderStatus };
+export type { PaymentMethod };
+export type { UserListResponse };
+export type { ProductListResponse };
+export type { PaginationInfo };
+export type { ErrorResponse };
+export type { Category };
+export type { InventoryResponse };
+export type { SalesAnalytics };
+export type { ProductAnalytics };
 
 export { UserSchema };
 export { UserProfileSchema };

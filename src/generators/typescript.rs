@@ -412,12 +412,13 @@ impl TypeScriptGenerator {
                         .cloned()
                         .collect();
 
-                    // Import only response schemas from schema.ts
+                    // Import response schemas and types from schema.ts
                     if !response_types.is_empty() {
                         output.push_str("import {\n");
 
                         let mut import_lines = Vec::new();
                         for name in &response_types {
+                            import_lines.push(format!("  {name},"));
                             import_lines.push(format!("  {name}Schema,"));
                         }
 
@@ -491,11 +492,9 @@ impl TypeScriptGenerator {
                         output.push_str(&query_param_types);
                     }
 
-                    // Create and export inferred types from response schemas only
+                    // Re-export types and schemas from schema.ts
                     for name in &response_types {
-                        output.push_str(&format!(
-                            "export type {name} = z.infer<typeof {name}Schema>;\n"
-                        ));
+                        output.push_str(&format!("export type {{ {name} }};\n"));
                     }
                     output.push('\n');
 

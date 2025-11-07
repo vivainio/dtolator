@@ -2,31 +2,42 @@
 // Do not modify manually
 
 import {
+  Metadata,
   MetadataSchema,
+  MetadataPreferences,
   MetadataPreferencesSchema,
+  MetadataPreferencesNotifications,
   MetadataPreferencesNotificationsSchema,
+  Organization,
   OrganizationSchema,
+  OrganizationSettings,
   OrganizationSettingsSchema,
+  OrganizationSettingsFeatures,
   OrganizationSettingsFeaturesSchema,
+  PasswordPolicy,
   PasswordPolicySchema,
+  Root,
   RootSchema,
+  RootStatistics,
   RootStatisticsSchema,
+  Security,
   SecuritySchema,
+  User,
   UserSchema,
 } from "./schema";
 import { z } from "zod";
 
-export type Metadata = z.infer<typeof MetadataSchema>;
-export type MetadataPreferences = z.infer<typeof MetadataPreferencesSchema>;
-export type MetadataPreferencesNotifications = z.infer<typeof MetadataPreferencesNotificationsSchema>;
-export type Organization = z.infer<typeof OrganizationSchema>;
-export type OrganizationSettings = z.infer<typeof OrganizationSettingsSchema>;
-export type OrganizationSettingsFeatures = z.infer<typeof OrganizationSettingsFeaturesSchema>;
-export type PasswordPolicy = z.infer<typeof PasswordPolicySchema>;
-export type Root = z.infer<typeof RootSchema>;
-export type RootStatistics = z.infer<typeof RootStatisticsSchema>;
-export type Security = z.infer<typeof SecuritySchema>;
-export type User = z.infer<typeof UserSchema>;
+export type { Metadata };
+export type { MetadataPreferences };
+export type { MetadataPreferencesNotifications };
+export type { Organization };
+export type { OrganizationSettings };
+export type { OrganizationSettingsFeatures };
+export type { PasswordPolicy };
+export type { Root };
+export type { RootStatistics };
+export type { Security };
+export type { User };
 
 export { MetadataSchema };
 export { MetadataPreferencesSchema };

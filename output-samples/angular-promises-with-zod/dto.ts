@@ -2,9 +2,13 @@
 // Do not modify manually
 
 import {
+  User,
   UserSchema,
+  UserProfile,
   UserProfileSchema,
+  Address,
   AddressSchema,
+  ApiResponse,
   ApiResponseSchema,
 } from "./schema";
 import { z } from "zod";
@@ -17,10 +21,10 @@ export interface CreateUserRequest {
   address?: Address;
 }
 
-export type User = z.infer<typeof UserSchema>;
-export type UserProfile = z.infer<typeof UserProfileSchema>;
-export type Address = z.infer<typeof AddressSchema>;
-export type ApiResponse = z.infer<typeof ApiResponseSchema>;
+export type { User };
+export type { UserProfile };
+export type { Address };
+export type { ApiResponse };
 
 export { UserSchema };
 export { UserProfileSchema };

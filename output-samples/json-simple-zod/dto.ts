@@ -2,17 +2,21 @@
 // Do not modify manually
 
 import {
+  RootAddress,
   RootAddressSchema,
+  ProfileSocialLinks,
   ProfileSocialLinksSchema,
+  Profile,
   ProfileSchema,
+  Root,
   RootSchema,
 } from "./schema";
 import { z } from "zod";
 
-export type RootAddress = z.infer<typeof RootAddressSchema>;
-export type ProfileSocialLinks = z.infer<typeof ProfileSocialLinksSchema>;
-export type Profile = z.infer<typeof ProfileSchema>;
-export type Root = z.infer<typeof RootSchema>;
+export type { RootAddress };
+export type { ProfileSocialLinks };
+export type { Profile };
+export type { Root };
 
 export { RootAddressSchema };
 export { ProfileSocialLinksSchema };
