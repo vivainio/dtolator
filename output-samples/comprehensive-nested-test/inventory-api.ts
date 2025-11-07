@@ -6,13 +6,15 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { fillUrl } from './fill-url';
-import {
+import type {
   Inventory,
-  InventorySchema,
   InventoryLevelsQueryParams,
   InventoryResponse,
-  InventoryResponseSchema,
   UpdateInventoryRequest,
+} from './dto';
+import {
+  InventorySchema,
+  InventoryResponseSchema,
 } from './dto';
 
 @Injectable({ providedIn: 'root' })

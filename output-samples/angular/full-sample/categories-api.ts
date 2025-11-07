@@ -7,10 +7,12 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
 import { fillUrl } from './fill-url';
-import {
+import type {
   Category,
-  CategorySchema,
   CreateCategoryRequest,
+} from './dto';
+import {
+  CategorySchema,
 } from './dto';
 
 @Injectable({ providedIn: 'root' })

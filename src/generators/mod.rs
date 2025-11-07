@@ -6,6 +6,7 @@ pub mod pydantic;
 pub mod python_dict;
 pub mod typescript;
 pub mod zod;
+pub mod zod_schema;
 
 use crate::openapi::OpenApiSchema;
 use anyhow::Result;

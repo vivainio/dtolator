@@ -5,7 +5,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
 import { fillUrl } from './fill-url';
-import {
+import type {
   ApiResponse,
   CreateUserRequest,
   User,

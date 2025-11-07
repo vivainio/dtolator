@@ -1,3 +1,4 @@
+use crate::generators::zod_schema::{NumberConstraints, StringConstraints, ZodValue};
 use crate::generators::Generator;
 use crate::openapi::{OpenApiSchema, Schema};
 use anyhow::Result;
@@ -152,16 +153,13 @@ impl ZodGenerator {
         }
     }
 
-    fn escape_regex_pattern(pattern: &str) -> String {
-        pattern.replace('\\', "\\\\").replace('/', "\\/")
-    }
-
     fn generate_schema(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
 
         let schema_name = format!("{name}Schema");
         output.push_str(&format!("{}export const {} = ", self.indent(), schema_name));
-        output.push_str(&self.schema_to_zod(schema)?);
+        let zod_value = self.schema_to_zod(schema)?;
+        output.push_str(&format!("{zod_value}"));
         output.push_str(";\n\n");
 
         output.push_str(&format!(
@@ -175,13 +173,13 @@ impl ZodGenerator {
     }
 
     #[allow(clippy::only_used_in_recursion)]
-    fn schema_to_zod(&self, schema: &Schema) -> Result<String> {
+    fn schema_to_zod(&self, schema: &Schema) -> Result<ZodValue> {
         match schema {
             Schema::Reference { reference } => {
                 let ref_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);
-                Ok(format!("{ref_name}Schema"))
+                Ok(ZodValue::Reference(ref_name.to_string()))
             }
             Schema::Object {
                 schema_type,
@@ -201,28 +199,25 @@ impl ZodGenerator {
                 pattern,
                 ..
             } => {
-                #[allow(unused_assignments)]
-                let mut zod_schema = String::new();
-
-                // Handle allOf, oneOf, anyOf
+                let value = // Handle allOf, oneOf, anyOf
                 if let Some(all_of_schemas) = all_of {
-                    let schemas: Result<Vec<String>, _> = all_of_schemas
+                    let schemas: Result<Vec<ZodValue>> = all_of_schemas
                         .iter()
                         .map(|s| self.schema_to_zod(s))
                         .collect();
-                    zod_schema = format!("z.intersection({})", schemas?.join(", z.intersection("));
+                    ZodValue::Intersection(schemas?)
                 } else if let Some(one_of_schemas) = one_of {
-                    let schemas: Result<Vec<String>, _> = one_of_schemas
+                    let schemas: Result<Vec<ZodValue>> = one_of_schemas
                         .iter()
                         .map(|s| self.schema_to_zod(s))
                         .collect();
-                    zod_schema = format!("z.union([{}])", schemas?.join(", "));
+                    ZodValue::Union(schemas?)
                 } else if let Some(any_of_schemas) = any_of {
-                    let schemas: Result<Vec<String>, _> = any_of_schemas
+                    let schemas: Result<Vec<ZodValue>> = any_of_schemas
                         .iter()
                         .map(|s| self.schema_to_zod(s))
                         .collect();
-                    zod_schema = format!("z.union([{}])", schemas?.join(", "));
+                    ZodValue::Union(schemas?)
                 } else {
                     // Handle basic types
                     match schema_type.as_deref() {
@@ -231,62 +226,30 @@ impl ZodGenerator {
                                 let enum_strings: Vec<String> = enum_vals
                                     .iter()
                                     .filter_map(|v| v.as_str())
-                                    .map(|s| format!("\"{s}\""))
+                                    .map(|s| s.to_string())
                                     .collect();
-                                zod_schema = format!("z.enum([{}])", enum_strings.join(", "));
+                                ZodValue::Enum(enum_strings)
                             } else {
-                                // Handle format validations using Zod v4 syntax
-                                if let Some(fmt) = format {
-                                    zod_schema = match fmt.as_str() {
-                                        "uuid" => "z.uuid()".to_string(),
-                                        "email" => "z.email()".to_string(),
-                                        "uri" => "z.url()".to_string(),
-                                        "date" => "z.iso.date()".to_string(),
-                                        "date-time" => "z.iso.datetime()".to_string(),
-                                        _ => "z.string()".to_string(),
-                                    };
-                                } else {
-                                    zod_schema = "z.string()".to_string();
-                                }
-
-                                // Add length constraints
-                                if let Some(min_len) = min_length {
-                                    zod_schema.push_str(&format!(".min({min_len})"));
-                                }
-                                if let Some(max_len) = max_length {
-                                    zod_schema.push_str(&format!(".max({max_len})"));
-                                }
-
-                                // Add pattern constraint
-                                if let Some(pat) = pattern {
-                                    let escaped_pattern = Self::escape_regex_pattern(pat);
-                                    zod_schema.push_str(&format!(".regex(/{escaped_pattern}/)"));
-                                }
+                                ZodValue::String(StringConstraints {
+                                    format: format.clone(),
+                                    min_length: *min_length,
+                                    max_length: *max_length,
+                                    pattern: pattern.clone(),
+                                })
                             }
                         }
-                        Some("number") | Some("integer") => {
-                            zod_schema = "z.number()".to_string();
-
-                            if let Some(min) = minimum {
-                                zod_schema.push_str(&format!(".min({min})"));
-                            }
-                            if let Some(max) = maximum {
-                                zod_schema.push_str(&format!(".max({max})"));
-                            }
-
-                            if schema_type.as_deref() == Some("integer") {
-                                zod_schema.push_str(".int()");
-                            }
-                        }
-                        Some("boolean") => {
-                            zod_schema = "z.boolean()".to_string();
-                        }
+                        Some("number") | Some("integer") => ZodValue::Number(NumberConstraints {
+                            is_integer: schema_type.as_deref() == Some("integer"),
+                            minimum: *minimum,
+                            maximum: *maximum,
+                        }),
+                        Some("boolean") => ZodValue::Boolean,
                         Some("array") => {
                             if let Some(items_schema) = items {
                                 let item_type = self.schema_to_zod(items_schema)?;
-                                zod_schema = format!("z.array({item_type})");
+                                ZodValue::Array(Box::new(item_type))
                             } else {
-                                zod_schema = "z.array(z.unknown())".to_string();
+                                ZodValue::Array(Box::new(ZodValue::Unknown))
                             }
                         }
                         Some("object") | None => {
@@ -298,33 +261,25 @@ impl ZodGenerator {
                                         .as_ref()
                                         .map(|req| req.contains(prop_name))
                                         .unwrap_or(false);
-
-                                    let prop_def = if is_required {
-                                        format!("  {prop_name}: {prop_zod}")
-                                    } else {
-                                        format!("  {prop_name}: {prop_zod}.optional()")
-                                    };
-                                    object_props.push(prop_def);
+                                    object_props.push((prop_name.clone(), prop_zod, is_required));
                                 }
-
-                                zod_schema =
-                                    format!("z.object({{\n{}\n}})", object_props.join(",\n"));
+                                ZodValue::Object(object_props)
                             } else {
-                                zod_schema = "z.object({})".to_string();
+                                ZodValue::Object(Vec::new())
                             }
                         }
-                        _ => {
-                            zod_schema = "z.unknown()".to_string();
-                        }
+                        _ => ZodValue::Unknown,
                     }
-                }
+                };
 
                 // Apply nullable if needed
-                if nullable.unwrap_or(false) {
-                    zod_schema = format!("{zod_schema}.nullable()");
-                }
+                let result = if nullable.unwrap_or(false) {
+                    ZodValue::Nullable(Box::new(value))
+                } else {
+                    value
+                };
 
-                Ok(zod_schema)
+                Ok(result)
             }
         }
     }

@@ -6,11 +6,13 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { fillUrl } from './fill-url';
-import {
+import type {
   CreateOrderRequest,
   Order,
-  OrderSchema,
   UpdateOrderStatusRequest,
+} from './dto';
+import {
+  OrderSchema,
 } from './dto';
 
 @Injectable({ providedIn: 'root' })

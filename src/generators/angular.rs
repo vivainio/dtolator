@@ -279,12 +279,10 @@ impl AngularGenerator {
                     } else {
                         format!("this.http.post<{return_type}>(url, null, {{ headers: {headers_var} }})")
                     }
+                } else if headers_var == "headers" {
+                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
                 } else {
-                    if headers_var == "headers" {
-                        format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
-                    } else {
-                        format!("this.http.post<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
-                    }
+                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
                 }
             }
             "PUT" => {
@@ -296,12 +294,10 @@ impl AngularGenerator {
                             "this.http.put<{return_type}>(url, null, {{ headers: {headers_var} }})"
                         )
                     }
+                } else if headers_var == "headers" {
+                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
                 } else {
-                    if headers_var == "headers" {
-                        format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
-                    } else {
-                        format!("this.http.put<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
-                    }
+                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
                 }
             }
             "DELETE" => {
@@ -318,12 +314,10 @@ impl AngularGenerator {
                     } else {
                         format!("this.http.patch<{return_type}>(url, null, {{ headers: {headers_var} }})")
                     }
+                } else if headers_var == "headers" {
+                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
                 } else {
-                    if headers_var == "headers" {
-                        format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
-                    } else {
-                        format!("this.http.patch<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
-                    }
+                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
                 }
             }
             _ => {

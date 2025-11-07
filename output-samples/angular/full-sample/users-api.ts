@@ -6,13 +6,15 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { fillUrl, mergeHeaders } from './fill-url';
-import {
+import type {
   AllUsersWithPaginationHeaders,
   AllUsersWithPaginationQueryParams,
   CreateUserRequest,
   User,
-  UserSchema,
   UserListResponse,
+} from './dto';
+import {
+  UserSchema,
   UserListResponseSchema,
 } from './dto';
 

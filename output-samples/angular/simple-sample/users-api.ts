@@ -7,11 +7,13 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { z } from 'zod';
 import { fillUrl } from './fill-url';
-import {
+import type {
   ApiResponse,
-  ApiResponseSchema,
   CreateUserRequest,
   User,
+} from './dto';
+import {
+  ApiResponseSchema,
   UserSchema,
 } from './dto';
 
