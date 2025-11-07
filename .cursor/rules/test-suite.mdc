@@ -1,0 +1,126 @@
+---
+alwaysApply: true
+description: "Test suite and integration testing guidelines for dtolator project"
+---
+
+# Test Suite Documentation
+
+## Overview
+
+The dtolator project uses a comprehensive Python-based test suite (`test-suite.py`) to verify that code generation works correctly across all supported output formats. The test suite compares generated output against expected sample files in `output-samples/`.
+
+## Running the Test Suite
+
+### Basic Usage
+
+```bash
+python test-suite.py                    # Build and run all tests
+python test-suite.py --no-build         # Run tests without rebuilding (faster)
+python test-suite.py --refresh          # Regenerate expected output files
+python test-suite.py --typecheck        # Enable TypeScript type checking
+python test-suite.py --help             # Show help information
+```
+
+### Common Scenarios
+
+**Run tests after code changes (with build):**
+```bash
+python test-suite.py
+```
+
+**Run tests quickly during development (skip build):**
+```bash
+python test-suite.py --no-build
+```
+
+**Update expected outputs after intentional improvements:**
+```bash
+python test-suite.py --refresh
+```
+
+**Verify TypeScript type safety:**
+```bash
+python test-suite.py --typecheck
+```
+
+## Understanding Test Output
+
+### Success
+All 22 tests pass and display:
+```
+Total tests: 22
+Passed: 22
+Failed: 0
+
+ALL TESTS PASSED!
+```
+
+### Failures
+If tests fail, review the diff output to understand what changed:
+```
+ERROR: Output differs from expected
+   File differs: schema.ts
+   Diff for schema.ts:
+-  old_line
++  new_line
+```
+
+## When to Refresh Test Outputs
+
+**DO refresh outputs when:**
+- Intentionally improving code generation (e.g., using regex literals instead of `new RegExp()`)
+- Fixing bugs that affect generated code format
+- Adding new features that improve output quality
+
+**DO NOT refresh outputs when:**
+- Tests fail due to regressions or bugs - fix the underlying code instead
+- Unrelated files changed - investigate why tests are affected
+
+## Test Coverage
+
+The suite covers 22 test cases across:
+- **Angular**: Services with/without Zod validation, promises support
+- **TypeScript**: Interfaces and type definitions
+- **Zod**: Schema validation
+- **Pydantic**: Python models
+- **Python TypedDict**: Typed dictionary definitions
+- **C#/.NET**: Classes with System.Text.Json
+- **JSON Schema**: Generation and conversion from various inputs
+
+Each test case:
+1. Runs dtolator with specific flags
+2. Generates output to a temporary directory
+3. Compares with expected files in `output-samples/`
+4. Reports success or detailed diff on failure
+
+## Output Samples Directory
+
+The `output-samples/` directory contains expected outputs organized by test type:
+
+```
+output-samples/
+├── angular/
+│   ├── full-sample/
+│   └── simple-sample/
+├── nested-test/
+├── pydantic/
+├── dotnet/
+├── json-simple-zod/
+└── ... (other output types)
+```
+
+After running `--refresh`, all expected files are updated to match current dtolator output.
+
+## TypeScript Checking
+
+When `--typecheck` is enabled, generated TypeScript files are validated using the TypeScript compiler. Requires:
+- `npm install` to be run first
+- TypeScript and dependencies available in `node_modules/`
+
+## Integration with Development
+
+After making code changes:
+1. Run tests: `python test-suite.py`
+2. If tests fail with intentional improvements, review the diff
+3. If the change is correct, refresh: `python test-suite.py --refresh`
+4. Commit both code changes and updated test outputs
