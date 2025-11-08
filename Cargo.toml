@@ -1,6 +1,6 @@
 [package]
 name = "dtolator"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2021"
 description = "Convert OpenAPI schema JSON files to Zod schema definitions or TypeScript interfaces"
 license = "MIT"
