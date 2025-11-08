@@ -9,9 +9,9 @@ updates:
       time: "06:00"
     open-pull-requests-limit: 10
     reviewers:
-      - "@maintainers"
+      - "vivainio"
     assignees:
-      - "@maintainers"
+      - "vivainio"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
@@ -26,9 +26,9 @@ updates:
       time: "06:00"
     open-pull-requests-limit: 5
     reviewers:
-      - "@maintainers"
+      - "vivainio"
     assignees:
-      - "@maintainers"
+      - "vivainio"
     commit-message:
       prefix: "ci"
       include: "scope" 
