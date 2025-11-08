@@ -83,11 +83,21 @@ struct Cli {
     /// Enable debug output
     #[arg(long)]
     debug: bool,
+
+    /// Hide version from generated output headers (use 'dtolator' instead of 'dtolator==VERSION')
+    #[arg(long)]
+    hide_version: bool,
 }
 
 impl Cli {
     fn build_command_string(&self) -> String {
-        let mut parts = vec!["dtolator".to_string()];
+        let version = env!("CARGO_PKG_VERSION");
+        let command_name = if self.hide_version {
+            "dtolator".to_string()
+        } else {
+            format!("dtolator=={version}")
+        };
+        let mut parts = vec![command_name];
 
         if let Some(openapi_path) = &self.from_openapi {
             let filename = openapi_path

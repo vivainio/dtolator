@@ -553,16 +553,16 @@ class TestSuite:
         # Prepare command based on input type
         if "--from-json" in test_case.command_args:
             # JSON input test case
-            cmd = [str(self.dtolator_binary), "--from-json", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--from-json"]
+            cmd = [str(self.dtolator_binary), "--from-json", test_case.input_file, "--hide-version"] + [arg for arg in test_case.command_args if arg != "--from-json"]
         elif "--from-json-schema" in test_case.command_args:
             # JSON Schema input test case
-            cmd = [str(self.dtolator_binary), "--from-json-schema", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--from-json-schema"]
+            cmd = [str(self.dtolator_binary), "--from-json-schema", test_case.input_file, "--hide-version"] + [arg for arg in test_case.command_args if arg != "--from-json-schema"]
         elif "--from-openapi" in test_case.command_args:
             # OpenAPI test case that already specifies --from-openapi in command_args
-            cmd = [str(self.dtolator_binary), "--from-openapi", test_case.input_file] + [arg for arg in test_case.command_args if arg != "--from-openapi"]
+            cmd = [str(self.dtolator_binary), "--from-openapi", test_case.input_file, "--hide-version"] + [arg for arg in test_case.command_args if arg != "--from-openapi"]
         else:
             # Default: assume OpenAPI input for backward compatibility
-            cmd = [str(self.dtolator_binary), "--from-openapi", test_case.input_file] + test_case.command_args
+            cmd = [str(self.dtolator_binary), "--from-openapi", test_case.input_file, "--hide-version"] + test_case.command_args
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
