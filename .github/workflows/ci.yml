@@ -191,27 +191,23 @@ jobs:
       with:
         path: dist
     
-    - name: Create release archives
+    - name: Prepare binaries
       run: |
         cd dist
         for dir in */; do
           if [ -d "$dir" ]; then
             cd "$dir"
-            if [[ "$dir" == *"windows"* ]]; then
-              zip -r "../${dir%/}.zip" .
-            else
-              tar -czf "../${dir%/}.tar.gz" .
-            fi
+            binary=$(ls)
+            mv "$binary" "../$binary"
             cd ..
           fi
         done
+        rm -rf */
     
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        files: |
-          dist/*.zip
-          dist/*.tar.gz
+        files: dist/*
         generate_release_notes: true
         draft: false
         prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
