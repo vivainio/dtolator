@@ -196,10 +196,14 @@ jobs:
         cd dist
         for dir in */; do
           if [ -d "$dir" ]; then
-            cd "$dir"
-            binary=$(ls)
-            mv "$binary" "../$binary"
-            cd ..
+            dirname="${dir%/}"
+            binary=$(ls "$dir")
+            extension="${binary##*.}"
+            if [ "$extension" = "exe" ]; then
+              mv "$dir$binary" "../${dirname}.exe"
+            else
+              mv "$dir$binary" "../$dirname"
+            fi
           fi
         done
         rm -rf */
