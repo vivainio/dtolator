@@ -405,7 +405,7 @@ If using Zod validation (recommended):
 ```json
 {
   "dependencies": {
-    "zod": "^3.22.0"
+    "zod": "^4.1.12"
   }
 }
 ```
@@ -471,39 +471,13 @@ const updatedUser = await this.usersApi.updateUser(123, {
 
 ### Best Practices
 
-1. **Choose Observable or Promise based on your needs:**
-   - Use **Observables** for reactive programming, data streams, and when you need operators like `map`, `filter`, `debounce`
-   - Use **Promises** for simple async operations, better async/await support, and when working with non-reactive code
-
-2. **Enable Zod validation for production apps:**
-   ```bash
-   dtolator --from-openapi api-spec.json -o ./src/app/api --angular --promises --zod
-   ```
-
-3. **Import only what you need:**
-   ```typescript
-   // Good: Import specific services and types
-   import { UsersApi, User, CreateUserRequest } from './api';
-   
-   // Avoid: Importing everything
-   import * as API from './api';
-   ```
-
-4. **Handle errors appropriately:**
-   ```typescript
-   try {
-     const result = await this.usersApi.createUser(userData);
-   } catch (error) {
-     // Handle both network errors and validation errors
-     this.handleApiError(error);
-   }
-   ```
-
-### Integration with Angular HTTP Interceptors
-
-The generated services work seamlessly with Angular HTTP interceptors for authentication, logging, etc.:
+- **Choose Observable or Promise based on your needs:** Use Observables for reactive programming and data streams with operators like `map`, `filter`, `debounce`. Use Promises for simple async operations and async/await support.
+- **Enable Zod validation for production:** `dtolator --from-openapi api-spec.json -o ./src/app/api --angular --promises --zod`
+- **Import specific services and types:** `import { UsersApi, User } from './api'` instead of wildcard imports
+- **Work with Angular HTTP Interceptors:** Generated services automatically integrate with interceptors for authentication and logging
 
 ```typescript
+// Interceptors work automatically with generated services
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
@@ -514,7 +488,6 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 }
 
-// Your generated services automatically benefit from this interceptor
 const users = await this.usersApi.listAllUsers(); // Includes auth header
 ```
 
