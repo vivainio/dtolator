@@ -500,6 +500,8 @@ dtolator includes two sample OpenAPI specifications:
 - **`simple-sample.json`** - Basic example with User schema (great for learning)
 - **`full-sample.json`** - Comprehensive e-commerce API with Users, Products, Orders, and multiple endpoints (real-world example)
 
+All generated output samples from these specifications are available in the [output-samples/](output-samples/) directory for reference.
+
 ### Sample OpenAPI Schema
 
 ```json
@@ -573,19 +575,24 @@ export interface User {
 # Generated Pydantic models from OpenAPI schema
 # Do not modify this file manually
 
-from datetime import date, datetime
+from pydantic import BaseModel, Field
+from typing import Optional, Union, List, Dict, Any
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
-from uuid import UUID
-
-from pydantic import BaseModel, EmailStr, Field, HttpUrl
+from datetime import datetime
 
 class User(BaseModel):
     id: int
     email: EmailStr
     name: str = Field(min_length=1, max_length=100)
+    age: Optional[int] = Field(None, ge=0, le=150)
+    isActive: Optional[bool] = None
+    tags: Optional[List[str]] = None
     status: Optional[Literal["active", "inactive", "pending"]] = None
+    profile: Optional[UserProfile] = None
+    address: Optional[Address] = None
 ```
+
+See [output-samples/pydantic/](output-samples/pydantic/models.py) for a complete real-world example.
 
 ### Generated Python TypedDict Definitions
 
@@ -593,11 +600,9 @@ class User(BaseModel):
 # Generated Python TypedDict definitions from OpenAPI schema
 # Do not modify this file manually
 
-from datetime import date, datetime
+from typing import TypedDict, Optional, Union, List, Dict, Any
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
-from typing_extensions import TypedDict
-from uuid import UUID
+from datetime import datetime
 
 class UserRequired(TypedDict):
     id: int
@@ -613,28 +618,27 @@ class User(UserRequired, total=False):
     address: Address
 ```
 
+See [output-samples/python-typed-dict/](output-samples/python-typed-dict/typed_dicts.py) for a complete real-world example.
+
 ### Generated C# Classes
 
 ```csharp
 // Generated C# classes from OpenAPI schema
 // Do not modify this file manually
 
-using System;
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace GeneratedApiModels;
-
-public class User
+public record User
 {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public required long Id { get; set; }
     
     [JsonPropertyName("email")]
-    public string Email { get; set; }
+    public required string Email { get; set; }
     
     [JsonPropertyName("name")]
-    public string Name { get; set; }
+    public required string Name { get; set; }
     
     [JsonPropertyName("age")]
     public int? Age { get; set; }
@@ -646,27 +650,26 @@ public class User
     public List<string> Tags { get; set; }
     
     [JsonPropertyName("status")]
-    public string Status { get; set; }
+    public string? Status { get; set; }
     
     [JsonPropertyName("profile")]
-    public UserProfile Profile { get; set; }
+    public UserProfile? Profile { get; set; }
     
     [JsonPropertyName("address")]
-    public Address Address { get; set; }
+    public Address? Address { get; set; }
 }
 
-public enum UserStatus
+public record UserProfile
 {
-    [JsonPropertyName("active")]
-    Active,
+    [JsonPropertyName("firstName")]
+    public required string FirstName { get; set; }
     
-    [JsonPropertyName("inactive")]
-    Inactive,
-    
-    [JsonPropertyName("pending")]
-    Pending
+    [JsonPropertyName("lastName")]
+    public required string LastName { get; set; }
 }
 ```
+
+See [output-samples/dotnet/](output-samples/dotnet/Models.cs) for a complete real-world example.
 
 ### Generated API Endpoints
 
