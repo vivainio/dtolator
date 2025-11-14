@@ -1087,4 +1087,27 @@ dtolator --from-json test-data-complex.json --typescript
 dtolator --from-json-schema complex-schema.json --zod
 ```
 
-The generated code maintains complete type safety and validation for all nested structures, making it easy to work with complex API responses and requests in your applications. 
+The generated code maintains complete type safety and validation for all nested structures, making it easy to work with complex API responses and requests in your applications.
+
+## Testing & Code Coverage
+
+The dtolator project includes a comprehensive test suite and code coverage analysis tools.
+
+### Running Tests
+
+```cmd
+run-tests.bat              # Run all tests
+run-tests.bat --refresh    # Update expected outputs after intentional changes
+```
+
+### Code Coverage
+
+Measure how much of the codebase is exercised by tests:
+
+```cmd
+run-tests.bat --coverage              # Display coverage in terminal
+run-tests.bat --coverage --html       # Generate HTML coverage report
+run-tests.bat --coverage --json       # Generate JSON coverage report
+```
+
+See [COVERAGE.md](COVERAGE.md) for detailed coverage analysis guide.

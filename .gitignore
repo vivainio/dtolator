@@ -37,6 +37,12 @@ Thumbs.db
 
 # Test artifacts
 *.profraw
+temp-*/
+test-*/
+templates/
+
+# Coverage reports
+coverage/
 
 # Node.js/TypeScript
 node_modules/
