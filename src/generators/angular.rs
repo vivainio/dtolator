@@ -9,6 +9,12 @@ pub struct AngularGenerator {
     promises: bool,
 }
 
+impl Default for AngularGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AngularGenerator {
     pub fn new() -> Self {
         Self {

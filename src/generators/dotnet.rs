@@ -6,6 +6,12 @@ pub struct DotNetGenerator {
     indent_level: usize,
 }
 
+impl Default for DotNetGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DotNetGenerator {
     pub fn new() -> Self {
         Self { indent_level: 0 }

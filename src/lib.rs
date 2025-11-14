@@ -112,7 +112,12 @@ fn build_command_string_from_options(options: &GenerateOptions) -> String {
     }
 
     // For non-Angular, put --zod after main generator
-    if options.with_zod && !matches!(options.generator_type, GeneratorType::Angular | GeneratorType::Zod) {
+    if options.with_zod
+        && !matches!(
+            options.generator_type,
+            GeneratorType::Angular | GeneratorType::Zod
+        )
+    {
         parts.push("--zod".to_string());
     }
 
@@ -132,17 +137,22 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
     // Read and parse the input file into an OpenApiSchema
     let schema = match options.input_type {
         InputType::OpenApi => {
-            let input_content = std::fs::read_to_string(&options.input_path).with_context(
-                || format!("Failed to read OpenAPI file: {}", options.input_path.display()),
-            )?;
+            let input_content =
+                std::fs::read_to_string(&options.input_path).with_context(|| {
+                    format!(
+                        "Failed to read OpenAPI file: {}",
+                        options.input_path.display()
+                    )
+                })?;
 
             serde_json::from_str::<OpenApiSchema>(&input_content)
                 .with_context(|| "Failed to parse OpenAPI schema JSON")?
         }
         InputType::Json => {
-            let input_content = std::fs::read_to_string(&options.input_path).with_context(
-                || format!("Failed to read JSON file: {}", options.input_path.display()),
-            )?;
+            let input_content =
+                std::fs::read_to_string(&options.input_path).with_context(|| {
+                    format!("Failed to read JSON file: {}", options.input_path.display())
+                })?;
 
             json_to_openapi_schema_with_root(
                 serde_json::from_str(&input_content)?,
@@ -150,9 +160,13 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             )?
         }
         InputType::JsonSchema => {
-            let input_content = std::fs::read_to_string(&options.input_path).with_context(
-                || format!("Failed to read JSON Schema file: {}", options.input_path.display()),
-            )?;
+            let input_content =
+                std::fs::read_to_string(&options.input_path).with_context(|| {
+                    format!(
+                        "Failed to read JSON Schema file: {}",
+                        options.input_path.display()
+                    )
+                })?;
 
             let cleaned_content = strip_json_comments(&input_content);
             json_schema_to_openapi_schema(
@@ -209,8 +223,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
         }
         GeneratorType::DotNet => {
             let dotnet_generator = DotNetGenerator::new();
-            let dotnet_output =
-                dotnet_generator.generate_with_command(&schema, &command_string)?;
+            let dotnet_output = dotnet_generator.generate_with_command(&schema, &command_string)?;
 
             let models_path = options.output_dir.join("Models.cs");
             fs::write(&models_path, dotnet_output).with_context(|| {
@@ -233,8 +246,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
         GeneratorType::Zod => {
             // Generate both dto.ts (with imports) and schema.ts, like the CLI --zod path
             let zod_generator = ZodGenerator::new();
-            let zod_output =
-                zod_generator.generate_with_command(&schema, &command_string)?;
+            let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
             let schema_path = options.output_dir.join("schema.ts");
             fs::write(&schema_path, zod_output).with_context(|| {
@@ -245,9 +257,8 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
             let dto_path = options.output_dir.join("dto.ts");
-            fs::write(&dto_path, ts_output).with_context(|| {
-                format!("Failed to write dto.ts file: {}", dto_path.display())
-            })?;
+            fs::write(&dto_path, ts_output)
+                .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
         }
         GeneratorType::TypeScript | GeneratorType::Endpoints => {
             if matches!(options.generator_type, GeneratorType::Endpoints) {
@@ -263,8 +274,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             } else if options.with_zod {
                 // TypeScript + Zod (same behavior as CLI with --typescript --zod)
                 let zod_generator = ZodGenerator::new();
-                let zod_output =
-                    zod_generator.generate_with_command(&schema, &command_string)?;
+                let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
                 let schema_path = options.output_dir.join("schema.ts");
                 fs::write(&schema_path, zod_output).with_context(|| {
@@ -272,8 +282,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 })?;
 
                 let ts_generator = TypeScriptGenerator::new();
-                let ts_output =
-                    ts_generator.generate_with_imports(&schema, &command_string)?;
+                let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
                 fs::write(&dto_path, ts_output).with_context(|| {
@@ -282,8 +291,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             } else {
                 // TypeScript only
                 let ts_generator = TypeScriptGenerator::new();
-                let ts_output =
-                    ts_generator.generate_with_command(&schema, &command_string)?;
+                let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
                 fs::write(&dto_path, ts_output).with_context(|| {
@@ -487,9 +495,8 @@ where
     // Read and parse the input file
     let schema = if let Some(openapi_path) = &cli.from_openapi {
         // Read and parse OpenAPI schema
-        let input_content = std::fs::read_to_string(openapi_path).with_context(|| {
-            format!("Failed to read OpenAPI file: {}", openapi_path.display())
-        })?;
+        let input_content = std::fs::read_to_string(openapi_path)
+            .with_context(|| format!("Failed to read OpenAPI file: {}", openapi_path.display()))?;
 
         serde_json::from_str::<OpenApiSchema>(&input_content)
             .with_context(|| "Failed to parse OpenAPI schema JSON")?
@@ -501,13 +508,12 @@ where
         json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
     } else if let Some(json_schema_path) = &cli.from_json_schema {
         // Read and parse JSON Schema, then convert to OpenAPI schema
-        let input_content =
-            std::fs::read_to_string(json_schema_path).with_context(|| {
-                format!(
-                    "Failed to read JSON Schema file: {}",
-                    json_schema_path.display()
-                )
-            })?;
+        let input_content = std::fs::read_to_string(json_schema_path).with_context(|| {
+            format!(
+                "Failed to read JSON Schema file: {}",
+                json_schema_path.display()
+            )
+        })?;
 
         // Strip JavaScript-style comments that might be in generated JSON Schema files
         let cleaned_content = strip_json_comments(&input_content);
@@ -600,8 +606,7 @@ where
 
                 // Generate Zod schemas first
                 let zod_generator = ZodGenerator::new();
-                let zod_output =
-                    zod_generator.generate_with_command(&schema, &command_string)?;
+                let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
                 let schema_path = output_dir.join("schema.ts");
                 fs::write(&schema_path, zod_output).with_context(|| {
@@ -610,8 +615,7 @@ where
 
                 // Generate TypeScript interfaces that import from schema.ts
                 let ts_generator = TypeScriptGenerator::new();
-                let ts_output =
-                    ts_generator.generate_with_imports(&schema, &command_string)?;
+                let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
                 let dto_path = output_dir.join("dto.ts");
                 fs::write(&dto_path, ts_output).with_context(|| {
@@ -624,8 +628,7 @@ where
             } else {
                 // Generate only dto.ts with TypeScript interfaces
                 let ts_generator = TypeScriptGenerator::new();
-                let ts_output =
-                    ts_generator.generate_with_command(&schema, &command_string)?;
+                let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
                 let dto_path = output_dir.join("dto.ts");
                 fs::write(&dto_path, ts_output).with_context(|| {
@@ -1553,5 +1556,3 @@ fn strip_json_comments(content: &str) -> String {
 
     result
 }
-
-

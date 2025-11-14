@@ -9,6 +9,12 @@ pub struct JsonSchemaGenerator {
     indent_level: usize,
 }
 
+impl Default for JsonSchemaGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JsonSchemaGenerator {
     pub fn new() -> Self {
         Self { indent_level: 0 }

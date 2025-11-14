@@ -9,6 +9,12 @@ pub struct ZodGenerator {
     indent_level: usize,
 }
 
+impl Default for ZodGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ZodGenerator {
     pub fn new() -> Self {
         Self { indent_level: 0 }

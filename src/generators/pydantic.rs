@@ -6,6 +6,12 @@ pub struct PydanticGenerator {
     indent_level: usize,
 }
 
+impl Default for PydanticGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PydanticGenerator {
     pub fn new() -> Self {
         Self { indent_level: 0 }

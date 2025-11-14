@@ -6,6 +6,12 @@ pub struct PythonDictGenerator {
     indent_level: usize,
 }
 
+impl Default for PythonDictGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PythonDictGenerator {
     pub fn new() -> Self {
         Self { indent_level: 0 }

@@ -8,6 +8,12 @@ pub struct TypeScriptGenerator {
     indent_level: usize,
 }
 
+impl Default for TypeScriptGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeScriptGenerator {
     pub fn new() -> Self {
         Self { indent_level: 0 }

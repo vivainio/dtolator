@@ -6,6 +6,12 @@ pub struct EndpointsGenerator {
     // Remove unused include_query_params field
 }
 
+impl Default for EndpointsGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EndpointsGenerator {
     pub fn new() -> Self {
         Self {}
