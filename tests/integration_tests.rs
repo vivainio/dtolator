@@ -193,10 +193,7 @@ impl TestSuite {
 
         // Normalize by removing trailing whitespace from each line and blank lines at end
         let normalize = |content: &str| {
-            let lines: Vec<&str> = content
-                .lines()
-                .map(|line| line.trim_end())
-                .collect();
+            let lines: Vec<&str> = content.lines().map(|line| line.trim_end()).collect();
             // Remove trailing empty lines
             let mut lines = lines;
             while lines.last() == Some(&"") {
@@ -221,7 +218,11 @@ impl TestSuite {
         Ok((false, diff_output))
     }
 
-    fn compare_directories(&self, expected_dir: &Path, actual_dir: &Path) -> Result<(bool, Vec<String>)> {
+    fn compare_directories(
+        &self,
+        expected_dir: &Path,
+        actual_dir: &Path,
+    ) -> Result<(bool, Vec<String>)> {
         let mut errors = Vec::new();
 
         let mut expected_files = std::collections::HashSet::new();
@@ -287,7 +288,11 @@ impl TestSuite {
                     }
                 }
                 Err(e) => {
-                    errors.push(format!("Error comparing {}: {}", file_rel_path.display(), e));
+                    errors.push(format!(
+                        "Error comparing {}: {}",
+                        file_rel_path.display(),
+                        e
+                    ));
                 }
             }
         }
@@ -298,15 +303,9 @@ impl TestSuite {
     fn determine_input_type(command_args: &[String]) -> InputType {
         if command_args.iter().any(|arg| arg == "--from-json") {
             InputType::Json
-        } else if command_args
-            .iter()
-            .any(|arg| arg == "--from-json-schema")
-        {
+        } else if command_args.iter().any(|arg| arg == "--from-json-schema") {
             InputType::JsonSchema
-        } else if command_args
-            .iter()
-            .any(|arg| arg == "--from-openapi")
-        {
+        } else if command_args.iter().any(|arg| arg == "--from-openapi") {
             InputType::OpenApi
         } else {
             InputType::OpenApi
@@ -318,22 +317,13 @@ impl TestSuite {
             GeneratorType::Angular
         } else if command_args.iter().any(|arg| arg == "--pydantic") {
             GeneratorType::Pydantic
-        } else if command_args
-            .iter()
-            .any(|arg| arg == "--python-dict")
-        {
+        } else if command_args.iter().any(|arg| arg == "--python-dict") {
             GeneratorType::PythonDict
         } else if command_args.iter().any(|arg| arg == "--dotnet") {
             GeneratorType::DotNet
-        } else if command_args
-            .iter()
-            .any(|arg| arg == "--json-schema")
-        {
+        } else if command_args.iter().any(|arg| arg == "--json-schema") {
             GeneratorType::JsonSchema
-        } else if command_args
-            .iter()
-            .any(|arg| arg == "--endpoints")
-        {
+        } else if command_args.iter().any(|arg| arg == "--endpoints") {
             GeneratorType::Endpoints
         } else if command_args.iter().any(|arg| arg == "--typescript") {
             GeneratorType::TypeScript
@@ -388,8 +378,7 @@ impl TestSuite {
                 fs::remove_dir_all(&expected_path)
                     .context("Failed to remove existing expected directory")?;
             }
-            fs::create_dir_all(&expected_path)
-                .context("Failed to create expected directory")?;
+            fs::create_dir_all(&expected_path).context("Failed to create expected directory")?;
 
             // Copy generated files to expected directory
             if output_dir.exists() {
@@ -409,12 +398,18 @@ impl TestSuite {
                             .context("Failed to get parent directory")?,
                     )
                     .context("Failed to create destination directory")?;
-                    fs::copy(entry.path(), &dest_path)
-                        .context("Failed to copy file")?;
+                    fs::copy(entry.path(), &dest_path).context("Failed to copy file")?;
                 }
             }
 
-            eprintln!("{}", format!("SUCCESS: Updated expected output in {}", test_case.expected_dir).green());
+            eprintln!(
+                "{}",
+                format!(
+                    "SUCCESS: Updated expected output in {}",
+                    test_case.expected_dir
+                )
+                .green()
+            );
             Ok(true)
         } else {
             // Compare with expected directory
@@ -449,7 +444,10 @@ impl TestSuite {
     fn run_all_tests(&mut self) -> Result<()> {
         if self.refresh_mode {
             eprintln!("{}", "=".repeat(60).cyan().bold());
-            eprintln!("{}", "Refreshing dtolator Test Expected Outputs".cyan().bold());
+            eprintln!(
+                "{}",
+                "Refreshing dtolator Test Expected Outputs".cyan().bold()
+            );
             eprintln!("{}", "=".repeat(60).cyan().bold());
         } else {
             eprintln!("{}", "=".repeat(60).cyan().bold());
@@ -499,7 +497,12 @@ impl TestSuite {
         if self.failed_tests == 0 {
             eprintln!("{}", "ALL TESTS PASSED!".green().bold());
         } else {
-            eprintln!("{}", format!("{} TEST(S) FAILED!", self.failed_tests).red().bold());
+            eprintln!(
+                "{}",
+                format!("{} TEST(S) FAILED!", self.failed_tests)
+                    .red()
+                    .bold()
+            );
         }
     }
 }
@@ -522,4 +525,3 @@ fn test_suite() {
         std::process::exit(1);
     }
 }
-
