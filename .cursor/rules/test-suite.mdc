@@ -7,40 +7,33 @@ description: "Test suite and integration testing guidelines for dtolator project
 
 ## Overview
 
-The dtolator project uses a comprehensive Python-based test suite (`test-suite.py`) to verify that code generation works correctly across all supported output formats. The test suite compares generated output against expected sample files in `output-samples/`.
+The dtolator project uses a comprehensive Rust-based integration test suite (`tests/integration_tests.rs`) to verify that code generation works correctly across all supported output formats. The test suite compares generated output against expected sample files in `output-samples/`.
 
 ## Running the Test Suite
 
 ### Basic Usage
 
-```bash
-python test-suite.py                    # Build and run all tests
-python test-suite.py --no-build         # Run tests without rebuilding (faster)
-python test-suite.py --refresh          # Regenerate expected output files
-python test-suite.py --typecheck        # Enable TypeScript type checking
-python test-suite.py --help             # Show help information
+```cmd
+run-tests.bat              # Build and run all tests
+run-tests.bat --refresh    # Regenerate expected output files
+run-tests.bat --help       # Show help information
 ```
 
 ### Common Scenarios
 
-**Run tests after code changes (with build):**
-```bash
-python test-suite.py
-```
-
-**Run tests quickly during development (skip build):**
-```bash
-python test-suite.py --no-build
+**Run tests after code changes (with full build):**
+```cmd
+run-tests.bat
 ```
 
 **Update expected outputs after intentional improvements:**
-```bash
-python test-suite.py --refresh
+```cmd
+run-tests.bat --refresh
 ```
 
-**Verify TypeScript type safety:**
-```bash
-python test-suite.py --typecheck
+**View available options:**
+```cmd
+run-tests.bat --help
 ```
 
 ## Understanding Test Output
@@ -111,16 +104,19 @@ output-samples/
 
 After running `--refresh`, all expected files are updated to match current dtolator output.
 
-## TypeScript Checking
+## Implementation Details
 
-When `--typecheck` is enabled, generated TypeScript files are validated using the TypeScript compiler. Requires:
-- `npm install` to be run first
-- TypeScript and dependencies available in `node_modules/`
+The test suite is implemented in Rust using:
+- `tests/integration_tests.rs` - Main test harness
+- Environment variable `DTOLATOR_TEST_REFRESH` - Controls refresh mode
+- `run-tests.bat` - Windows CMD wrapper script
+
+Each test runs dtolator with specific generator flags and compares the output against expected files in `output-samples/`.
 
 ## Integration with Development
 
 After making code changes:
-1. Run tests: `python test-suite.py`
+1. Run tests: `run-tests.bat`
 2. If tests fail with intentional improvements, review the diff
-3. If the change is correct, refresh: `python test-suite.py --refresh`
+3. If the change is correct, refresh: `run-tests.bat --refresh`
 4. Commit both code changes and updated test outputs
