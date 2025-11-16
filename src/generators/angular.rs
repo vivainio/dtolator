@@ -592,13 +592,8 @@ impl AngularGenerator {
                 }
             }
 
-            for parameter in parameters {
-                if let Some(schema) = &parameter.schema {
-                    if let Some(type_name) = self.extract_type_name(schema) {
-                        service_data.imports.insert(type_name);
-                    }
-                }
-            }
+            // Don't collect parameter schema types - they're only referenced in JSDoc comments
+            // and would result in unused imports
         }
 
         Ok(())

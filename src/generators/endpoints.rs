@@ -1,6 +1,7 @@
 use crate::generators::Generator;
 use crate::openapi::{OpenApiSchema, Operation, Parameter};
 use anyhow::Result;
+use std::collections::HashSet;
 
 pub struct EndpointsGenerator {
     // Remove unused include_query_params field
@@ -17,6 +18,69 @@ impl EndpointsGenerator {
         Self {}
     }
 
+    // Collect all schema types that are actually used in endpoints
+    fn collect_used_types(&self, schema: &OpenApiSchema) -> HashSet<String> {
+        let mut used_types = HashSet::new();
+
+        if let Some(paths) = &schema.paths {
+            for (_path, path_item) in paths {
+                let operations = [
+                    &path_item.get,
+                    &path_item.post,
+                    &path_item.put,
+                    &path_item.patch,
+                    &path_item.delete,
+                ];
+
+                for operation in operations.into_iter().flatten() {
+                    // Collect request body types
+                    if let Some(request_body) = &operation.request_body {
+                        if let Some(content) = &request_body.content {
+                            if let Some(media_type) = content.get("application/json") {
+                                if let Some(schema) = &media_type.schema {
+                                    if let Some(type_name) = self.extract_schema_type_name(schema) {
+                                        used_types.insert(type_name);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Collect response types
+                    if let Some(responses) = &operation.responses {
+                        for (_status, response) in responses {
+                            if let Some(content) = &response.content {
+                                if let Some(media_type) = content.get("application/json") {
+                                    if let Some(schema) = &media_type.schema {
+                                        if let Some(type_name) =
+                                            self.extract_schema_type_name(schema)
+                                        {
+                                            used_types.insert(type_name);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        used_types
+    }
+
+    fn extract_schema_type_name(&self, schema: &crate::openapi::Schema) -> Option<String> {
+        match schema {
+            crate::openapi::Schema::Reference { reference } => Some(
+                reference
+                    .strip_prefix("#/components/schemas/")
+                    .unwrap_or(reference)
+                    .to_string(),
+            ),
+            _ => None,
+        }
+    }
+
     // Remove unused with_query_params method
 }
 
@@ -30,22 +94,24 @@ impl Generator for EndpointsGenerator {
 
         output.push_str("// API Endpoint Types\n\n");
 
-        // Import the schema types
-        output.push_str("import {\n");
-        if let Some(components) = &schema.components {
-            if let Some(schemas) = &components.schemas {
-                let schema_names: Vec<&String> = schemas.keys().collect();
-                for (i, name) in schema_names.iter().enumerate() {
-                    output.push_str(&format!("  {name}"));
-                    if i < schema_names.len() - 1 {
-                        output.push_str(",\n");
-                    } else {
-                        output.push('\n');
-                    }
+        // Collect only the types that are actually used in endpoints
+        let used_types = self.collect_used_types(schema);
+
+        // Import only the used schema types
+        if !used_types.is_empty() {
+            output.push_str("import {\n");
+            let mut sorted_types: Vec<_> = used_types.iter().collect();
+            sorted_types.sort();
+            for (i, name) in sorted_types.iter().enumerate() {
+                output.push_str(&format!("  {name}"));
+                if i < sorted_types.len() - 1 {
+                    output.push_str(",\n");
+                } else {
+                    output.push('\n');
                 }
             }
+            output.push_str("} from './types';\n\n");
         }
-        output.push_str("} from './types';\n\n");
 
         // Generate ApiEndpoints type
         output.push_str("export type ApiEndpoints = {\n");

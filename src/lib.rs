@@ -850,18 +850,18 @@ fn generate_angular_services(
     }
 
     // Write the last file if there is one
-    if !current_file.is_empty() && !current_content.is_empty() {
-        if !skip_files.contains(&current_file) {
-            let service_path = output_dir.join(&current_file);
-            fs::write(&service_path, &current_content).with_context(|| {
-                format!(
-                    "Failed to write {} file: {}",
-                    current_file,
-                    service_path.display()
-                )
-            })?;
-            files_generated.push(service_path.display().to_string());
-        }
+    if !current_file.is_empty() && !current_content.is_empty()
+        && !skip_files.contains(&current_file)
+    {
+        let service_path = output_dir.join(&current_file);
+        fs::write(&service_path, &current_content).with_context(|| {
+            format!(
+                "Failed to write {} file: {}",
+                current_file,
+                service_path.display()
+            )
+        })?;
+        files_generated.push(service_path.display().to_string());
     }
 
     // Special case: extract the service content before the first FILE marker

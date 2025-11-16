@@ -33,7 +33,12 @@ impl TestSuite {
             TestCase {
                 name: "Angular Full Sample".to_string(),
                 input_file: "input-files/full-sample.json".to_string(),
-                command_args: vec!["--angular".to_string(), "--zod".to_string(), "--skip-file".to_string(), "fill-url.ts".to_string()],
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--zod".to_string(),
+                    "--skip-file".to_string(),
+                    "fill-url.ts".to_string(),
+                ],
                 expected_dir: "output-samples/angular/full-sample".to_string(),
             },
             TestCase {
@@ -46,14 +51,23 @@ impl TestSuite {
             TestCase {
                 name: "Angular Nested Test".to_string(),
                 input_file: "input-files/full-sample.json".to_string(),
-                command_args: vec!["--angular".to_string(), "--skip-file".to_string(), "fill-url.ts".to_string()],
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--skip-file".to_string(),
+                    "fill-url.ts".to_string(),
+                ],
                 expected_dir: "output-samples/angular-nested".to_string(),
             },
             // Comprehensive nested test
             TestCase {
                 name: "Comprehensive Nested Test".to_string(),
                 input_file: "input-files/full-sample.json".to_string(),
-                command_args: vec!["--angular".to_string(), "--zod".to_string(), "--skip-file".to_string(), "fill-url.ts".to_string()],
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--zod".to_string(),
+                    "--skip-file".to_string(),
+                    "fill-url.ts".to_string(),
+                ],
                 expected_dir: "output-samples/comprehensive-nested-test".to_string(),
             },
             // Nested test (TypeScript + Zod only)
@@ -106,7 +120,12 @@ impl TestSuite {
             TestCase {
                 name: "Angular Promises without Zod".to_string(),
                 input_file: "input-files/simple-sample.json".to_string(),
-                command_args: vec!["--angular".to_string(), "--promises".to_string(), "--skip-file".to_string(), "fill-url.ts".to_string()],
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--promises".to_string(),
+                    "--skip-file".to_string(),
+                    "fill-url.ts".to_string(),
+                ],
                 expected_dir: "output-samples/angular-promises-no-zod".to_string(),
             },
             // JSON to TypeScript/Zod/Pydantic tests
