@@ -1,0 +1,211 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "ComprehensiveZodTest",
+  "properties": {
+    "basicString": {
+      "type": "string",
+      "description": "Basic string field"
+    },
+    "stringWithConstraints": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 50,
+      "pattern": "^[a-zA-Z]+$",
+      "description": "String with min/max length and regex pattern"
+    },
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID format string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email format string"
+    },
+    "uri": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI format string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date string"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO datetime string"
+    },
+    "basicNumber": {
+      "type": "number",
+      "description": "Basic floating-point number"
+    },
+    "numberWithConstraints": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Number with min/max constraints"
+    },
+    "integer": {
+      "type": "integer",
+      "description": "Integer number"
+    },
+    "integerWithRange": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Integer with range constraints"
+    },
+    "booleanField": {
+      "type": "boolean",
+      "description": "Boolean field"
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of strings"
+    },
+    "numberArray": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Array of numbers"
+    },
+    "objectArray": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": ["id"]
+      },
+      "description": "Array of objects"
+    },
+    "enumField": {
+      "type": "string",
+      "enum": ["active", "inactive", "pending"],
+      "description": "Enum string"
+    },
+    "unionField": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "description": "Union of string or number"
+    },
+    "nestedObject": {
+      "type": "object",
+      "properties": {
+        "level1": {
+          "type": "object",
+          "properties": {
+            "level2": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": ["value"]
+            }
+          },
+          "required": ["level2"]
+        }
+      },
+      "required": ["level1"]
+    },
+    "nullableString": {
+      "type": ["string", "null"],
+      "description": "Nullable string"
+    },
+    "optionalField": {
+      "type": "string",
+      "description": "Optional field (not in required array)"
+    },
+    "complexArray": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "description": "Complex nested array"
+    },
+    "intersectionField": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": ["id"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          "required": ["email"]
+        }
+      ],
+      "description": "Intersection of two object schemas using allOf"
+    }
+  },
+  "required": [
+    "basicString",
+    "stringWithConstraints",
+    "uuid",
+    "email",
+    "uri",
+    "date",
+    "dateTime",
+    "basicNumber",
+    "numberWithConstraints",
+    "integer",
+    "integerWithRange",
+    "booleanField",
+    "stringArray",
+    "numberArray",
+    "objectArray",
+    "enumField",
+    "unionField",
+    "nestedObject",
+    "nullableString",
+    "complexArray",
+    "intersectionField"
+  ]
+}
+

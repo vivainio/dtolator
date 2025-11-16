@@ -55,7 +55,7 @@ impl ZodValue {
             }
             ZodValue::Intersection(values) => {
                 let value_strs: Vec<String> = values.iter().map(|v| v.render()).collect();
-                format!("z.intersection({})", value_strs.join(", z.intersection("))
+                format!("z.intersection([{}])", value_strs.join(", "))
             }
             ZodValue::Enum(values) => {
                 let value_strs: Vec<String> = values.iter().map(|v| format!("\"{v}\"")).collect();

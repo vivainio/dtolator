@@ -218,6 +218,13 @@ impl TestSuite {
                 command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/empty-schema".to_string(),
             },
+            // Zod all features test
+            TestCase {
+                name: "Zod All Features Test".to_string(),
+                input_file: "input-files/test-zod-all-features.json".to_string(),
+                command_args: vec!["--from-json-schema".to_string(), "--zod".to_string()],
+                expected_dir: "output-samples/zod-all-features".to_string(),
+            },
         ];
 
         Self {
