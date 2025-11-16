@@ -54,6 +54,7 @@ pub struct GenerateOptions {
     pub hide_version: bool,
     pub root_name: String,
     pub debug: bool,
+    pub skip_files: Vec<String>,
 }
 
 fn build_command_string_from_options(options: &GenerateOptions) -> String {
@@ -196,6 +197,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 options.debug,
                 options.with_promises,
                 &command_string,
+                &options.skip_files,
             )?;
         }
         GeneratorType::Pydantic => {
@@ -371,6 +373,10 @@ pub struct Cli {
     /// Hide version from generated output headers (use 'dtolator' instead of 'dtolator==VERSION')
     #[arg(long)]
     pub hide_version: bool,
+
+    /// Skip writing specific file(s) to output directory (can be used multiple times)
+    #[arg(long)]
+    pub skip_file: Vec<String>,
 }
 
 impl Cli {
@@ -542,6 +548,7 @@ where
                     cli.debug,
                     cli.promises,
                     &command_string,
+                    &cli.skip_file,
                 )?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
@@ -688,6 +695,7 @@ fn generate_angular_services(
     debug: bool,
     promises: bool,
     command_string: &str,
+    skip_files: &[String],
 ) -> Result<()> {
     let angular_generator = AngularGenerator::new()
         .with_zod_validation(with_zod)
@@ -704,31 +712,29 @@ fn generate_angular_services(
         let zod_output = zod_generator.generate_with_command(schema, command_string)?;
 
         let schema_path = output_dir.join("schema.ts");
-        fs::write(&schema_path, zod_output).with_context(|| {
-            format!("Failed to write schema.ts file: {}", schema_path.display())
-        })?;
+        if !skip_files.contains(&"schema.ts".to_string()) {
+            fs::write(&schema_path, zod_output).with_context(|| {
+                format!("Failed to write schema.ts file: {}", schema_path.display())
+            })?;
+        }
 
         // Generate TypeScript interfaces that re-export from schema.ts
         let ts_generator = TypeScriptGenerator::new();
         let mut ts_output = ts_generator.generate_with_imports(schema, command_string)?;
 
-        // Add query parameter types for Angular services
-        let angular_generator = AngularGenerator::new();
-        let query_param_types = angular_generator.generate_query_param_types(schema)?;
-        if !query_param_types.trim().is_empty() {
-            ts_output.push('\n');
-            ts_output.push_str(&query_param_types);
-        }
-
         // Add header parameter types for Angular services
+        // (query parameter types are already included in generate_with_imports)
+        let angular_generator = AngularGenerator::new();
         let header_param_types = angular_generator.generate_header_param_types(schema)?;
         if !header_param_types.trim().is_empty() {
             ts_output.push('\n');
             ts_output.push_str(&header_param_types);
         }
 
-        fs::write(&dto_path, ts_output)
-            .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+        if !skip_files.contains(&"dto.ts".to_string()) {
+            fs::write(&dto_path, ts_output)
+                .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+        }
     } else {
         // Generate only TypeScript interfaces
         let ts_generator = TypeScriptGenerator::new();
@@ -749,26 +755,33 @@ fn generate_angular_services(
             dto_output.push_str(&header_param_types);
         }
 
-        fs::write(&dto_path, dto_output)
-            .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+        if !skip_files.contains(&"dto.ts".to_string()) {
+            fs::write(&dto_path, dto_output)
+                .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+        }
     }
 
     // Generate fill-url utility function
     let angular_generator = AngularGenerator::new();
     let fill_url_content = angular_generator.generate_fill_url_func(command_string);
     let fill_url_path = output_dir.join("fill-url.ts");
-    fs::write(&fill_url_path, fill_url_content).with_context(|| {
-        format!(
-            "Failed to write fill-url.ts file: {}",
-            fill_url_path.display()
-        )
-    })?;
+    if !skip_files.contains(&"fill-url.ts".to_string()) {
+        fs::write(&fill_url_path, fill_url_content).with_context(|| {
+            format!(
+                "Failed to write fill-url.ts file: {}",
+                fill_url_path.display()
+            )
+        })?;
+    }
 
     // Parse and split the Angular generator output into individual service files
-    let mut files_generated = vec![
-        dto_path.display().to_string(),
-        fill_url_path.display().to_string(),
-    ];
+    let mut files_generated = Vec::new();
+    if !skip_files.contains(&"dto.ts".to_string()) {
+        files_generated.push(dto_path.display().to_string());
+    }
+    if !skip_files.contains(&"fill-url.ts".to_string()) {
+        files_generated.push(fill_url_path.display().to_string());
+    }
 
     if debug {
         println!("🔍 [DEBUG] Raw Angular generator output:");
@@ -802,15 +815,17 @@ fn generate_angular_services(
                     );
                 }
 
-                let service_path = output_dir.join(&current_file);
-                fs::write(&service_path, &current_content).with_context(|| {
-                    format!(
-                        "Failed to write {} file: {}",
-                        current_file,
-                        service_path.display()
-                    )
-                })?;
-                files_generated.push(service_path.display().to_string());
+                if !skip_files.contains(&current_file) {
+                    let service_path = output_dir.join(&current_file);
+                    fs::write(&service_path, &current_content).with_context(|| {
+                        format!(
+                            "Failed to write {} file: {}",
+                            current_file,
+                            service_path.display()
+                        )
+                    })?;
+                    files_generated.push(service_path.display().to_string());
+                }
             }
 
             // Start collecting for the new file
@@ -836,15 +851,17 @@ fn generate_angular_services(
 
     // Write the last file if there is one
     if !current_file.is_empty() && !current_content.is_empty() {
-        let service_path = output_dir.join(&current_file);
-        fs::write(&service_path, &current_content).with_context(|| {
-            format!(
-                "Failed to write {} file: {}",
-                current_file,
-                service_path.display()
-            )
-        })?;
-        files_generated.push(service_path.display().to_string());
+        if !skip_files.contains(&current_file) {
+            let service_path = output_dir.join(&current_file);
+            fs::write(&service_path, &current_content).with_context(|| {
+                format!(
+                    "Failed to write {} file: {}",
+                    current_file,
+                    service_path.display()
+                )
+            })?;
+            files_generated.push(service_path.display().to_string());
+        }
     }
 
     // Special case: extract the service content before the first FILE marker
@@ -856,19 +873,21 @@ fn generate_angular_services(
             if let Some(first_marker) = parts.get(1) {
                 if let Some(newline_pos) = first_marker.find('\n') {
                     let first_file_name = &first_marker[..newline_pos];
-                    let service_path = output_dir.join(first_file_name);
-                    fs::write(&service_path, first_service_content).with_context(|| {
-                        format!(
-                            "Failed to write {} file: {}",
-                            first_file_name,
-                            service_path.display()
-                        )
-                    })?;
+                    if !skip_files.contains(&first_file_name.to_string()) {
+                        let service_path = output_dir.join(first_file_name);
+                        fs::write(&service_path, first_service_content).with_context(|| {
+                            format!(
+                                "Failed to write {} file: {}",
+                                first_file_name,
+                                service_path.display()
+                            )
+                        })?;
 
-                    // Add to files_generated if not already there
-                    let file_path_str = service_path.display().to_string();
-                    if !files_generated.contains(&file_path_str) {
-                        files_generated.push(file_path_str);
+                        // Add to files_generated if not already there
+                        let file_path_str = service_path.display().to_string();
+                        if !files_generated.contains(&file_path_str) {
+                            files_generated.push(file_path_str);
+                        }
                     }
                 }
             }

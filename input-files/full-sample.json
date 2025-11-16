@@ -769,9 +769,9 @@
             "type": "object",
             "additionalProperties": {
               "oneOf": [
-                {"type": "string"},
-                {"type": "number"},
-                {"type": "boolean"}
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" }
               ]
             }
           },
@@ -809,7 +809,15 @@
       },
       "ProductCategory": {
         "type": "string",
-        "enum": ["electronics", "clothing", "home", "books", "sports", "beauty", "automotive"]
+        "enum": [
+          "electronics",
+          "clothing",
+          "home",
+          "books",
+          "sports",
+          "beauty",
+          "automotive"
+        ]
       },
       "Inventory": {
         "type": "object",
@@ -902,7 +910,15 @@
       },
       "OrderStatus": {
         "type": "string",
-        "enum": ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"]
+        "enum": [
+          "pending",
+          "confirmed",
+          "processing",
+          "shipped",
+          "delivered",
+          "cancelled",
+          "refunded"
+        ]
       },
       "PaymentMethod": {
         "type": "object",
@@ -910,7 +926,13 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"]
+            "enum": [
+              "credit_card",
+              "debit_card",
+              "paypal",
+              "bank_transfer",
+              "crypto"
+            ]
           },
           "last4": {
             "type": "string",
@@ -1019,8 +1041,8 @@
               "priceRange": {
                 "type": "object",
                 "properties": {
-                  "min": {"type": "number"},
-                  "max": {"type": "number"}
+                  "min": { "type": "number" },
+                  "max": { "type": "number" }
                 }
               }
             }
@@ -1074,8 +1096,8 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "field": {"type": "string"},
-                    "message": {"type": "string"}
+                    "field": { "type": "string" },
+                    "message": { "type": "string" }
                   }
                 }
               },
@@ -1260,8 +1282,8 @@
           "period": {
             "type": "object",
             "properties": {
-              "startDate": {"type": "string", "format": "date"},
-              "endDate": {"type": "string", "format": "date"}
+              "startDate": { "type": "string", "format": "date" },
+              "endDate": { "type": "string", "format": "date" }
             }
           }
         }
@@ -1329,4 +1351,4 @@
       "ApiKeyAuth": []
     }
   ]
-} 
+}

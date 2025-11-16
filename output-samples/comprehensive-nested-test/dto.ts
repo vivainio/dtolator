@@ -170,39 +170,6 @@ export { SalesAnalyticsSchema };
 export { ProductAnalyticsSchema };
 
 /**
- * Query parameters for Get All Users With Pagination
- */
-export interface AllUsersWithPaginationQueryParams {
-  page?: number;
-  limit?: number;
-}
-
-/**
- * Query parameters for Search Products With Filters
- */
-export interface SearchProductsWithFiltersQueryParams {
-  category?: ProductCategory;
-  minPrice?: number;
-  maxPrice?: number;
-}
-
-/**
- * Query parameters for Get Inventory Levels
- */
-export interface InventoryLevelsQueryParams {
-  lowStock?: boolean;
-}
-
-/**
- * Query parameters for Get Sales Analytics
- */
-export interface SalesAnalyticsQueryParams {
-  startDate?: string;
-  endDate?: string;
-}
-
-
-/**
  * Header parameters for Get All Users With Pagination
  */
 export interface AllUsersWithPaginationHeaders {
