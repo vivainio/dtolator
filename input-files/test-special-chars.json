@@ -1,0 +1,23 @@
+{
+  "user data": {
+    "first-name": "John",
+    "last_name": "Doe",
+    "email@address": "john@example.com",
+    "user-id": "12345",
+    "display name": "J. Doe",
+    "special$field": "value1",
+    "field-with-hyphen": "value2",
+    "field_with_underscore": "value3",
+    "field with spaces": "value4",
+    "camelCaseField": "value5",
+    "PascalCaseField": "value6",
+    "UPPERCASE_FIELD": "value7",
+    "123numeric": "starts with number",
+    "field.with.dots": "dotted value",
+    "nested-object": {
+      "child-field": "nested value",
+      "another field": "another nested value"
+    }
+  }
+}
+

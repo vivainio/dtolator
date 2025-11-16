@@ -1,0 +1,29 @@
+{
+  "level1": {
+    "id": "l1",
+    "name": "Level 1",
+    "level2": {
+      "id": "l2",
+      "name": "Level 2",
+      "level3": {
+        "id": "l3",
+        "name": "Level 3",
+        "level4": {
+          "id": "l4",
+          "name": "Level 4",
+          "level5": {
+            "id": "l5",
+            "name": "Level 5",
+            "level6": {
+              "id": "l6",
+              "name": "Level 6",
+              "data": "Deep nested value",
+              "array": [1, 2, 3]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

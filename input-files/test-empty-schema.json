@@ -1,0 +1,13 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Empty API",
+    "version": "1.0.0",
+    "description": "An API with no schemas to test empty generation"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {}
+  }
+}
+

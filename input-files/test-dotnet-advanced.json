@@ -1,0 +1,49 @@
+{
+  "transaction": {
+    "transactionId": "550e8400-e29b-41d4-a716-446655440000",
+    "amount": 1299.99,
+    "preciseAmount": 1299.9875,
+    "smallAmount": 19.95,
+    "quantity": 5,
+    "bigNumber": 9999999999,
+    "date": "2024-11-14",
+    "timestamp": "2024-11-14T10:30:00Z",
+    "status": "completed",
+    "type": "purchase",
+    "isVerified": true,
+    "isRefunded": false,
+    "metadata": {
+      "ipAddress": "192.168.1.1",
+      "userAgent": "Mozilla/5.0",
+      "country": "US",
+      "currency": "USD"
+    },
+    "tags": ["online", "credit-card", "verified"],
+    "customer": {
+      "customerId": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "joinDate": "2023-01-15",
+      "lastPurchase": "2024-11-10T15:45:00Z",
+      "isPremium": true,
+      "loyaltyPoints": 1500
+    },
+    "items": [
+      {
+        "itemId": "item-001",
+        "name": "Product A",
+        "price": 599.99,
+        "quantity": 2
+      },
+      {
+        "itemId": "item-002",
+        "name": "Product B",
+        "price": 99.99,
+        "quantity": 1
+      }
+    ],
+    "paymentMethod": "credit_card",
+    "notes": null
+  }
+}
+

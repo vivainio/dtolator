@@ -260,4 +260,3 @@ class ProductAnalytics(ProductAnalyticsRequired, total=False):
     categoryBreakdown: Dict[str, Any]
     lowStockProducts: List[Dict[str, Any]]
 
-

@@ -62,4 +62,3 @@ class Root(BaseModel):
     statistics: RootStatistics
     users: List[User]
 
-

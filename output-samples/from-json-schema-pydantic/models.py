@@ -45,4 +45,3 @@ class UserProfile(BaseModel):
 
 Root = User
 
-

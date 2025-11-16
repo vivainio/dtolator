@@ -1,0 +1,39 @@
+{
+  "user": {
+    "username": "john_doe_123",
+    "email": "john.doe@example.com",
+    "password": "SecureP@ssw0rd",
+    "age": 25,
+    "score": 95.5,
+    "userId": "550e8400-e29b-41d4-a716-446655440000",
+    "birthDate": "1998-03-15",
+    "registeredAt": "2024-01-15T10:30:00Z",
+    "bio": "Software developer with 5 years of experience. Passionate about building scalable systems.",
+    "website": "https://johndoe.com",
+    "phonePattern": "+1-555-0123",
+    "status": "active",
+    "roles": ["admin", "developer", "reviewer"],
+    "metadata": {
+      "lastLogin": "2024-11-14T08:00:00Z",
+      "loginCount": 142,
+      "accountType": "premium",
+      "preferences": {
+        "theme": "dark",
+        "notifications": true,
+        "language": "en-US"
+      }
+    },
+    "tags": ["typescript", "rust", "python"],
+    "profile": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "middleName": null,
+      "displayName": "JD",
+      "avatar": "https://example.com/avatars/john.jpg",
+      "verified": true,
+      "rating": 4.8,
+      "reviewCount": 127
+    }
+  }
+}
+

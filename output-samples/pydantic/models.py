@@ -43,4 +43,3 @@ class ApiResponse(BaseModel):
     message: Optional[str] = None
     data: Optional[User] = None
 
-

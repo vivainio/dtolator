@@ -1,0 +1,1332 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "E-Commerce API",
+    "version": "2.1.0",
+    "description": "A comprehensive e-commerce API with user management, product catalog, and order processing",
+    "contact": {
+      "name": "API Support",
+      "url": "https://example.com/support",
+      "email": "api-support@example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/v2",
+      "description": "Production server"
+    },
+    {
+      "url": "https://staging-api.example.com/v2",
+      "description": "Staging server"
+    },
+    {
+      "url": "http://localhost:3000/v2",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get All Users With Pagination",
+        "description": "Retrieve a paginated list of users",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "X-API-Key",
+            "in": "header",
+            "description": "API key for authentication",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create New User Account",
+        "description": "Create a new user account",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get User Profile By ID",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Search Products With Filters",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ProductCategory"
+            }
+          },
+          {
+            "name": "minPrice",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "maxPrice",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Products list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Create New Order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/{productId}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get Product By ID",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Products"],
+        "summary": "Update Product",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Get Order By ID",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Orders"],
+        "summary": "Update Order Status",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order status updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Get All Product Categories",
+        "responses": {
+          "200": {
+            "description": "Categories list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Categories"],
+        "summary": "Create New Category",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory": {
+      "get": {
+        "tags": ["Inventory"],
+        "summary": "Get Inventory Levels",
+        "parameters": [
+          {
+            "name": "lowStock",
+            "in": "query",
+            "description": "Filter for low stock items only",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inventory levels",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory/{productId}": {
+      "put": {
+        "tags": ["Inventory"],
+        "summary": "Update Product Inventory",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInventoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Inventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/sales": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get Sales Analytics",
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales analytics data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesAnalytics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/products": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get Product Analytics",
+        "responses": {
+          "200": {
+            "description": "Product analytics data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductAnalytics"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "required": ["id", "email", "profile"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique user identifier"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User's email address"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfile"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/UserPreferences"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserRole"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "UserProfile": {
+        "type": "object",
+        "required": ["firstName", "lastName"],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^\\+?[1-9]\\d{1,14}$",
+            "nullable": true
+          },
+          "avatar": {
+            "$ref": "#/components/schemas/ImageUrl"
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          }
+        }
+      },
+      "UserPreferences": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": ["en", "es", "fr", "de", "it"],
+            "default": "en"
+          },
+          "currency": {
+            "type": "string",
+            "enum": ["USD", "EUR", "GBP", "JPY"],
+            "default": "USD"
+          },
+          "notifications": {
+            "$ref": "#/components/schemas/NotificationSettings"
+          },
+          "theme": {
+            "type": "string",
+            "enum": ["light", "dark", "auto"],
+            "default": "auto"
+          }
+        }
+      },
+      "NotificationSettings": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "boolean",
+            "default": true
+          },
+          "push": {
+            "type": "boolean",
+            "default": true
+          },
+          "sms": {
+            "type": "boolean",
+            "default": false
+          },
+          "marketing": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": ["customer", "admin", "moderator", "vendor"]
+      },
+      "Address": {
+        "type": "object",
+        "required": ["street", "city", "country", "postalCode"],
+        "properties": {
+          "street": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "street2": {
+            "type": "string",
+            "maxLength": 100,
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 50,
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "description": "ISO 3166-1 alpha-2 country code"
+          },
+          "postalCode": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 10
+          }
+        },
+        "additionalProperties": false
+      },
+      "ImageUrl": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Image URL"
+          },
+          "alt": {
+            "type": "string",
+            "description": "Alternative text for the image"
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "required": ["id", "name", "price", "category"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "price": {
+            "$ref": "#/components/schemas/Price"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ProductCategory"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImageUrl"
+            },
+            "maxItems": 20
+          },
+          "inventory": {
+            "$ref": "#/components/schemas/Inventory"
+          },
+          "specifications": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {"type": "string"},
+                {"type": "number"},
+                {"type": "boolean"}
+              ]
+            }
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Price": {
+        "type": "object",
+        "required": ["amount", "currency"],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "multipleOf": 0.01
+          },
+          "currency": {
+            "type": "string",
+            "enum": ["USD", "EUR", "GBP", "JPY"]
+          },
+          "originalAmount": {
+            "type": "number",
+            "minimum": 0,
+            "multipleOf": 0.01,
+            "nullable": true,
+            "description": "Original price before discount"
+          }
+        }
+      },
+      "ProductCategory": {
+        "type": "string",
+        "enum": ["electronics", "clothing", "home", "books", "sports", "beauty", "automotive"]
+      },
+      "Inventory": {
+        "type": "object",
+        "required": ["quantity", "status"],
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": ["in_stock", "low_stock", "out_of_stock", "discontinued"]
+          },
+          "lowStockThreshold": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 10
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": ["id", "userId", "items", "total", "status"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            },
+            "minItems": 1
+          },
+          "total": {
+            "$ref": "#/components/schemas/Price"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "billingAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "orderDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estimatedDelivery": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "trackingNumber": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": ["productId", "quantity", "price"],
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "price": {
+            "$ref": "#/components/schemas/Price"
+          },
+          "productSnapshot": {
+            "$ref": "#/components/schemas/Product",
+            "description": "Snapshot of product at time of order"
+          }
+        }
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"]
+      },
+      "PaymentMethod": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"]
+          },
+          "last4": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$",
+            "description": "Last 4 digits of card (for card payments)"
+          },
+          "brand": {
+            "type": "string",
+            "enum": ["visa", "mastercard", "amex", "discover"],
+            "description": "Card brand (for card payments)"
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["email", "password", "profile"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfile"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/UserPreferences"
+          }
+        }
+      },
+      "CreateOrderRequest": {
+        "type": "object",
+        "required": ["items", "shippingAddress"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["productId", "quantity"],
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "minItems": 1
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "billingAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          }
+        }
+      },
+      "UserListResponse": {
+        "type": "object",
+        "required": ["data", "pagination"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationInfo"
+          }
+        }
+      },
+      "ProductListResponse": {
+        "type": "object",
+        "required": ["data", "pagination"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationInfo"
+          },
+          "filters": {
+            "type": "object",
+            "properties": {
+              "categories": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProductCategory"
+                }
+              },
+              "priceRange": {
+                "type": "object",
+                "properties": {
+                  "min": {"type": "number"},
+                  "max": {"type": "number"}
+                }
+              }
+            }
+          }
+        }
+      },
+      "PaginationInfo": {
+        "type": "object",
+        "required": ["page", "limit", "total", "totalPages"],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasNext": {
+            "type": "boolean"
+          },
+          "hasPrev": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {"type": "string"},
+                    "message": {"type": "string"}
+                  }
+                }
+              },
+              "requestId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "UpdateProductRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "price": {
+            "$ref": "#/components/schemas/Price"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ProductCategory"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateOrderStatusRequest": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "trackingNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": ["id", "name", "slug"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "required": ["name", "slug"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "InventoryResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["productId", "inventory"],
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "productName": {
+                  "type": "string"
+                },
+                "inventory": {
+                  "$ref": "#/components/schemas/Inventory"
+                }
+              }
+            }
+          }
+        }
+      },
+      "UpdateInventoryRequest": {
+        "type": "object",
+        "required": ["quantity"],
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lowStockThreshold": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "SalesAnalytics": {
+        "type": "object",
+        "required": ["totalRevenue", "totalOrders", "averageOrderValue"],
+        "properties": {
+          "totalRevenue": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalOrders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "averageOrderValue": {
+            "type": "number",
+            "minimum": 0
+          },
+          "topProducts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "productName": {
+                  "type": "string"
+                },
+                "revenue": {
+                  "type": "number"
+                },
+                "unitsSold": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "period": {
+            "type": "object",
+            "properties": {
+              "startDate": {"type": "string", "format": "date"},
+              "endDate": {"type": "string", "format": "date"}
+            }
+          }
+        }
+      },
+      "ProductAnalytics": {
+        "type": "object",
+        "required": ["totalProducts", "activeProducts"],
+        "properties": {
+          "totalProducts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "activeProducts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "categoryBreakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "lowStockProducts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "productName": {
+                  "type": "string"
+                },
+                "currentStock": {
+                  "type": "integer"
+                },
+                "threshold": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    },
+    {
+      "ApiKeyAuth": []
+    }
+  ]
+} 
