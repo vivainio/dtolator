@@ -62,16 +62,6 @@ The suite tests 29 scenarios across:
 - Unrelated files changed - investigate why tests are affected
 - Not all tests pass - only refresh when intentional improvements are made
 
-## Key Test Directories
-
-- `output-samples/angular/full-sample/` - Full OpenAPI with Zod + Angular
-- `output-samples/angular/simple-sample/` - Simple sample with Zod + Angular  
-- `output-samples/angular-nested/` - Angular without Zod
-- `output-samples/angular-promises-with-zod/` - Promises support with Zod
-- `output-samples/angular-promises-no-zod/` - Promises support without Zod
-- `output-samples/comprehensive-nested-test/` - Comprehensive test with Zod
-- Other directories for TypeScript, Pydantic, JSON Schema, etc.
-
 ## Implementation Details
 
 - Test harness: `tests/integration_tests.rs`
@@ -82,31 +72,24 @@ The suite tests 29 scenarios across:
 
 ## Example Workflow
 
-```bash
+```powershell
 # 1. Make code changes to generator (e.g., angular.rs)
 # 2. Run tests to see which outputs changed
 cargo test --test integration_tests -- --nocapture
 
 # 3. Review the diff output to verify changes are intentional
 # 4. Once verified as correct, refresh the outputs
-DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests -- --nocapture
+$env:DTOLATOR_TEST_REFRESH=1; cargo test --test integration_tests -- --nocapture
 
 # 5. Verify all tests now pass
 cargo test --test integration_tests
 
-# 6. Commit both code changes AND updated output-samples
-git add src/generators/angular.rs output-samples/
-git commit -m "feat: description of changes"
+# 6. Stage and commit changes (user action, not automated)
+# git add src/generators/angular.rs output-samples/
+# git commit -m "feat: description of changes"
 ```
 
 ## Troubleshooting
-
-### Environment Variable Not Detected
-If `DTOLATOR_TEST_REFRESH=1` doesn't work:
-1. Verify the shell supports environment variable syntax
-2. Try running from a fresh shell session
-3. Check that the variable is actually being set by adding debug output
-4. Use `echo $DTOLATOR_TEST_REFRESH` to verify it's set
 
 ### Test Failures After Refresh
 If tests still fail after refresh:
