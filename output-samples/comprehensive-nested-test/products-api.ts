@@ -8,7 +8,6 @@ import { map } from "rxjs/operators";
 
 import type {
   Product,
-  ProductCategory,
   ProductListResponse,
   SearchProductsWithFiltersQueryParams,
   UpdateProductRequest,

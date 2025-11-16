@@ -4,11 +4,9 @@
 // API Endpoint Types
 
 import {
-  User,
-  UserProfile,
-  Address,
+  ApiResponse,
   CreateUserRequest,
-  ApiResponse
+  User
 } from './types';
 
 export type ApiEndpoints = {

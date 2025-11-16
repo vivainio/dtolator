@@ -9,7 +9,6 @@ import { map } from "rxjs/operators";
 import { ProductListResponseSchema, ProductSchema } from "./dto";
 import type {
   Product,
-  ProductCategory,
   ProductListResponse,
   SearchProductsWithFiltersQueryParams,
   UpdateProductRequest,

@@ -7,7 +7,6 @@ import type { Observable } from "rxjs";
 
 import type {
   Product,
-  ProductCategory,
   ProductListResponse,
   SearchProductsWithFiltersQueryParams,
   UpdateProductRequest,
