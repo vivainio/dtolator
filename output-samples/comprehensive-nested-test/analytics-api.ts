@@ -5,16 +5,14 @@ import type { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import { fillUrl } from "./fill-url";
+
+import { ProductAnalyticsSchema, SalesAnalyticsSchema } from "./dto";
 import type {
   ProductAnalytics,
   SalesAnalytics,
   SalesAnalyticsQueryParams,
 } from "./dto";
-import {
-  ProductAnalyticsSchema,
-  SalesAnalyticsSchema,
-} from "./dto";
+import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApi {

@@ -1,3 +1,4 @@
+use crate::generators::import_generator::ImportGenerator;
 use crate::generators::Generator;
 use crate::openapi::{OpenApiSchema, Schema};
 use anyhow::Result;
@@ -481,22 +482,20 @@ impl TypeScriptGenerator {
                         let mut sorted_types = response_types.clone();
                         sorted_types.sort();
 
-                        output.push_str("import type {\n");
-                        let mut import_lines = Vec::new();
-                        for name in &sorted_types {
-                            import_lines.push(format!("  {name},"));
-                        }
-                        output.push_str(&import_lines.join("\n"));
-                        output.push_str("\n} from \"./schema\";\n");
+                        let mut import_gen = ImportGenerator::new();
 
-                        // Import schemas as runtime values (sorted)
-                        output.push_str("import {\n");
-                        let mut schema_lines = Vec::new();
+                        // Add type imports
                         for name in &sorted_types {
-                            schema_lines.push(format!("  {name}Schema,"));
+                            import_gen.add_import("./schema", name, true);
                         }
-                        output.push_str(&schema_lines.join("\n"));
-                        output.push_str("\n} from \"./schema\";\n\n");
+
+                        // Add schema imports (runtime values)
+                        for name in &sorted_types {
+                            import_gen.add_import("./schema", &format!("{name}Schema"), false);
+                        }
+
+                        output.push_str(&import_gen.generate());
+                        output.push('\n');
                     }
 
                     // Generate TypeScript interfaces for request types (direct interfaces, not z.infer)

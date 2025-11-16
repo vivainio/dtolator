@@ -4,12 +4,13 @@
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import type { Observable } from "rxjs";
-import { fillUrl } from "./fill-url";
+
 import type {
   CreateOrderRequest,
   Order,
   UpdateOrderStatusRequest,
 } from "./dto";
+import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class OrdersApi {

@@ -6,14 +6,10 @@ import { Injectable } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
+
+import { CategorySchema } from "./dto";
+import type { Category, CreateCategoryRequest } from "./dto";
 import { fillUrl } from "./fill-url";
-import type {
-  Category,
-  CreateCategoryRequest,
-} from "./dto";
-import {
-  CategorySchema,
-} from "./dto";
 
 @Injectable({ providedIn: 'root' })
 export class CategoriesApi {

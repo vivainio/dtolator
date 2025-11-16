@@ -6,16 +6,10 @@ import { Injectable } from "@angular/core";
 import { lastValueFrom } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
+
+import { ApiResponseSchema, UserSchema } from "./dto";
+import type { ApiResponse, CreateUserRequest, User } from "./dto";
 import { fillUrl } from "./fill-url";
-import type {
-  ApiResponse,
-  CreateUserRequest,
-  User,
-} from "./dto";
-import {
-  ApiResponseSchema,
-  UserSchema,
-} from "./dto";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {

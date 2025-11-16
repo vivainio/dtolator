@@ -1,6 +1,7 @@
 pub mod angular;
 pub mod dotnet;
 pub mod endpoints;
+pub mod import_generator;
 pub mod json_schema;
 pub mod pydantic;
 pub mod python_dict;

@@ -4,12 +4,9 @@
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { lastValueFrom } from "rxjs";
+
+import type { ApiResponse, CreateUserRequest, User } from "./dto";
 import { fillUrl } from "./fill-url";
-import type {
-  ApiResponse,
-  CreateUserRequest,
-  User,
-} from "./dto";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {
