@@ -477,26 +477,26 @@ impl TypeScriptGenerator {
 
                     // Import response types from schema.ts using 'import type'
                     if !response_types.is_empty() {
-                        output.push_str("import type {\n");
+                        // Sort response types alphabetically
+                        let mut sorted_types = response_types.clone();
+                        sorted_types.sort();
 
+                        output.push_str("import type {\n");
                         let mut import_lines = Vec::new();
-                        for name in &response_types {
+                        for name in &sorted_types {
                             import_lines.push(format!("  {name},"));
                         }
-
                         output.push_str(&import_lines.join("\n"));
                         output.push_str("\n} from \"./schema\";\n");
 
-                        // Import schemas as runtime values
+                        // Import schemas as runtime values (sorted)
                         output.push_str("import {\n");
                         let mut schema_lines = Vec::new();
-                        for name in &response_types {
+                        for name in &sorted_types {
                             schema_lines.push(format!("  {name}Schema,"));
                         }
                         output.push_str(&schema_lines.join("\n"));
-                        output.push_str("\n} from \"./schema\";\n");
-
-                        output.push_str("import { z } from \"zod\";\n\n");
+                        output.push_str("\n} from \"./schema\";\n\n");
                     }
 
                     // Generate TypeScript interfaces for request types (direct interfaces, not z.infer)
@@ -574,12 +574,12 @@ impl TypeScriptGenerator {
                     for name in &response_types {
                         output.push_str(&format!("export {{ {name}Schema }};\n"));
                     }
-                    output.push('\n');
                 }
             }
         }
 
-        Ok(output)
+        // Remove trailing blank lines
+        Ok(output.trim_end().to_string() + "\n")
     }
 
     /// Collect request and response types from OpenAPI paths

@@ -2,7 +2,6 @@
 // Do not modify manually
 
 import { z } from "zod";
-
 export const RootSchema = z.object({
   basicString: z.string(),
   stringWithConstraints: z.string().min(3).max(50).regex(/^[a-zA-Z]+$/),
@@ -20,29 +19,34 @@ export const RootSchema = z.object({
   numberArray: z.array(z.number()),
   objectArray: z.array(z.object({
   id: z.number().int(),
-  name: z.string().optional()
+  name: z.string().optional(),
 })),
   enumField: z.enum(["active", "inactive", "pending"]),
-  unionField: z.union([z.string(), z.number()]),
+  unionField: z.union([
+  z.string(),
+  z.number()
+]),
   nestedObject: z.object({
   level1: z.object({
   level2: z.object({
-  value: z.string()
-})
-})
+  value: z.string(),
+}),
+}),
 }),
   nullableString: z.string().nullable(),
   optionalField: z.string().optional(),
   complexArray: z.array(z.object({
   tags: z.array(z.string()).optional(),
-  score: z.number().min(0).max(1).optional()
+  score: z.number().min(0).max(1).optional(),
 })),
-  intersectionField: z.intersection([z.object({
-  id: z.uuid()
-}), z.object({
-  email: z.email()
-})])
+  intersectionField: z.intersection([
+  z.object({
+  id: z.uuid(),
+}),
+  z.object({
+  email: z.email(),
+})
+]),
 });
 
 export type Root = z.infer<typeof RootSchema>;
-

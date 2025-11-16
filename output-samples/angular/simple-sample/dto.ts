@@ -2,18 +2,17 @@
 // Do not modify manually
 
 import type {
-  User,
-  UserProfile,
   Address,
   ApiResponse,
+  User,
+  UserProfile,
 } from "./schema";
 import {
-  UserSchema,
-  UserProfileSchema,
   AddressSchema,
   ApiResponseSchema,
+  UserSchema,
+  UserProfileSchema,
 } from "./schema";
-import { z } from "zod";
 
 export interface CreateUserRequest {
   email: string;
@@ -32,4 +31,3 @@ export { UserSchema };
 export { UserProfileSchema };
 export { AddressSchema };
 export { ApiResponseSchema };
-

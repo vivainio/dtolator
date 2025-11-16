@@ -2,14 +2,13 @@
 // Do not modify manually
 
 import { z } from "zod";
-
 export const AddressSchema = z.object({
   street: z.string().min(1).max(100),
   street2: z.string().max(100).nullable().optional(),
   city: z.string().min(1).max(50),
   state: z.string().max(50).nullable().optional(),
   country: z.string().regex(/^[A-Z]{2}$/),
-  postalCode: z.string().min(3).max(10)
+  postalCode: z.string().min(3).max(10),
 });
 
 export type Address = z.infer<typeof AddressSchema>;
@@ -20,7 +19,7 @@ export const CategorySchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/),
   description: z.string().max(500).optional(),
   parentId: z.uuid().nullable().optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
 });
 
 export type Category = z.infer<typeof CategorySchema>;
@@ -29,7 +28,7 @@ export const CreateCategoryRequestSchema = z.object({
   name: z.string().min(1).max(100),
   slug: z.string().regex(/^[a-z0-9-]+$/),
   description: z.string().max(500).optional(),
-  parentId: z.uuid().optional()
+  parentId: z.uuid().optional(),
 });
 
 export type CreateCategoryRequest = z.infer<typeof CreateCategoryRequestSchema>;
@@ -40,11 +39,11 @@ export const ErrorResponseSchema = z.object({
   message: z.string(),
   details: z.array(z.object({
   field: z.string().optional(),
-  message: z.string().optional()
+  message: z.string().optional(),
 })).optional(),
   requestId: z.uuid().optional(),
-  timestamp: z.iso.datetime().optional()
-})
+  timestamp: z.iso.datetime().optional(),
+}),
 });
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
@@ -53,7 +52,7 @@ export const ImageUrlSchema = z.object({
   url: z.url(),
   alt: z.string().optional(),
   width: z.number().min(1).int().optional(),
-  height: z.number().min(1).int().optional()
+  height: z.number().min(1).int().optional(),
 });
 
 export type ImageUrl = z.infer<typeof ImageUrlSchema>;
@@ -61,7 +60,7 @@ export type ImageUrl = z.infer<typeof ImageUrlSchema>;
 export const InventorySchema = z.object({
   quantity: z.number().min(0).int(),
   status: z.enum(["in_stock", "low_stock", "out_of_stock", "discontinued"]),
-  lowStockThreshold: z.number().min(0).int().optional()
+  lowStockThreshold: z.number().min(0).int().optional(),
 });
 
 export type Inventory = z.infer<typeof InventorySchema>;
@@ -70,12 +69,20 @@ export const NotificationSettingsSchema = z.object({
   email: z.boolean().optional(),
   push: z.boolean().optional(),
   sms: z.boolean().optional(),
-  marketing: z.boolean().optional()
+  marketing: z.boolean().optional(),
 });
 
 export type NotificationSettings = z.infer<typeof NotificationSettingsSchema>;
 
-export const OrderStatusSchema = z.enum(["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"]);
+export const OrderStatusSchema = z.enum([
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refunded"
+]);
 
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
@@ -85,7 +92,7 @@ export const PaginationInfoSchema = z.object({
   total: z.number().min(0).int(),
   totalPages: z.number().min(0).int(),
   hasNext: z.boolean().optional(),
-  hasPrev: z.boolean().optional()
+  hasPrev: z.boolean().optional(),
 });
 
 export type PaginationInfo = z.infer<typeof PaginationInfoSchema>;
@@ -93,7 +100,7 @@ export type PaginationInfo = z.infer<typeof PaginationInfoSchema>;
 export const PaymentMethodSchema = z.object({
   type: z.enum(["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"]),
   last4: z.string().regex(/^[0-9]{4}$/).optional(),
-  brand: z.enum(["visa", "mastercard", "amex", "discover"]).optional()
+  brand: z.enum(["visa", "mastercard", "amex", "discover"]).optional(),
 });
 
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
@@ -101,7 +108,7 @@ export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 export const PriceSchema = z.object({
   amount: z.number().min(0),
   currency: z.enum(["USD", "EUR", "GBP", "JPY"]),
-  originalAmount: z.number().min(0).nullable().optional()
+  originalAmount: z.number().min(0).nullable().optional(),
 });
 
 export type Price = z.infer<typeof PriceSchema>;
@@ -114,13 +121,21 @@ export const ProductAnalyticsSchema = z.object({
   productId: z.uuid().optional(),
   productName: z.string().optional(),
   currentStock: z.number().int().optional(),
-  threshold: z.number().int().optional()
-})).optional()
+  threshold: z.number().int().optional(),
+})).optional(),
 });
 
 export type ProductAnalytics = z.infer<typeof ProductAnalyticsSchema>;
 
-export const ProductCategorySchema = z.enum(["electronics", "clothing", "home", "books", "sports", "beauty", "automotive"]);
+export const ProductCategorySchema = z.enum([
+  "electronics",
+  "clothing",
+  "home",
+  "books",
+  "sports",
+  "beauty",
+  "automotive"
+]);
 
 export type ProductCategory = z.infer<typeof ProductCategorySchema>;
 
@@ -132,19 +147,19 @@ export const SalesAnalyticsSchema = z.object({
   productId: z.uuid().optional(),
   productName: z.string().optional(),
   revenue: z.number().optional(),
-  unitsSold: z.number().int().optional()
+  unitsSold: z.number().int().optional(),
 })).optional(),
   period: z.object({
   startDate: z.iso.date().optional(),
-  endDate: z.iso.date().optional()
-}).optional()
+  endDate: z.iso.date().optional(),
+}).optional(),
 });
 
 export type SalesAnalytics = z.infer<typeof SalesAnalyticsSchema>;
 
 export const UpdateInventoryRequestSchema = z.object({
   quantity: z.number().min(0).int(),
-  lowStockThreshold: z.number().min(0).int().optional()
+  lowStockThreshold: z.number().min(0).int().optional(),
 });
 
 export type UpdateInventoryRequest = z.infer<typeof UpdateInventoryRequestSchema>;
@@ -159,7 +174,7 @@ export const UserProfileSchema = z.object({
   dateOfBirth: z.iso.date().nullable().optional(),
   phoneNumber: z.string().regex(/^\\+?[1-9]\\d{1,14}$/).nullable().optional(),
   avatar: ImageUrlSchema.optional(),
-  address: AddressSchema.optional()
+  address: AddressSchema.optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;
@@ -168,8 +183,8 @@ export const InventoryResponseSchema = z.object({
   data: z.array(z.object({
   productId: z.uuid(),
   productName: z.string().optional(),
-  inventory: InventorySchema
-}))
+  inventory: InventorySchema,
+})),
 });
 
 export type InventoryResponse = z.infer<typeof InventoryResponseSchema>;
@@ -178,14 +193,14 @@ export const UserPreferencesSchema = z.object({
   language: z.enum(["en", "es", "fr", "de", "it"]).optional(),
   currency: z.enum(["USD", "EUR", "GBP", "JPY"]).optional(),
   notifications: NotificationSettingsSchema.optional(),
-  theme: z.enum(["light", "dark", "auto"]).optional()
+  theme: z.enum(["light", "dark", "auto"]).optional(),
 });
 
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 
 export const UpdateOrderStatusRequestSchema = z.object({
   status: OrderStatusSchema,
-  trackingNumber: z.string().optional()
+  trackingNumber: z.string().optional(),
 });
 
 export type UpdateOrderStatusRequest = z.infer<typeof UpdateOrderStatusRequestSchema>;
@@ -193,11 +208,11 @@ export type UpdateOrderStatusRequest = z.infer<typeof UpdateOrderStatusRequestSc
 export const CreateOrderRequestSchema = z.object({
   items: z.array(z.object({
   productId: z.uuid(),
-  quantity: z.number().min(1).int()
+  quantity: z.number().min(1).int(),
 })),
   shippingAddress: AddressSchema,
   billingAddress: AddressSchema.optional(),
-  paymentMethod: PaymentMethodSchema.optional()
+  paymentMethod: PaymentMethodSchema.optional(),
 });
 
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
@@ -213,7 +228,7 @@ export const ProductSchema = z.object({
   inventory: InventorySchema.optional(),
   specifications: z.object({}).optional(),
   isActive: z.boolean().optional(),
-  createdAt: z.iso.datetime().optional()
+  createdAt: z.iso.datetime().optional(),
 });
 
 export type Product = z.infer<typeof ProductSchema>;
@@ -223,7 +238,7 @@ export const UpdateProductRequestSchema = z.object({
   description: z.string().max(2000).optional(),
   price: PriceSchema.optional(),
   category: ProductCategorySchema.optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
 });
 
 export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
@@ -232,7 +247,7 @@ export const CreateUserRequestSchema = z.object({
   email: z.email(),
   password: z.string().min(8).max(128).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]/),
   profile: UserProfileSchema,
-  preferences: UserPreferencesSchema.optional()
+  preferences: UserPreferencesSchema.optional(),
 });
 
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
@@ -245,7 +260,7 @@ export const UserSchema = z.object({
   createdAt: z.iso.datetime().optional(),
   updatedAt: z.iso.datetime().optional(),
   isActive: z.boolean().optional(),
-  roles: z.array(UserRoleSchema).optional()
+  roles: z.array(UserRoleSchema).optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;
@@ -254,7 +269,7 @@ export const OrderItemSchema = z.object({
   productId: z.uuid(),
   quantity: z.number().min(1).int(),
   price: PriceSchema,
-  productSnapshot: ProductSchema.optional()
+  productSnapshot: ProductSchema.optional(),
 });
 
 export type OrderItem = z.infer<typeof OrderItemSchema>;
@@ -266,16 +281,16 @@ export const ProductListResponseSchema = z.object({
   categories: z.array(ProductCategorySchema).optional(),
   priceRange: z.object({
   min: z.number().optional(),
-  max: z.number().optional()
-}).optional()
-}).optional()
+  max: z.number().optional(),
+}).optional(),
+}).optional(),
 });
 
 export type ProductListResponse = z.infer<typeof ProductListResponseSchema>;
 
 export const UserListResponseSchema = z.object({
   data: z.array(UserSchema),
-  pagination: PaginationInfoSchema
+  pagination: PaginationInfoSchema,
 });
 
 export type UserListResponse = z.infer<typeof UserListResponseSchema>;
@@ -291,8 +306,7 @@ export const OrderSchema = z.object({
   paymentMethod: PaymentMethodSchema.optional(),
   orderDate: z.iso.datetime().optional(),
   estimatedDelivery: z.iso.date().nullable().optional(),
-  trackingNumber: z.string().nullable().optional()
+  trackingNumber: z.string().nullable().optional(),
 });
 
 export type Order = z.infer<typeof OrderSchema>;
-

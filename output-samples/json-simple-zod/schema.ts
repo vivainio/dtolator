@@ -2,10 +2,9 @@
 // Do not modify manually
 
 import { z } from "zod";
-
 export const ProfileSocialLinksSchema = z.object({
   github: z.string(),
-  twitter: z.string()
+  twitter: z.string(),
 });
 
 export type ProfileSocialLinks = z.infer<typeof ProfileSocialLinksSchema>;
@@ -13,7 +12,7 @@ export type ProfileSocialLinks = z.infer<typeof ProfileSocialLinksSchema>;
 export const RootAddressSchema = z.object({
   city: z.string(),
   street: z.string(),
-  zipCode: z.string()
+  zipCode: z.string(),
 });
 
 export type RootAddress = z.infer<typeof RootAddressSchema>;
@@ -21,7 +20,7 @@ export type RootAddress = z.infer<typeof RootAddressSchema>;
 export const ProfileSchema = z.object({
   avatar: z.unknown().nullable(),
   bio: z.string(),
-  socialLinks: ProfileSocialLinksSchema
+  socialLinks: ProfileSocialLinksSchema,
 });
 
 export type Profile = z.infer<typeof ProfileSchema>;
@@ -34,8 +33,7 @@ export const RootSchema = z.object({
   isActive: z.boolean(),
   name: z.string(),
   profile: ProfileSchema,
-  tags: z.array(z.string())
+  tags: z.array(z.string()),
 });
 
 export type Root = z.infer<typeof RootSchema>;
-

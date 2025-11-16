@@ -2,18 +2,17 @@
 // Do not modify manually
 
 import type {
-  RootAddress,
-  ProfileSocialLinks,
   Profile,
+  ProfileSocialLinks,
   Root,
+  RootAddress,
 } from "./schema";
 import {
-  RootAddressSchema,
-  ProfileSocialLinksSchema,
   ProfileSchema,
+  ProfileSocialLinksSchema,
   RootSchema,
+  RootAddressSchema,
 } from "./schema";
-import { z } from "zod";
 
 export type { RootAddress };
 export type { ProfileSocialLinks };
@@ -24,4 +23,3 @@ export { RootAddressSchema };
 export { ProfileSocialLinksSchema };
 export { ProfileSchema };
 export { RootSchema };
-

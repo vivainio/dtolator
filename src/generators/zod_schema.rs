@@ -51,15 +51,30 @@ impl ZodValue {
             ZodValue::Reference(name) => format!("{name}Schema"),
             ZodValue::Union(values) => {
                 let value_strs: Vec<String> = values.iter().map(|v| v.render()).collect();
-                format!("z.union([{}])", value_strs.join(", "))
+                if value_strs.len() > 1 {
+                    format!("z.union([\n  {}\n])", value_strs.join(",\n  "))
+                } else {
+                    format!("z.union([{}])", value_strs.join(", "))
+                }
             }
             ZodValue::Intersection(values) => {
                 let value_strs: Vec<String> = values.iter().map(|v| v.render()).collect();
-                format!("z.intersection([{}])", value_strs.join(", "))
+                if value_strs.len() > 1 {
+                    format!("z.intersection([\n  {}\n])", value_strs.join(",\n  "))
+                } else {
+                    format!("z.intersection([{}])", value_strs.join(", "))
+                }
             }
             ZodValue::Enum(values) => {
-                let value_strs: Vec<String> = values.iter().map(|v| format!("\"{v}\"")).collect();
-                format!("z.enum([{}])", value_strs.join(", "))
+                if values.len() > 5 {
+                    let value_strs: Vec<String> =
+                        values.iter().map(|v| format!("  \"{v}\"")).collect();
+                    format!("z.enum([\n{}\n])", value_strs.join(",\n"))
+                } else {
+                    let value_strs: Vec<String> =
+                        values.iter().map(|v| format!("\"{v}\"")).collect();
+                    format!("z.enum([{}])", value_strs.join(", "))
+                }
             }
             ZodValue::Nullable(inner) => format!("{}.nullable()", inner.render()),
             ZodValue::Unknown => "z.unknown()".to_string(),
@@ -120,11 +135,11 @@ impl ZodValue {
                 } else {
                     format!("{val_str}.optional()")
                 };
-                format!("  {name}: {constraint}")
+                format!("  {name}: {constraint},")
             })
             .collect();
 
-        format!("z.object({{\n{}\n}})", prop_strs.join(",\n"))
+        format!("z.object({{\n{}\n}})", prop_strs.join("\n"))
     }
 
     fn escape_regex_pattern(pattern: &str) -> String {

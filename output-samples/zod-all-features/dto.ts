@@ -7,9 +7,7 @@ import type {
 import {
   RootSchema,
 } from "./schema";
-import { z } from "zod";
 
 export type { Root };
 
 export { RootSchema };
-

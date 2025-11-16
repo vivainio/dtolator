@@ -2,56 +2,55 @@
 // Do not modify manually
 
 import type {
-  User,
-  UserProfile,
-  UserPreferences,
-  NotificationSettings,
-  UserRole,
   Address,
+  Category,
+  ErrorResponse,
   ImageUrl,
-  Product,
-  Price,
-  ProductCategory,
   Inventory,
+  InventoryResponse,
+  NotificationSettings,
   Order,
   OrderItem,
   OrderStatus,
-  PaymentMethod,
-  UserListResponse,
-  ProductListResponse,
   PaginationInfo,
-  ErrorResponse,
-  Category,
-  InventoryResponse,
-  SalesAnalytics,
+  PaymentMethod,
+  Price,
+  Product,
   ProductAnalytics,
+  ProductCategory,
+  ProductListResponse,
+  SalesAnalytics,
+  User,
+  UserListResponse,
+  UserPreferences,
+  UserProfile,
+  UserRole,
 } from "./schema";
 import {
-  UserSchema,
-  UserProfileSchema,
-  UserPreferencesSchema,
-  NotificationSettingsSchema,
-  UserRoleSchema,
   AddressSchema,
+  CategorySchema,
+  ErrorResponseSchema,
   ImageUrlSchema,
-  ProductSchema,
-  PriceSchema,
-  ProductCategorySchema,
   InventorySchema,
+  InventoryResponseSchema,
+  NotificationSettingsSchema,
   OrderSchema,
   OrderItemSchema,
   OrderStatusSchema,
-  PaymentMethodSchema,
-  UserListResponseSchema,
-  ProductListResponseSchema,
   PaginationInfoSchema,
-  ErrorResponseSchema,
-  CategorySchema,
-  InventoryResponseSchema,
-  SalesAnalyticsSchema,
+  PaymentMethodSchema,
+  PriceSchema,
+  ProductSchema,
   ProductAnalyticsSchema,
+  ProductCategorySchema,
+  ProductListResponseSchema,
+  SalesAnalyticsSchema,
+  UserSchema,
+  UserListResponseSchema,
+  UserPreferencesSchema,
+  UserProfileSchema,
+  UserRoleSchema,
 } from "./schema";
-import { z } from "zod";
 
 export interface CreateCategoryRequest {
   name: string;
@@ -169,7 +168,6 @@ export { CategorySchema };
 export { InventoryResponseSchema };
 export { SalesAnalyticsSchema };
 export { ProductAnalyticsSchema };
-
 
 /**
  * Query parameters for Get All Users With Pagination

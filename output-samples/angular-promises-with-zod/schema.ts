@@ -2,13 +2,12 @@
 // Do not modify manually
 
 import { z } from "zod";
-
 export const AddressSchema = z.object({
   street: z.string().min(1).max(100),
   city: z.string().min(1).max(50),
   state: z.string().max(50).nullable().optional(),
   country: z.string().regex(/^[A-Z]{2}$/),
-  postalCode: z.string().min(3).max(10).nullable().optional()
+  postalCode: z.string().min(3).max(10).nullable().optional(),
 });
 
 export type Address = z.infer<typeof AddressSchema>;
@@ -18,7 +17,7 @@ export const UserProfileSchema = z.object({
   lastName: z.string().min(1).max(50),
   phoneNumber: z.string().regex(/^\\+?[1-9]\\d{1,14}$/).nullable().optional(),
   avatar: z.url().nullable().optional(),
-  bio: z.string().max(500).nullable().optional()
+  bio: z.string().max(500).nullable().optional(),
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;
@@ -28,7 +27,7 @@ export const CreateUserRequestSchema = z.object({
   name: z.string().min(1).max(100),
   age: z.number().min(0).max(150).int().nullable().optional(),
   profile: UserProfileSchema,
-  address: AddressSchema.optional()
+  address: AddressSchema.optional(),
 });
 
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
@@ -42,7 +41,7 @@ export const UserSchema = z.object({
   tags: z.array(z.string()).optional(),
   status: z.enum(["active", "inactive", "pending"]).optional(),
   profile: UserProfileSchema.optional(),
-  address: AddressSchema.optional()
+  address: AddressSchema.optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;
@@ -50,8 +49,7 @@ export type User = z.infer<typeof UserSchema>;
 export const ApiResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
-  data: UserSchema.optional()
+  data: UserSchema.optional(),
 });
 
 export type ApiResponse = z.infer<typeof ApiResponseSchema>;
-

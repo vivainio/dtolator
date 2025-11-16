@@ -27,7 +27,6 @@ import {
   SecuritySchema,
   UserSchema,
 } from "./schema";
-import { z } from "zod";
 
 export type { Metadata };
 export type { MetadataPreferences };
@@ -52,4 +51,3 @@ export { RootSchema };
 export { RootStatisticsSchema };
 export { SecuritySchema };
 export { UserSchema };
-
