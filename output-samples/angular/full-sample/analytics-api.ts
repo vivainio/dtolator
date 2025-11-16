@@ -26,7 +26,7 @@ export class AnalyticsApi {
    * @param queryParams - Query parameters object
    * @param queryParams.startDate - optional parameter of type string
    * @param queryParams.endDate - optional parameter of type string
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<SalesAnalytics> - Sales analytics data
    */
   getSalesAnalytics(queryParams?: SalesAnalyticsQueryParams, headers?: HttpHeaders): Observable<SalesAnalytics> {
@@ -40,7 +40,7 @@ export class AnalyticsApi {
   /**
    * Get Product Analytics
    *
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<ProductAnalytics> - Product analytics data
    */
   getProductAnalytics(headers?: HttpHeaders): Observable<ProductAnalytics> {
@@ -52,4 +52,3 @@ export class AnalyticsApi {
   }
 
 }
-

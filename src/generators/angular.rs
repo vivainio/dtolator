@@ -250,88 +250,39 @@ impl AngularGenerator {
             "    const url = fillUrl('{path}', {url_params}, {query_params});\n"
         ));
 
-        // Check if there are any header parameters
-        let has_header_params = if let Some(parameters) = &operation.parameters {
-            parameters.iter().any(|p| p.location == "header")
-        } else {
-            false
-        };
-
-        // Merge custom headers if there are header parameters
-        if has_header_params {
-            method.push_str("    const finalHeaders = mergeHeaders(headers, customHeaders);\n\n");
-        }
-
         // Generate HTTP call
         let request_body = self.get_request_body(operation)?;
-        let headers_var = if has_header_params {
-            "finalHeaders".to_string()
-        } else {
-            "headers".to_string()
-        };
 
         let http_call = match http_method {
             "GET" => {
-                if headers_var == "headers" {
-                    format!("this.http.get<{return_type}>(url, {{ headers }})")
-                } else {
-                    format!("this.http.get<{return_type}>(url, {{ headers: {headers_var} }})")
-                }
+                format!("this.http.get<{return_type}>(url, {{ headers }})")
             }
             "POST" => {
                 if request_body.is_empty() {
-                    if headers_var == "headers" {
-                        format!("this.http.post<{return_type}>(url, null, {{ headers }})")
-                    } else {
-                        format!("this.http.post<{return_type}>(url, null, {{ headers: {headers_var} }})")
-                    }
-                } else if headers_var == "headers" {
-                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
+                    format!("this.http.post<{return_type}>(url, null, {{ headers }})")
                 } else {
-                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
+                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
                 }
             }
             "PUT" => {
                 if request_body.is_empty() {
-                    if headers_var == "headers" {
-                        format!("this.http.put<{return_type}>(url, null, {{ headers }})")
-                    } else {
-                        format!(
-                            "this.http.put<{return_type}>(url, null, {{ headers: {headers_var} }})"
-                        )
-                    }
-                } else if headers_var == "headers" {
-                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
+                    format!("this.http.put<{return_type}>(url, null, {{ headers }})")
                 } else {
-                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
+                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
                 }
             }
             "DELETE" => {
-                if headers_var == "headers" {
-                    format!("this.http.delete<{return_type}>(url, {{ headers }})")
-                } else {
-                    format!("this.http.delete<{return_type}>(url, {{ headers: {headers_var} }})")
-                }
+                format!("this.http.delete<{return_type}>(url, {{ headers }})")
             }
             "PATCH" => {
                 if request_body.is_empty() {
-                    if headers_var == "headers" {
-                        format!("this.http.patch<{return_type}>(url, null, {{ headers }})")
-                    } else {
-                        format!("this.http.patch<{return_type}>(url, null, {{ headers: {headers_var} }})")
-                    }
-                } else if headers_var == "headers" {
-                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
+                    format!("this.http.patch<{return_type}>(url, null, {{ headers }})")
                 } else {
-                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers: {headers_var} }})")
+                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
                 }
             }
             _ => {
-                if headers_var == "headers" {
-                    format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})")
-                } else {
-                    format!("this.http.request<{return_type}>('{http_method}', {{ url, headers: {headers_var} }})")
-                }
+                format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})")
             }
         };
 
@@ -473,7 +424,19 @@ impl AngularGenerator {
             }
         }
 
-        // Header parameters (with named types)
+        // Request body
+        if let Some(request_body) = &operation.request_body {
+            if let Some(content) = &request_body.content {
+                if let Some(media_type) = content.get("application/json") {
+                    if let Some(schema) = &media_type.schema {
+                        let type_name = self.get_schema_type_name(schema);
+                        params.push(format!("dto: {type_name}"));
+                    }
+                }
+            }
+        }
+
+        // Merge header parameters and HttpHeaders into single parameter
         if let Some(parameters) = &operation.parameters {
             let header_params: Vec<&Parameter> = parameters
                 .iter()
@@ -482,7 +445,7 @@ impl AngularGenerator {
 
             if !header_params.is_empty() {
                 if let Some(type_name) = self.get_header_param_type_name(operation) {
-                    params.push(format!("customHeaders?: {type_name}"));
+                    params.push(format!("headers?: {type_name} & Record<string, string>"));
                 } else {
                     // Fallback to inline type if no good name can be generated
                     let mut header_type = "{ ".to_string();
@@ -499,26 +462,17 @@ impl AngularGenerator {
                             header_type.push_str(", ");
                         }
                     }
-                    header_type.push_str(" }");
-                    params.push(format!("customHeaders?: {header_type}"));
+                    header_type.push_str(" } & Record<string, string>");
+                    params.push(format!("headers?: {header_type}"));
                 }
+            } else {
+                // No header parameters, just add HttpHeaders
+                params.push("headers?: HttpHeaders".to_string());
             }
+        } else {
+            // No parameters at all, just add HttpHeaders
+            params.push("headers?: HttpHeaders".to_string());
         }
-
-        // Request body
-        if let Some(request_body) = &operation.request_body {
-            if let Some(content) = &request_body.content {
-                if let Some(media_type) = content.get("application/json") {
-                    if let Some(schema) = &media_type.schema {
-                        let type_name = self.get_schema_type_name(schema);
-                        params.push(format!("dto: {type_name}"));
-                    }
-                }
-            }
-        }
-
-        // Always add optional headers parameter at the end
-        params.push("headers?: HttpHeaders".to_string());
 
         Ok(params.join(", "))
     }
@@ -706,11 +660,7 @@ impl AngularGenerator {
             }
         }
 
-        if service_data.has_header_params {
-            service.push_str("import { fillUrl, mergeHeaders } from './fill-url';\n");
-        } else {
-            service.push_str("import { fillUrl } from './fill-url';\n");
-        }
+        service.push_str("import { fillUrl } from './fill-url';\n");
 
         if !service_data.imports.is_empty() {
             let mut imports: Vec<String> = service_data.imports.iter().cloned().collect();
@@ -969,28 +919,6 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
   
   return `${baseUrl}${path}`;
 }
-
-/**
- * Merges custom header parameters with base headers
- * @param baseHeaders - Optional base HttpHeaders to merge into
- * @param customHeaders - Optional custom headers object to merge
- * @returns Merged HttpHeaders instance
- */
-export function mergeHeaders(
-  baseHeaders: HttpHeaders | undefined,
-  customHeaders?: Record<string, any>,
-): HttpHeaders {
-  let finalHeaders = baseHeaders;
-  if (customHeaders) {
-    finalHeaders = baseHeaders || new HttpHeaders();
-    Object.entries(customHeaders).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        finalHeaders = finalHeaders!.set(key, String(value));
-      }
-    });
-  }
-  return finalHeaders;
-}
 "#;
         template.replace("COMMAND_PLACEHOLDER", command_string)
     }
@@ -1175,30 +1103,6 @@ export function mergeHeaders(
             }
         }
 
-        // Document header parameters
-        if let Some(parameters) = &operation.parameters {
-            let header_params: Vec<&Parameter> = parameters
-                .iter()
-                .filter(|p| p.location == "header")
-                .collect();
-
-            if !header_params.is_empty() {
-                comment.push_str("   * @param customHeaders - Custom header parameters\n");
-                for param in header_params {
-                    let required = if param.required.unwrap_or(false) {
-                        "required"
-                    } else {
-                        "optional"
-                    };
-                    let param_type = self.get_parameter_type(param);
-                    comment.push_str(&format!(
-                        "   * @param customHeaders.{} - {} header of type {}\n",
-                        param.name, required, param_type
-                    ));
-                }
-            }
-        }
-
         // Document request body
         if let Some(request_body) = &operation.request_body {
             if let Some(content) = &request_body.content {
@@ -1219,7 +1123,32 @@ export function mergeHeaders(
         }
 
         // Document headers parameter
-        comment.push_str("   * @param headers - Optional custom HTTP headers\n");
+        if let Some(parameters) = &operation.parameters {
+            let header_params: Vec<&Parameter> = parameters
+                .iter()
+                .filter(|p| p.location == "header")
+                .collect();
+
+            if !header_params.is_empty() {
+                comment.push_str("   * @param headers - Custom header values or HttpHeaders instance\n");
+                for param in header_params {
+                    let required = if param.required.unwrap_or(false) {
+                        "required"
+                    } else {
+                        "optional"
+                    };
+                    let param_type = self.get_parameter_type(param);
+                    comment.push_str(&format!(
+                        "   * @param headers.{} - {} header of type {}\n",
+                        param.name, required, param_type
+                    ));
+                }
+            } else {
+                comment.push_str("   * @param headers - Optional HTTP headers\n");
+            }
+        } else {
+            comment.push_str("   * @param headers - Optional HTTP headers\n");
+        }
 
         // Document return type
         let return_wrapper = if return_type == "void" || self.promises {

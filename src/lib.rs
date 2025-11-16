@@ -648,7 +648,9 @@ where
                 let generator = TypeScriptGenerator::new();
                 generator.generate_with_command(&schema, &command_string)?
             } else if cli.angular {
-                let generator = AngularGenerator::new().with_promises(cli.promises);
+                let generator = AngularGenerator::new()
+                    .with_zod_validation(cli.zod)
+                    .with_promises(cli.promises);
                 generator.generate_with_command(&schema, &command_string)?
             } else if cli.pydantic {
                 let generator = PydanticGenerator::new();

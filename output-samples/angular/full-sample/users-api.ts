@@ -5,7 +5,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { fillUrl, mergeHeaders } from './fill-url';
+import { fillUrl } from './fill-url';
 import type {
   AllUsersWithPaginationHeaders,
   AllUsersWithPaginationQueryParams,
@@ -30,16 +30,13 @@ export class UsersApi {
    * @param queryParams - Query parameters object
    * @param queryParams.page - optional parameter of type number
    * @param queryParams.limit - optional parameter of type number
-   * @param customHeaders - Custom header parameters
-   * @param customHeaders.X-API-Key - optional header of type string
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Custom header values or HttpHeaders instance
+   * @param headers.X-API-Key - optional header of type string
    * @returns Observable<UserListResponse> - Successful response
    */
-  getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams, customHeaders?: AllUsersWithPaginationHeaders, headers?: HttpHeaders): Observable<UserListResponse> {
+  getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams, headers?: AllUsersWithPaginationHeaders & Record<string, string>): Observable<UserListResponse> {
     const url = fillUrl('/users', {}, queryParams || {});
-    const finalHeaders = mergeHeaders(headers, customHeaders);
-
-    return this.http.get<UserListResponse>(url, { headers: finalHeaders })
+    return this.http.get<UserListResponse>(url, { headers })
       .pipe(
         map(response => UserListResponseSchema.parse(response))
       );
@@ -51,7 +48,7 @@ export class UsersApi {
    * Create a new user account
    *
    * @param dto - Request body of type CreateUserRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<User> - User created successfully
    */
   createNewUserAccount(dto: CreateUserRequest, headers?: HttpHeaders): Observable<User> {
@@ -66,7 +63,7 @@ export class UsersApi {
    * Get User Profile By ID
    *
    * @param userId - Path parameter of type string
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<User> - User found
    */
   getUserProfileByID(userId: string, headers?: HttpHeaders): Observable<User> {
@@ -78,4 +75,3 @@ export class UsersApi {
   }
 
 }
-
