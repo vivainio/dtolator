@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
 use dtolator::{generate, GenerateOptions, GeneratorType, InputType};
-use similar::TextDiff;
+use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
@@ -279,10 +279,65 @@ impl TestSuite {
             return Ok((true, String::new()));
         }
 
+        // Generate unified diff format
         let diff = TextDiff::from_lines(&content1_normalized, &content2_normalized);
         let mut diff_output = String::new();
-        for change in diff.iter_all_changes() {
-            diff_output.push_str(&format!("{}", change));
+
+        // Add unified diff header
+        diff_output.push_str(&format!(
+            "--- expected ({})\n+++ actual ({})\n",
+            file1.display(),
+            file2.display()
+        ));
+
+        // Group changes by context for better readability
+        let changes: Vec<_> = diff.iter_all_changes().collect();
+        const CONTEXT_LINES: usize = 2;
+
+        let mut in_hunk = false;
+        let mut hunk_start = 0;
+        let mut hunk_size = 0;
+        let mut diff_lines = Vec::new();
+
+        for (i, change) in changes.iter().enumerate() {
+            match change.tag() {
+                ChangeTag::Delete => {
+                    if !in_hunk {
+                        in_hunk = true;
+                        hunk_start = i.saturating_sub(CONTEXT_LINES);
+                    }
+                    diff_lines.push((i, format!("-{}", change.value())));
+                    hunk_size = i - hunk_start + 1;
+                }
+                ChangeTag::Insert => {
+                    if !in_hunk {
+                        in_hunk = true;
+                        hunk_start = i.saturating_sub(CONTEXT_LINES);
+                    }
+                    diff_lines.push((i, format!("+{}", change.value())));
+                    hunk_size = i - hunk_start + 1;
+                }
+                ChangeTag::Equal => {
+                    if in_hunk && i - hunk_start <= hunk_size + CONTEXT_LINES {
+                        // Still in context
+                        diff_lines.push((i, format!(" {}", change.value())));
+                    } else if in_hunk {
+                        // End of hunk
+                        in_hunk = false;
+                    }
+                }
+            }
+        }
+
+        // Format output with color codes if terminal supports it
+        for (_, line) in diff_lines {
+            if line.starts_with('+') {
+                diff_output.push_str(&format!("{}\n", line.green()));
+            } else if line.starts_with('-') {
+                diff_output.push_str(&format!("{}\n", line.red()));
+            } else {
+                diff_output.push_str(&format!("{line}\n"));
+            }
         }
 
         Ok((false, diff_output))
@@ -351,9 +406,12 @@ impl TestSuite {
             match self.compare_files(&expected_file, &actual_file) {
                 Ok((matches, diff)) => {
                     if !matches {
-                        errors.push(format!("File differs: {}", file_rel_path.display()));
+                        errors.push(format!(
+                            "{}",
+                            format!("File differs: {}", file_rel_path.display()).bold()
+                        ));
                         if !diff.is_empty() {
-                            errors.push(format!("Diff for {}:\n{}", file_rel_path.display(), diff));
+                            errors.push(diff);
                         }
                     }
                 }
@@ -504,14 +562,22 @@ impl TestSuite {
                         Ok(true)
                     } else {
                         eprintln!("{}", "ERROR: Output differs from expected".red());
-                        for error in errors.iter().take(10) {
-                            eprintln!("{}", format!("   {}", error).yellow());
-                        }
-                        if errors.len() > 10 {
-                            eprintln!(
-                                "{}",
-                                format!("   ... and {} more errors", errors.len() - 10).yellow()
-                            );
+                        eprintln!();
+                        for (idx, error) in errors.iter().enumerate() {
+                            // Don't limit output, show all diffs for better visibility
+                            if error.contains("---") {
+                                // This is a unified diff - display it more prominently
+                                eprintln!("{}", error);
+                            } else if error.contains("File differs") {
+                                eprintln!("{}", format!("   {}", error).yellow().bold());
+                            } else {
+                                eprintln!("{}", format!("   {}", error).yellow());
+                            }
+
+                            // Add spacing between different files
+                            if idx < errors.len() - 1 && errors[idx + 1].contains("File differs") {
+                                eprintln!();
+                            }
                         }
                         Ok(false)
                     }
