@@ -154,6 +154,59 @@ impl TypeScriptGenerator {
         Ok(result)
     }
 
+    fn is_valid_identifier(name: &str) -> bool {
+        if name.is_empty() {
+            return false;
+        }
+
+        // Check if first character is a valid identifier start
+        let first_char = name.chars().next().unwrap();
+        if !first_char.is_alphabetic() && first_char != '_' && first_char != '$' {
+            return false;
+        }
+
+        // Check if all characters are valid identifier characters
+        name.chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '$')
+    }
+
+    fn quote_property_name(name: &str) -> String {
+        if Self::is_valid_identifier(name) {
+            name.to_string()
+        } else {
+            format!("\"{name}\"")
+        }
+    }
+
+    fn sanitize_type_name(&self, name: &str) -> String {
+        if Self::is_valid_identifier(name) {
+            name.to_string()
+        } else {
+            // Convert special characters to PascalCase format
+            let mut result = String::new();
+            let mut capitalize_next = true;
+            for ch in name.chars() {
+                if ch.is_alphanumeric() {
+                    if capitalize_next {
+                        result.push(ch.to_uppercase().next().unwrap_or(ch));
+                        capitalize_next = false;
+                    } else {
+                        result.push(ch);
+                    }
+                } else {
+                    capitalize_next = true;
+                }
+            }
+            if result.is_empty() {
+                "Schema".to_string()
+            } else if result.chars().next().unwrap().is_numeric() {
+                format!("_{result}")
+            } else {
+                result
+            }
+        }
+    }
+
     fn generate_interface(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
 
@@ -234,7 +287,8 @@ impl TypeScriptGenerator {
 
                 // Handle object types
                 if schema_type.as_deref() == Some("object") || properties.is_some() {
-                    output.push_str(&format!("export interface {name} {{\n"));
+                    let sanitized_name = self.sanitize_type_name(name);
+                    output.push_str(&format!("export interface {sanitized_name} {{\n"));
 
                     if let Some(props) = properties {
                         for (prop_name, prop_schema) in props {
@@ -245,8 +299,9 @@ impl TypeScriptGenerator {
                                 .unwrap_or(false);
 
                             let optional_marker = if is_required { "" } else { "?" };
+                            let quoted_name = Self::quote_property_name(prop_name);
                             output.push_str(&format!(
-                                "  {prop_name}{optional_marker}: {prop_type};\n"
+                                "  {quoted_name}{optional_marker}: {prop_type};\n"
                             ));
                         }
                     }
@@ -279,7 +334,8 @@ impl TypeScriptGenerator {
                 let ref_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);
-                Ok(ref_name.to_string())
+                let sanitized = self.sanitize_type_name(ref_name);
+                Ok(sanitized)
             }
             Schema::Object {
                 schema_type,
@@ -355,8 +411,9 @@ impl TypeScriptGenerator {
                                         .unwrap_or(false);
 
                                     let optional_marker = if is_required { "" } else { "?" };
+                                    let quoted_name = Self::quote_property_name(prop_name);
                                     object_props.push(format!(
-                                        "    {prop_name}{optional_marker}: {prop_type}"
+                                        "    {quoted_name}{optional_marker}: {prop_type}"
                                     ));
                                 }
 
@@ -622,7 +679,7 @@ impl Generator for TypeScriptGenerator {
             }
         }
 
-        Ok(output)
+        Ok(output.trim_end().to_string() + "\n")
     }
 }
 

@@ -254,7 +254,6 @@ export interface Order {
   trackingNumber?: string | null;
 }
 
-
 /**
  * Query parameters for Get All Users With Pagination
  */

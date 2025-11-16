@@ -41,4 +41,3 @@ export interface Level1 {
 export interface Root {
   level1: Level1;
 }
-

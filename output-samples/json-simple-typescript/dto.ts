@@ -28,4 +28,3 @@ export interface Root {
   profile: Profile;
   tags: string[];
 }
-

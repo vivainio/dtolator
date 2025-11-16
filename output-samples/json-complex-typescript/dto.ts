@@ -67,4 +67,3 @@ export interface Root {
   statistics: RootStatistics;
   users: User[];
 }
-
