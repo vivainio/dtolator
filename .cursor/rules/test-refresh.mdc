@@ -25,9 +25,8 @@ cargo test --test integration_tests -- --nocapture
 When generator changes intentionally affect output format and tests fail, refresh the expected outputs:
 
 ### Method 1: Using Environment Variable (Recommended)
-```bash
-# In Rust shell environment
-DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests -- --nocapture
+```powershell
+$env:DTOLATOR_TEST_REFRESH=1; cargo test --test integration_tests -- --nocapture
 ```
 
 ### Method 2: Manual Generation + Review
