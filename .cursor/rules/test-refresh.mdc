@@ -1,0 +1,124 @@
+# Test Suite Refresh Guide
+
+## Overview
+
+The dtolator project uses an integration test suite that compares generated output against expected sample files in `output-samples/`. When the generator code changes in ways that affect output format, the expected output files must be refreshed.
+
+## Important Rule
+
+**NEVER manually edit files in `output-samples/` directory.** These files should ONLY be updated through the official test refresh process. Manual edits violate the immutability contract of test fixtures and will be reverted.
+
+## Running Test Suite
+
+### Normal Test Run
+```bash
+cargo test --test integration_tests
+```
+
+### With Detailed Output
+```bash
+cargo test --test integration_tests -- --nocapture
+```
+
+## Refreshing Expected Outputs
+
+When generator changes intentionally affect output format and tests fail, refresh the expected outputs:
+
+### Method 1: Using Environment Variable (Recommended)
+```bash
+# In Rust shell environment
+DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests -- --nocapture
+```
+
+### Method 2: Manual Generation + Review
+If the environment variable method doesn't work:
+
+1. Generate output for each test configuration manually
+2. Compare with current expected outputs in `output-samples/`
+3. If changes are intentional (e.g., unified headers parameter), verify the generated output is correct
+4. Run the full test suite with `--nocapture` to see all diffs
+5. Once verified as correct, use git to update the output-samples files through proper refresh
+
+## Test Coverage
+
+The suite tests 29 scenarios across:
+- **Angular**: Full sample (with/without Zod), simple sample, nested variations, promises support
+- **TypeScript**: Various JSON inputs with Zod
+- **Pydantic**: Python models
+- **Python TypedDict**: Typed dictionaries
+- **C#/.NET**: Classes with System.Text.Json
+- **JSON Schema**: Generation and conversion
+- **Endpoints**: API endpoint generation
+
+## When to Refresh
+
+**DO refresh expected outputs when:**
+- Intentionally improving code generation (e.g., unified headers)
+- Fixing bugs that affect generated code format
+- Adding new features that improve output quality
+- Language/framework-specific improvements
+
+**DO NOT refresh when:**
+- Tests fail due to regressions or bugs - fix the underlying code instead
+- Unrelated files changed - investigate why tests are affected
+- Not all tests pass - only refresh when intentional improvements are made
+
+## Key Test Directories
+
+- `output-samples/angular/full-sample/` - Full OpenAPI with Zod + Angular
+- `output-samples/angular/simple-sample/` - Simple sample with Zod + Angular  
+- `output-samples/angular-nested/` - Angular without Zod
+- `output-samples/angular-promises-with-zod/` - Promises support with Zod
+- `output-samples/angular-promises-no-zod/` - Promises support without Zod
+- `output-samples/comprehensive-nested-test/` - Comprehensive test with Zod
+- Other directories for TypeScript, Pydantic, JSON Schema, etc.
+
+## Implementation Details
+
+- Test harness: `tests/integration_tests.rs`
+- Refresh detection: `std::env::var("DTOLATOR_TEST_REFRESH").is_ok()`
+- Test files are compared line-by-line for exact matches
+- Diff output shows specific changes when tests fail
+- Environment variable approach preferred over manual edits
+
+## Example Workflow
+
+```bash
+# 1. Make code changes to generator (e.g., angular.rs)
+# 2. Run tests to see which outputs changed
+cargo test --test integration_tests -- --nocapture
+
+# 3. Review the diff output to verify changes are intentional
+# 4. Once verified as correct, refresh the outputs
+DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests -- --nocapture
+
+# 5. Verify all tests now pass
+cargo test --test integration_tests
+
+# 6. Commit both code changes AND updated output-samples
+git add src/generators/angular.rs output-samples/
+git commit -m "feat: description of changes"
+```
+
+## Troubleshooting
+
+### Environment Variable Not Detected
+If `DTOLATOR_TEST_REFRESH=1` doesn't work:
+1. Verify the shell supports environment variable syntax
+2. Try running from a fresh shell session
+3. Check that the variable is actually being set by adding debug output
+4. Use `echo $DTOLATOR_TEST_REFRESH` to verify it's set
+
+### Test Failures After Refresh
+If tests still fail after refresh:
+1. Check that the generated output is actually correct
+2. Verify no unintended changes were included
+3. Run a single test in isolation to debug
+4. Check if other code changes are interfering
+
+### Partial Refresh
+If only some tests need refresh:
+1. Run the full test suite to identify which tests fail
+2. Make code changes to fix those specific cases
+3. Refresh outputs when all intentional changes are complete
+4. Avoid partial refreshes that leave inconsistent test state
