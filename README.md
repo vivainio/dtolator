@@ -1095,19 +1095,10 @@ The dtolator project includes a comprehensive test suite and code coverage analy
 
 ### Running Tests
 
-```cmd
-run-tests.bat              # Run all tests
-run-tests.bat --refresh    # Update expected outputs after intentional changes
+```bash
+python run-tests.py              # Run all tests
+python run-tests.py --refresh    # Update expected outputs after intentional changes
+python run-tests.py --coverage   # Run tests with code coverage analysis
 ```
 
-### Code Coverage
-
-Measure how much of the codebase is exercised by tests:
-
-```cmd
-run-tests.bat --coverage              # Display coverage in terminal
-run-tests.bat --coverage --html       # Generate HTML coverage report
-run-tests.bat --coverage --json       # Generate JSON coverage report
-```
-
-See [COVERAGE.md](COVERAGE.md) for detailed coverage analysis guide.
+See [COVERAGE-ANALYSIS.md](COVERAGE-ANALYSIS.md) for detailed coverage analysis guide.
