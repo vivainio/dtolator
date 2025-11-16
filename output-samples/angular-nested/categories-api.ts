@@ -17,7 +17,7 @@ export class CategoriesApi {
   /**
    * Get All Product Categories
    *
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Category[]> - Categories list
    */
   getAllProductCategories(headers?: HttpHeaders): Observable<Category[]> {
@@ -29,7 +29,7 @@ export class CategoriesApi {
    * Create New Category
    *
    * @param dto - Request body of type CreateCategoryRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Category> - Category created
    */
   createNewCategory(dto: CreateCategoryRequest, headers?: HttpHeaders): Observable<Category> {

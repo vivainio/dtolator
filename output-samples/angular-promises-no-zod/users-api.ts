@@ -20,7 +20,7 @@ export class UsersApi {
    *
    * Retrieve a list of all users in the system
    *
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Promise<User[]> - Successful response
    */
   listAllUsers(headers?: HttpHeaders): Promise<User[]> {
@@ -34,7 +34,7 @@ export class UsersApi {
    * Create a new user account
    *
    * @param dto - Request body of type CreateUserRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Promise<ApiResponse> - User created successfully
    */
   createNewUser(dto: CreateUserRequest, headers?: HttpHeaders): Promise<ApiResponse> {
@@ -48,7 +48,7 @@ export class UsersApi {
    * Retrieve a specific user by their ID
    *
    * @param userId - Path parameter of type number
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Promise<User> - User found
    */
   getUserByID(userId: number, headers?: HttpHeaders): Promise<User> {
@@ -63,7 +63,7 @@ export class UsersApi {
    *
    * @param userId - Path parameter of type number
    * @param dto - Request body of type CreateUserRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Promise<ApiResponse> - User updated successfully
    */
   updateUserProfile(userId: number, dto: CreateUserRequest, headers?: HttpHeaders): Promise<ApiResponse> {
@@ -77,7 +77,7 @@ export class UsersApi {
    * Permanently delete a user account
    *
    * @param userId - Path parameter of type number
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Promise<ApiResponse> - User deleted successfully
    */
   deleteUserAccount(userId: number, headers?: HttpHeaders): Promise<ApiResponse> {
@@ -91,7 +91,7 @@ export class UsersApi {
    * Activate a user's account status
    *
    * @param userId - Path parameter of type number
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Promise<ApiResponse> - User activated successfully
    */
   activateUserAccount(userId: number, headers?: HttpHeaders): Promise<ApiResponse> {
@@ -105,7 +105,7 @@ export class UsersApi {
    * Deactivate a user's account status
    *
    * @param userId - Path parameter of type number
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Promise<ApiResponse> - User deactivated successfully
    */
   deactivateUserAccount(userId: number, headers?: HttpHeaders): Promise<ApiResponse> {

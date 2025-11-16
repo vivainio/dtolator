@@ -52,25 +52,3 @@ export function fillUrl<T extends Record<string, any> = Record<string, ParamValu
   
   return `${baseUrl}${path}`;
 }
-
-/**
- * Merges custom header parameters with base headers
- * @param baseHeaders - Optional base HttpHeaders to merge into
- * @param customHeaders - Optional custom headers object to merge
- * @returns Merged HttpHeaders instance
- */
-export function mergeHeaders(
-  baseHeaders: HttpHeaders | undefined,
-  customHeaders?: Record<string, any>,
-): HttpHeaders {
-  let finalHeaders = baseHeaders;
-  if (customHeaders) {
-    finalHeaders = baseHeaders || new HttpHeaders();
-    Object.entries(customHeaders).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        finalHeaders = finalHeaders!.set(key, String(value));
-      }
-    });
-  }
-  return finalHeaders;
-}

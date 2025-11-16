@@ -23,7 +23,7 @@ export class OrdersApi {
    * Create New Order
    *
    * @param dto - Request body of type CreateOrderRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Order> - Order created
    */
   createNewOrder(dto: CreateOrderRequest, headers?: HttpHeaders): Observable<Order> {
@@ -38,7 +38,7 @@ export class OrdersApi {
    * Get Order By ID
    *
    * @param orderId - Path parameter of type string
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Order> - Order found
    */
   getOrderByID(orderId: string, headers?: HttpHeaders): Observable<Order> {
@@ -54,7 +54,7 @@ export class OrdersApi {
    *
    * @param orderId - Path parameter of type string
    * @param dto - Request body of type UpdateOrderStatusRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Order> - Order status updated
    */
   updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest, headers?: HttpHeaders): Observable<Order> {

@@ -24,7 +24,7 @@ export class ProductsApi {
    * @param queryParams.category - optional parameter of type ProductCategory
    * @param queryParams.minPrice - optional parameter of type number
    * @param queryParams.maxPrice - optional parameter of type number
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<ProductListResponse> - Products list
    */
   searchProductsWithFilters(queryParams?: SearchProductsWithFiltersQueryParams, headers?: HttpHeaders): Observable<ProductListResponse> {
@@ -36,7 +36,7 @@ export class ProductsApi {
    * Get Product By ID
    *
    * @param productId - Path parameter of type string
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Product> - Product found
    */
   getProductByID(productId: string, headers?: HttpHeaders): Observable<Product> {
@@ -49,7 +49,7 @@ export class ProductsApi {
    *
    * @param productId - Path parameter of type string
    * @param dto - Request body of type UpdateProductRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Product> - Product updated
    */
   updateProduct(productId: string, dto: UpdateProductRequest, headers?: HttpHeaders): Observable<Product> {

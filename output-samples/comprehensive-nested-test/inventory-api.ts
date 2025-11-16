@@ -26,7 +26,7 @@ export class InventoryApi {
    *
    * @param queryParams - Query parameters object
    * @param queryParams.lowStock - optional parameter of type boolean
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<InventoryResponse> - Inventory levels
    */
   getInventoryLevels(queryParams?: InventoryLevelsQueryParams, headers?: HttpHeaders): Observable<InventoryResponse> {
@@ -42,7 +42,7 @@ export class InventoryApi {
    *
    * @param productId - Path parameter of type string
    * @param dto - Request body of type UpdateInventoryRequest
-   * @param headers - Optional custom HTTP headers
+   * @param headers - Optional HTTP headers
    * @returns Observable<Inventory> - Inventory updated
    */
   updateProductInventory(productId: string, dto: UpdateInventoryRequest, headers?: HttpHeaders): Observable<Inventory> {
