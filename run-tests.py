@@ -13,7 +13,7 @@ def run_tests(refresh: bool = False) -> None:
     else:
         print("Running dtolator test suite...")
     
-    subprocess.run(["cargo", "test", "--test", "integration_tests", "--"], env=env)
+    subprocess.run(["cargo", "test", "--test", "integration_tests", "--", "--nocapture"], env=env)
 
 def run_biome() -> None:
     """Run biome formatter and linter on output-samples"""
