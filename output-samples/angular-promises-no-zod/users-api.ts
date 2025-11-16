@@ -2,7 +2,7 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import type { Injectable } from "@angular/core";
+import { Injectable } from "@angular/core";
 import { lastValueFrom } from "rxjs";
 import { fillUrl } from "./fill-url";
 import type {

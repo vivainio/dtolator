@@ -13,27 +13,27 @@ The dtolator project uses a comprehensive Rust-based integration test suite (`te
 
 ### Basic Usage
 
-```cmd
-run-tests.bat              # Build and run all tests
-run-tests.bat --refresh    # Regenerate expected output files
-run-tests.bat --help       # Show help information
+```bash
+python run-tests.py              # Build and run all tests
+python run-tests.py --refresh    # Regenerate expected output files
+python run-tests.py --help       # Show help information
 ```
 
 ### Common Scenarios
 
 **Run tests after code changes (with full build):**
-```cmd
-run-tests.bat
+```bash
+python run-tests.py
 ```
 
 **Update expected outputs after intentional improvements:**
-```cmd
-run-tests.bat --refresh
+```bash
+python run-tests.py --refresh
 ```
 
 **View available options:**
-```cmd
-run-tests.bat --help
+```bash
+python run-tests.py --help
 ```
 
 ## Understanding Test Output
@@ -106,17 +106,17 @@ After running `--refresh`, all expected files are updated to match current dtola
 
 ## Implementation Details
 
-The test suite is implemented in Rust using:
+The test suite is implemented in Rust with a Python wrapper:
 - `tests/integration_tests.rs` - Main test harness
 - Environment variable `DTOLATOR_TEST_REFRESH` - Controls refresh mode
-- `run-tests.bat` - Windows CMD wrapper script
+- `run-tests.py` - Python wrapper script
 
 Each test runs dtolator with specific generator flags and compares the output against expected files in `output-samples/`.
 
 ## Integration with Development
 
 After making code changes:
-1. Run tests: `run-tests.bat`
+1. Run tests: `python run-tests.py`
 2. If tests fail with intentional improvements, review the diff
-3. If the change is correct, refresh: `run-tests.bat --refresh`
+3. If the change is correct, refresh: `python run-tests.py --refresh`
 4. Commit both code changes and updated test outputs

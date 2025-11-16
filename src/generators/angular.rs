@@ -643,7 +643,7 @@ impl AngularGenerator {
         // Use import type for Angular types
         service
             .push_str("import type { HttpClient, HttpHeaders } from \"@angular/common/http\";\n");
-        service.push_str("import type { Injectable } from \"@angular/core\";\n");
+        service.push_str("import { Injectable } from \"@angular/core\";\n");
 
         // Import Observable only if not using promises
         if !self.promises {
