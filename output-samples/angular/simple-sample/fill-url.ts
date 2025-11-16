@@ -34,13 +34,13 @@ export function fillUrl<
   }
 
   // Get API base URL with improved error messaging
-  const apiConfig = (globalThis as any).API_URL || (window as any)?.API_URL;
+  const apiConfig = (globalThis as {{ API_URL?: string }}).API_URL || (window as {{ API_URL?: string }})?.API_URL;
   if (!apiConfig) {
     throw new Error(
       "API_URL is not configured. Please set the global API_URL variable to your backend API base URL.\n" +
         "Examples:\n" +
-        '  • Browser: (window as any).API_URL = "https://api.example.com";\n' +
-        '  • Node.js: (globalThis as any).API_URL = "https://api.example.com";',
+        '  • Browser: window.API_URL = "https://api.example.com";\n' +
+        '  • Node.js: globalThis.API_URL = "https://api.example.com";',
     );
   }
 
