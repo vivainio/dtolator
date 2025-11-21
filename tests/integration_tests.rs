@@ -666,11 +666,12 @@ fn test_suite() {
 
     // Run all tests
     if let Err(e) = suite.run_all_tests() {
-        eprintln!("{}", format!("Test suite error: {}", e).red());
-        std::process::exit(1);
+        panic!("Test suite error: {}", e);
     }
 
-    if suite.failed_tests > 0 {
-        std::process::exit(1);
-    }
+    assert_eq!(
+        suite.failed_tests, 0,
+        "{} test(s) failed! See output above for details.",
+        suite.failed_tests
+    );
 }

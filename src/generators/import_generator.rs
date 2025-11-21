@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ImportCategory {
@@ -79,13 +79,13 @@ impl ImportStatement {
 
 pub struct ImportGenerator {
     // Map of (source, is_type_only) -> list of import names
-    imports: HashMap<(String, bool), Vec<String>>,
+    imports: BTreeMap<(String, bool), Vec<String>>,
 }
 
 impl ImportGenerator {
     pub fn new() -> Self {
         Self {
-            imports: HashMap::new(),
+            imports: BTreeMap::new(),
         }
     }
 

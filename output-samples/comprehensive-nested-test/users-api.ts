@@ -6,6 +6,7 @@ import { Injectable } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
+import { UserListResponseSchema, UserSchema } from "./dto";
 import type {
   AllUsersWithPaginationHeaders,
   AllUsersWithPaginationQueryParams,
@@ -13,7 +14,6 @@ import type {
   User,
   UserListResponse,
 } from "./dto";
-import { UserListResponseSchema, UserSchema } from "./dto";
 import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
