@@ -1,3 +1,1 @@
 pre-commit = "cargo fmt --check"
-# empty hooks are ignored
-pre-push = ""
