@@ -6,17 +6,22 @@ from typing import Optional, Union, List, Dict, Any
 from enum import Enum
 from datetime import datetime
 
+
 class Address(BaseModel):
     city: str = Field(min_length=1, max_length=50)
-    country: str = Field(regex=r"^[A-Z]{2}$", description="ISO 3166-1 alpha-2 country code")
+    country: str = Field(
+        regex=r"^[A-Z]{2}$", description="ISO 3166-1 alpha-2 country code"
+    )
     postalCode: Optional[str] = Field(None, min_length=3, max_length=10)
     state: Optional[str] = Field(None, max_length=50)
     street: str = Field(min_length=1, max_length=100)
+
 
 class ApiResponse(BaseModel):
     data: Optional[User] = None
     message: Optional[str] = None
     success: bool
+
 
 class CreateUserRequest(BaseModel):
     address: Optional[Address] = None
@@ -24,6 +29,7 @@ class CreateUserRequest(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1, max_length=100)
     profile: UserProfile
+
 
 class User(BaseModel):
     address: Optional[Address] = None
@@ -36,6 +42,7 @@ class User(BaseModel):
     status: Optional[Dict[str, Any]] = None
     tags: Optional[List[str]] = None
 
+
 class UserProfile(BaseModel):
     avatar: Optional[HttpUrl] = None
     bio: Optional[str] = Field(None, max_length=500)
@@ -43,5 +50,5 @@ class UserProfile(BaseModel):
     lastName: str = Field(min_length=1, max_length=50)
     phoneNumber: Optional[str] = Field(None, regex=r"^\+?[1-9]\d{1,14}$")
 
-Root = User
 
+Root = User

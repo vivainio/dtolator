@@ -245,7 +245,7 @@ impl AngularGenerator {
 
         // Generate URL building
         let url_params = self.get_url_params(path, operation)?;
-        
+
         method.push_str(&format!(
             "    const url = fillUrl('{path}', {url_params});\n"
         ));
@@ -522,8 +522,6 @@ impl AngularGenerator {
 
         Ok(format!("{{ {} }}", params.join(", ")))
     }
-
-
 
     fn get_request_body(&self, operation: &Operation) -> Result<String> {
         if operation.request_body.is_some() {
@@ -941,7 +939,9 @@ export function fillUrl(url: string, params?: Record<string, ParamValue>): strin
                                         ));
                                     }
 
-                                    types.push_str(&format!("export type {type_name} = Partial<{{\n"));
+                                    types.push_str(&format!(
+                                        "export type {type_name} = Partial<{{\n"
+                                    ));
                                     for param in &query_params {
                                         let param_type = self.get_parameter_type(param);
                                         // We make all properties required inside Partial since Partial makes them optional

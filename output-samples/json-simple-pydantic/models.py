@@ -6,19 +6,23 @@ from typing import Optional, Union, List, Dict, Any
 from enum import Enum
 from datetime import datetime
 
+
 class RootAddress(BaseModel):
     city: str
     street: str
     zipCode: str
 
+
 class ProfileSocialLinks(BaseModel):
     github: str
     twitter: str
+
 
 class Profile(BaseModel):
     avatar: Optional[Any]
     bio: str
     socialLinks: ProfileSocialLinks
+
 
 class Root(BaseModel):
     address: RootAddress
@@ -29,4 +33,3 @@ class Root(BaseModel):
     name: str
     profile: Profile
     tags: List[str]
-

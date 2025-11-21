@@ -6,16 +6,19 @@ from typing import Optional, Union, List, Dict, Any
 from enum import Enum
 from datetime import datetime
 
+
 class MetadataPreferences(BaseModel):
     language: str
     notifications: bool
     theme: str
+
 
 class Metadata(BaseModel):
     accountType: str
     lastLogin: str
     loginCount: int
     preferences: MetadataPreferences
+
 
 class Profile(BaseModel):
     avatar: str
@@ -26,6 +29,7 @@ class Profile(BaseModel):
     rating: float
     reviewCount: int
     verified: bool
+
 
 class User(BaseModel):
     age: int
@@ -45,6 +49,6 @@ class User(BaseModel):
     username: str
     website: str
 
+
 class Root(BaseModel):
     user: User
-

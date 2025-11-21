@@ -6,48 +6,58 @@ from typing import Optional, Union, List, Dict, Any
 from enum import Enum
 from datetime import datetime
 
+
 class OrganizationSettingsFeatures(BaseModel):
     advancedReporting: bool
     apiAccess: bool
     customBranding: Optional[Any]
+
 
 class PasswordPolicy(BaseModel):
     minLength: int
     requireNumbers: bool
     requireSpecialChars: bool
 
+
 class Security(BaseModel):
     passwordPolicy: PasswordPolicy
     twoFactorRequired: bool
 
+
 class OrganizationSettings(BaseModel):
     features: OrganizationSettingsFeatures
     security: Security
+
 
 class Organization(BaseModel):
     industry: str
     name: str
     settings: OrganizationSettings
 
+
 class RootStatistics(BaseModel):
     activeUsers: int
     growth: float
     totalUsers: int
+
 
 class MetadataPreferencesNotifications(BaseModel):
     email: bool
     push: bool
     sms: Optional[Any]
 
+
 class MetadataPreferences(BaseModel):
     language: str
     notifications: MetadataPreferencesNotifications
     theme: str
 
+
 class Metadata(BaseModel):
     createdAt: str
     lastLogin: str
     preferences: MetadataPreferences
+
 
 class User(BaseModel):
     email: str
@@ -57,8 +67,8 @@ class User(BaseModel):
     permissions: List[str]
     role: str
 
+
 class Root(BaseModel):
     organization: Organization
     statistics: RootStatistics
     users: List[User]
-
