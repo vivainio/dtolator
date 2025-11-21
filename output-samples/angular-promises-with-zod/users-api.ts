@@ -7,8 +7,8 @@ import { lastValueFrom } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
 
-import type { ApiResponse, CreateUserRequest, User } from "./dto";
 import { ApiResponseSchema, UserSchema } from "./dto";
+import type { ApiResponse, CreateUserRequest, User } from "./dto";
 import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })

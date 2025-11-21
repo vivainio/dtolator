@@ -5,7 +5,6 @@ from typing import TypedDict, Optional, Union, List, Dict, Any
 from enum import Enum
 from datetime import datetime
 
-
 class UserRequired(TypedDict):
     id: str
     email: str
@@ -19,7 +18,6 @@ class User(UserRequired, total=False):
     isActive: bool
     roles: List[UserRole]
 
-
 class UserProfileRequired(TypedDict):
     firstName: str
     lastName: str
@@ -31,20 +29,17 @@ class UserProfile(UserProfileRequired, total=False):
     avatar: ImageUrl
     address: Address
 
-
 class UserPreferences(TypedDict, total=False):
     language: Literal["en", "es", "fr", "de", "it"]
     currency: Literal["USD", "EUR", "GBP", "JPY"]
     notifications: NotificationSettings
     theme: Literal["light", "dark", "auto"]
 
-
 class NotificationSettings(TypedDict, total=False):
     email: bool
     push: bool
     sms: bool
     marketing: bool
-
 
 class UserRole(str, Enum):
     CUSTOMER = "customer"
@@ -64,7 +59,6 @@ class Address(AddressRequired, total=False):
     street2: Optional[str]
     state: Optional[str]
 
-
 class ImageUrlRequired(TypedDict):
     url: str
 
@@ -73,7 +67,6 @@ class ImageUrl(ImageUrlRequired, total=False):
     alt: str
     width: int
     height: int
-
 
 class ProductRequired(TypedDict):
     id: str
@@ -91,7 +84,6 @@ class Product(ProductRequired, total=False):
     isActive: bool
     createdAt: str
 
-
 class PriceRequired(TypedDict):
     amount: float
     currency: Literal["USD", "EUR", "GBP", "JPY"]
@@ -99,7 +91,6 @@ class PriceRequired(TypedDict):
 
 class Price(PriceRequired, total=False):
     originalAmount: Optional[float]
-
 
 class ProductCategory(str, Enum):
     ELECTRONICS = "electronics"
@@ -119,7 +110,6 @@ class InventoryRequired(TypedDict):
 class Inventory(InventoryRequired, total=False):
     lowStockThreshold: int
 
-
 class OrderRequired(TypedDict):
     id: str
     userId: str
@@ -136,7 +126,6 @@ class Order(OrderRequired, total=False):
     estimatedDelivery: Optional[str]
     trackingNumber: Optional[str]
 
-
 class OrderItemRequired(TypedDict):
     productId: str
     quantity: int
@@ -145,7 +134,6 @@ class OrderItemRequired(TypedDict):
 
 class OrderItem(OrderItemRequired, total=False):
     productSnapshot: Product
-
 
 class OrderStatus(str, Enum):
     PENDING = "pending"
@@ -165,7 +153,6 @@ class PaymentMethod(PaymentMethodRequired, total=False):
     last4: str
     brand: Literal["visa", "mastercard", "amex", "discover"]
 
-
 class CreateUserRequestRequired(TypedDict):
     email: str
     password: str
@@ -174,7 +161,6 @@ class CreateUserRequestRequired(TypedDict):
 
 class CreateUserRequest(CreateUserRequestRequired, total=False):
     preferences: UserPreferences
-
 
 class CreateOrderRequestRequired(TypedDict):
     items: List[Dict[str, Any]]
@@ -185,11 +171,9 @@ class CreateOrderRequest(CreateOrderRequestRequired, total=False):
     billingAddress: Address
     paymentMethod: PaymentMethod
 
-
 class UserListResponse(TypedDict):
     data: List[User]
     pagination: PaginationInfo
-
 
 class ProductListResponseRequired(TypedDict):
     data: List[Product]
@@ -198,7 +182,6 @@ class ProductListResponseRequired(TypedDict):
 
 class ProductListResponse(ProductListResponseRequired, total=False):
     filters: Dict[str, Any]
-
 
 class PaginationInfoRequired(TypedDict):
     page: int
@@ -211,10 +194,8 @@ class PaginationInfo(PaginationInfoRequired, total=False):
     hasNext: bool
     hasPrev: bool
 
-
 class ErrorResponse(TypedDict):
     error: Dict[str, Any]
-
 
 class UpdateProductRequest(TypedDict, total=False):
     name: str
@@ -223,14 +204,12 @@ class UpdateProductRequest(TypedDict, total=False):
     category: ProductCategory
     isActive: bool
 
-
 class UpdateOrderStatusRequestRequired(TypedDict):
     status: OrderStatus
 
 
 class UpdateOrderStatusRequest(UpdateOrderStatusRequestRequired, total=False):
     trackingNumber: str
-
 
 class CategoryRequired(TypedDict):
     id: str
@@ -243,7 +222,6 @@ class Category(CategoryRequired, total=False):
     parentId: Optional[str]
     isActive: bool
 
-
 class CreateCategoryRequestRequired(TypedDict):
     name: str
     slug: str
@@ -253,10 +231,8 @@ class CreateCategoryRequest(CreateCategoryRequestRequired, total=False):
     description: str
     parentId: str
 
-
 class InventoryResponse(TypedDict):
     data: List[Dict[str, Any]]
-
 
 class UpdateInventoryRequestRequired(TypedDict):
     quantity: int
@@ -264,7 +240,6 @@ class UpdateInventoryRequestRequired(TypedDict):
 
 class UpdateInventoryRequest(UpdateInventoryRequestRequired, total=False):
     lowStockThreshold: int
-
 
 class SalesAnalyticsRequired(TypedDict):
     totalRevenue: float
@@ -276,7 +251,6 @@ class SalesAnalytics(SalesAnalyticsRequired, total=False):
     topProducts: List[Dict[str, Any]]
     period: Dict[str, Any]
 
-
 class ProductAnalyticsRequired(TypedDict):
     totalProducts: int
     activeProducts: int
@@ -285,3 +259,4 @@ class ProductAnalyticsRequired(TypedDict):
 class ProductAnalytics(ProductAnalyticsRequired, total=False):
     categoryBreakdown: Dict[str, Any]
     lowStockProducts: List[Dict[str, Any]]
+

@@ -5,7 +5,6 @@ from typing import TypedDict, Optional, Union, List, Dict, Any
 from enum import Enum
 from datetime import datetime
 
-
 class UserRequired(TypedDict):
     id: int
     email: str
@@ -20,7 +19,6 @@ class User(UserRequired, total=False):
     profile: UserProfile
     address: Address
 
-
 class UserProfileRequired(TypedDict):
     firstName: str
     lastName: str
@@ -30,7 +28,6 @@ class UserProfile(UserProfileRequired, total=False):
     phoneNumber: Optional[str]
     avatar: Optional[str]
     bio: Optional[str]
-
 
 class AddressRequired(TypedDict):
     street: str
@@ -42,7 +39,6 @@ class Address(AddressRequired, total=False):
     state: Optional[str]
     postalCode: Optional[str]
 
-
 class CreateUserRequestRequired(TypedDict):
     email: str
     name: str
@@ -53,7 +49,6 @@ class CreateUserRequest(CreateUserRequestRequired, total=False):
     age: Optional[int]
     address: Address
 
-
 class ApiResponseRequired(TypedDict):
     success: bool
 
@@ -61,3 +56,4 @@ class ApiResponseRequired(TypedDict):
 class ApiResponse(ApiResponseRequired, total=False):
     message: str
     data: User
+
