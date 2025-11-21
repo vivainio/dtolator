@@ -6,13 +6,13 @@ import { Injectable } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
-import { InventoryResponseSchema, InventorySchema } from "./dto";
 import type {
   Inventory,
   InventoryLevelsQueryParams,
   InventoryResponse,
   UpdateInventoryRequest,
 } from "./dto";
+import { InventoryResponseSchema, InventorySchema } from "./dto";
 import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
@@ -28,8 +28,8 @@ export class InventoryApi {
    * @returns Observable<InventoryResponse> - Inventory levels
    */
   getInventoryLevels(queryParams?: InventoryLevelsQueryParams, headers?: HttpHeaders): Observable<InventoryResponse> {
-    const url = fillUrl('/inventory', {}, queryParams || {});
-    return this.http.get<InventoryResponse>(url, { headers })
+    const url = fillUrl('/inventory', {});
+    return this.http.get<InventoryResponse>(url, { headers, params: queryParams })
       .pipe(
         map(response => InventoryResponseSchema.parse(response))
       );
@@ -44,7 +44,7 @@ export class InventoryApi {
    * @returns Observable<Inventory> - Inventory updated
    */
   updateProductInventory(productId: string, dto: UpdateInventoryRequest, headers?: HttpHeaders): Observable<Inventory> {
-    const url = fillUrl('/inventory/{productId}', { productId: productId }, {});
+    const url = fillUrl('/inventory/{productId}', { productId: productId });
     return this.http.put<Inventory>(url, dto, { headers })
       .pipe(
         map(response => InventorySchema.parse(response))

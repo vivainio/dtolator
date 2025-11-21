@@ -31,8 +31,8 @@ export class UsersApi {
    * @returns Observable<UserListResponse> - Successful response
    */
   getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams, headers?: AllUsersWithPaginationHeaders & Record<string, string>): Observable<UserListResponse> {
-    const url = fillUrl('/users', {}, queryParams || {});
-    return this.http.get<UserListResponse>(url, { headers });
+    const url = fillUrl('/users', {});
+    return this.http.get<UserListResponse>(url, { headers, params: queryParams });
   }
 
   /**
@@ -45,7 +45,7 @@ export class UsersApi {
    * @returns Observable<User> - User created successfully
    */
   createNewUserAccount(dto: CreateUserRequest, headers?: HttpHeaders): Observable<User> {
-    const url = fillUrl('/users', {}, {});
+    const url = fillUrl('/users', {});
     return this.http.post<User>(url, dto, { headers });
   }
 
@@ -57,7 +57,7 @@ export class UsersApi {
    * @returns Observable<User> - User found
    */
   getUserProfileByID(userId: string, headers?: HttpHeaders): Observable<User> {
-    const url = fillUrl('/users/{userId}', { userId: userId }, {});
+    const url = fillUrl('/users/{userId}', { userId: userId });
     return this.http.get<User>(url, { headers });
   }
 

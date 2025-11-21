@@ -26,7 +26,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order created
    */
   createNewOrder(dto: CreateOrderRequest, headers?: HttpHeaders): Observable<Order> {
-    const url = fillUrl('/orders', {}, {});
+    const url = fillUrl('/orders', {});
     return this.http.post<Order>(url, dto, { headers })
       .pipe(
         map(response => OrderSchema.parse(response))
@@ -41,7 +41,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order found
    */
   getOrderByID(orderId: string, headers?: HttpHeaders): Observable<Order> {
-    const url = fillUrl('/orders/{orderId}', { orderId: orderId }, {});
+    const url = fillUrl('/orders/{orderId}', { orderId: orderId });
     return this.http.get<Order>(url, { headers })
       .pipe(
         map(response => OrderSchema.parse(response))
@@ -57,7 +57,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order status updated
    */
   updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest, headers?: HttpHeaders): Observable<Order> {
-    const url = fillUrl('/orders/{orderId}', { orderId: orderId }, {});
+    const url = fillUrl('/orders/{orderId}', { orderId: orderId });
     return this.http.patch<Order>(url, dto, { headers })
       .pipe(
         map(response => OrderSchema.parse(response))

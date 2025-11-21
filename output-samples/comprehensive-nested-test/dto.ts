@@ -92,34 +92,34 @@ export interface CreateUserRequest {
 /**
  * Query parameters for Get All Users With Pagination
  */
-export interface AllUsersWithPaginationQueryParams {
-  page?: number;
-  limit?: number;
-}
+export type AllUsersWithPaginationQueryParams = Partial<{
+  page: number;
+  limit: number;
+}>;
 
 /**
  * Query parameters for Search Products With Filters
  */
-export interface SearchProductsWithFiltersQueryParams {
-  category?: ProductCategory;
-  minPrice?: number;
-  maxPrice?: number;
-}
+export type SearchProductsWithFiltersQueryParams = Partial<{
+  category: ProductCategory;
+  minPrice: number;
+  maxPrice: number;
+}>;
 
 /**
  * Query parameters for Get Inventory Levels
  */
-export interface InventoryLevelsQueryParams {
-  lowStock?: boolean;
-}
+export type InventoryLevelsQueryParams = Partial<{
+  lowStock: boolean;
+}>;
 
 /**
  * Query parameters for Get Sales Analytics
  */
-export interface SalesAnalyticsQueryParams {
-  startDate?: string;
-  endDate?: string;
-}
+export type SalesAnalyticsQueryParams = Partial<{
+  startDate: string;
+  endDate: string;
+}>;
 
 export type { User };
 export type { UserProfile };

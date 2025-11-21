@@ -28,8 +28,8 @@ export class ProductsApi {
    * @returns Observable<ProductListResponse> - Products list
    */
   searchProductsWithFilters(queryParams?: SearchProductsWithFiltersQueryParams, headers?: HttpHeaders): Observable<ProductListResponse> {
-    const url = fillUrl('/products', {}, queryParams || {});
-    return this.http.get<ProductListResponse>(url, { headers });
+    const url = fillUrl('/products', {});
+    return this.http.get<ProductListResponse>(url, { headers, params: queryParams });
   }
 
   /**
@@ -40,7 +40,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product found
    */
   getProductByID(productId: string, headers?: HttpHeaders): Observable<Product> {
-    const url = fillUrl('/products/{productId}', { productId: productId }, {});
+    const url = fillUrl('/products/{productId}', { productId: productId });
     return this.http.get<Product>(url, { headers });
   }
 
@@ -53,7 +53,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product updated
    */
   updateProduct(productId: string, dto: UpdateProductRequest, headers?: HttpHeaders): Observable<Product> {
-    const url = fillUrl('/products/{productId}', { productId: productId }, {});
+    const url = fillUrl('/products/{productId}', { productId: productId });
     return this.http.put<Product>(url, dto, { headers });
   }
 

@@ -245,45 +245,61 @@ impl AngularGenerator {
 
         // Generate URL building
         let url_params = self.get_url_params(path, operation)?;
-        let query_params = self.get_query_params(operation)?;
-
+        
         method.push_str(&format!(
-            "    const url = fillUrl('{path}', {url_params}, {query_params});\n"
+            "    const url = fillUrl('{path}', {url_params});\n"
         ));
+
+        // Check for query params
+        let has_query_params = if let Some(parameters) = &operation.parameters {
+            parameters.iter().any(|p| p.location == "query")
+        } else {
+            false
+        };
+
+        let options = if has_query_params {
+            "{ headers, params: queryParams }"
+        } else {
+            "{ headers }"
+        };
 
         // Generate HTTP call
         let request_body = self.get_request_body(operation)?;
 
         let http_call = match http_method {
             "GET" => {
-                format!("this.http.get<{return_type}>(url, {{ headers }})")
+                format!("this.http.get<{return_type}>(url, {options})")
             }
             "POST" => {
                 if request_body.is_empty() {
-                    format!("this.http.post<{return_type}>(url, null, {{ headers }})")
+                    format!("this.http.post<{return_type}>(url, null, {options})")
                 } else {
-                    format!("this.http.post<{return_type}>(url{request_body}, {{ headers }})")
+                    format!("this.http.post<{return_type}>(url{request_body}, {options})")
                 }
             }
             "PUT" => {
                 if request_body.is_empty() {
-                    format!("this.http.put<{return_type}>(url, null, {{ headers }})")
+                    format!("this.http.put<{return_type}>(url, null, {options})")
                 } else {
-                    format!("this.http.put<{return_type}>(url{request_body}, {{ headers }})")
+                    format!("this.http.put<{return_type}>(url{request_body}, {options})")
                 }
             }
             "DELETE" => {
-                format!("this.http.delete<{return_type}>(url, {{ headers }})")
+                format!("this.http.delete<{return_type}>(url, {options})")
             }
             "PATCH" => {
                 if request_body.is_empty() {
-                    format!("this.http.patch<{return_type}>(url, null, {{ headers }})")
+                    format!("this.http.patch<{return_type}>(url, null, {options})")
                 } else {
-                    format!("this.http.patch<{return_type}>(url{request_body}, {{ headers }})")
+                    format!("this.http.patch<{return_type}>(url{request_body}, {options})")
                 }
             }
             _ => {
-                format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})")
+                if has_query_params {
+                    format!("this.http.request<{return_type}>('{http_method}', {{ url, headers, params: queryParams }})")
+                } else {
+                    format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})")
+                }
             }
         };
 
@@ -507,19 +523,7 @@ impl AngularGenerator {
         Ok(format!("{{ {} }}", params.join(", ")))
     }
 
-    fn get_query_params(&self, operation: &Operation) -> Result<String> {
-        if let Some(parameters) = &operation.parameters {
-            let query_params: Vec<&Parameter> = parameters
-                .iter()
-                .filter(|p| p.location == "query")
-                .collect();
 
-            if !query_params.is_empty() {
-                return Ok("queryParams || {}".to_string());
-            }
-        }
-        Ok("{}".to_string())
-    }
 
     fn get_request_body(&self, operation: &Operation) -> Result<String> {
         if operation.request_body.is_some() {
@@ -869,9 +873,7 @@ impl AngularGenerator {
 
 type ParamValue = string | number | boolean | null | undefined;
 
-export function fillUrl<
-  T extends Record<string, any> = Record<string, ParamValue>,
->(url: string, params?: Record<string, ParamValue>, queryParams?: T): string {
+export function fillUrl(url: string, params?: Record<string, ParamValue>): string {
   // Substitute path parameters using {param} format
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -880,22 +882,6 @@ export function fillUrl<
         const paramPattern = `{${key}}`;
         url = url.replace(paramPattern, String(value));
       }
-    }
-  }
-
-  // Build query string efficiently without intermediate arrays
-  if (queryParams) {
-    const queryParts: string[] = [];
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value != null) {
-        queryParts.push(
-          `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
-        );
-      }
-    }
-
-    if (queryParts.length > 0) {
-      url += `?${queryParts.join("&")}`;
     }
   }
 
@@ -916,6 +902,8 @@ export function fillUrl<
 
   return `${baseUrl}${path}`;
 }
+
+
 "#;
         template.replace("COMMAND_PLACEHOLDER", command_string)
     }
@@ -953,21 +941,17 @@ export function fillUrl<
                                         ));
                                     }
 
-                                    types.push_str(&format!("export interface {type_name} {{\n"));
+                                    types.push_str(&format!("export type {type_name} = Partial<{{\n"));
                                     for param in &query_params {
                                         let param_type = self.get_parameter_type(param);
-                                        let optional = if param.required.unwrap_or(false) {
-                                            ""
-                                        } else {
-                                            "?"
-                                        };
-
+                                        // We make all properties required inside Partial since Partial makes them optional
+                                        // This is cleaner than having optional properties inside an interface
                                         types.push_str(&format!(
-                                            "  {}{}: {};\n",
-                                            param.name, optional, param_type
+                                            "  {}: {};\n",
+                                            param.name, param_type
                                         ));
                                     }
-                                    types.push_str("}\n\n");
+                                    types.push_str("}>;\n\n");
                                 }
                             }
                         }

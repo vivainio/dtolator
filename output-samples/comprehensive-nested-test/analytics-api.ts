@@ -6,12 +6,12 @@ import { Injectable } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
+import { ProductAnalyticsSchema, SalesAnalyticsSchema } from "./dto";
 import type {
   ProductAnalytics,
   SalesAnalytics,
   SalesAnalyticsQueryParams,
 } from "./dto";
-import { ProductAnalyticsSchema, SalesAnalyticsSchema } from "./dto";
 import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
@@ -28,8 +28,8 @@ export class AnalyticsApi {
    * @returns Observable<SalesAnalytics> - Sales analytics data
    */
   getSalesAnalytics(queryParams?: SalesAnalyticsQueryParams, headers?: HttpHeaders): Observable<SalesAnalytics> {
-    const url = fillUrl('/analytics/sales', {}, queryParams || {});
-    return this.http.get<SalesAnalytics>(url, { headers })
+    const url = fillUrl('/analytics/sales', {});
+    return this.http.get<SalesAnalytics>(url, { headers, params: queryParams })
       .pipe(
         map(response => SalesAnalyticsSchema.parse(response))
       );
@@ -42,7 +42,7 @@ export class AnalyticsApi {
    * @returns Observable<ProductAnalytics> - Product analytics data
    */
   getProductAnalytics(headers?: HttpHeaders): Observable<ProductAnalytics> {
-    const url = fillUrl('/analytics/products', {}, {});
+    const url = fillUrl('/analytics/products', {});
     return this.http.get<ProductAnalytics>(url, { headers })
       .pipe(
         map(response => ProductAnalyticsSchema.parse(response))

@@ -26,8 +26,8 @@ export class InventoryApi {
    * @returns Observable<InventoryResponse> - Inventory levels
    */
   getInventoryLevels(queryParams?: InventoryLevelsQueryParams, headers?: HttpHeaders): Observable<InventoryResponse> {
-    const url = fillUrl('/inventory', {}, queryParams || {});
-    return this.http.get<InventoryResponse>(url, { headers });
+    const url = fillUrl('/inventory', {});
+    return this.http.get<InventoryResponse>(url, { headers, params: queryParams });
   }
 
   /**
@@ -39,7 +39,7 @@ export class InventoryApi {
    * @returns Observable<Inventory> - Inventory updated
    */
   updateProductInventory(productId: string, dto: UpdateInventoryRequest, headers?: HttpHeaders): Observable<Inventory> {
-    const url = fillUrl('/inventory/{productId}', { productId: productId }, {});
+    const url = fillUrl('/inventory/{productId}', { productId: productId });
     return this.http.put<Inventory>(url, dto, { headers });
   }
 

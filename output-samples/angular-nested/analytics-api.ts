@@ -26,8 +26,8 @@ export class AnalyticsApi {
    * @returns Observable<SalesAnalytics> - Sales analytics data
    */
   getSalesAnalytics(queryParams?: SalesAnalyticsQueryParams, headers?: HttpHeaders): Observable<SalesAnalytics> {
-    const url = fillUrl('/analytics/sales', {}, queryParams || {});
-    return this.http.get<SalesAnalytics>(url, { headers });
+    const url = fillUrl('/analytics/sales', {});
+    return this.http.get<SalesAnalytics>(url, { headers, params: queryParams });
   }
 
   /**
@@ -37,7 +37,7 @@ export class AnalyticsApi {
    * @returns Observable<ProductAnalytics> - Product analytics data
    */
   getProductAnalytics(headers?: HttpHeaders): Observable<ProductAnalytics> {
-    const url = fillUrl('/analytics/products', {}, {});
+    const url = fillUrl('/analytics/products', {});
     return this.http.get<ProductAnalytics>(url, { headers });
   }
 

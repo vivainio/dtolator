@@ -22,7 +22,7 @@ export class CategoriesApi {
    * @returns Observable<Category[]> - Categories list
    */
   getAllProductCategories(headers?: HttpHeaders): Observable<Category[]> {
-    const url = fillUrl('/categories', {}, {});
+    const url = fillUrl('/categories', {});
     return this.http.get<Category[]>(url, { headers })
       .pipe(
         map(response => z.array(CategorySchema).parse(response))
@@ -37,7 +37,7 @@ export class CategoriesApi {
    * @returns Observable<Category> - Category created
    */
   createNewCategory(dto: CreateCategoryRequest, headers?: HttpHeaders): Observable<Category> {
-    const url = fillUrl('/categories', {}, {});
+    const url = fillUrl('/categories', {});
     return this.http.post<Category>(url, dto, { headers })
       .pipe(
         map(response => CategorySchema.parse(response))

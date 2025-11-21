@@ -3,9 +3,7 @@
 
 type ParamValue = string | number | boolean | null | undefined;
 
-export function fillUrl<
-  T extends Record<string, any> = Record<string, ParamValue>,
->(url: string, params?: Record<string, ParamValue>, queryParams?: T): string {
+export function fillUrl(url: string, params?: Record<string, ParamValue>): string {
   // Substitute path parameters using {param} format
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -14,22 +12,6 @@ export function fillUrl<
         const paramPattern = `{${key}}`;
         url = url.replace(paramPattern, String(value));
       }
-    }
-  }
-
-  // Build query string efficiently without intermediate arrays
-  if (queryParams) {
-    const queryParts: string[] = [];
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value != null) {
-        queryParts.push(
-          `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
-        );
-      }
-    }
-
-    if (queryParts.length > 0) {
-      url += `?${queryParts.join("&")}`;
     }
   }
 
@@ -50,3 +32,5 @@ export function fillUrl<
 
   return `${baseUrl}${path}`;
 }
+
+

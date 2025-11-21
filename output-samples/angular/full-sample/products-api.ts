@@ -6,13 +6,13 @@ import { Injectable } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
-import { ProductListResponseSchema, ProductSchema } from "./dto";
 import type {
   Product,
   ProductListResponse,
   SearchProductsWithFiltersQueryParams,
   UpdateProductRequest,
 } from "./dto";
+import { ProductListResponseSchema, ProductSchema } from "./dto";
 import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
@@ -30,8 +30,8 @@ export class ProductsApi {
    * @returns Observable<ProductListResponse> - Products list
    */
   searchProductsWithFilters(queryParams?: SearchProductsWithFiltersQueryParams, headers?: HttpHeaders): Observable<ProductListResponse> {
-    const url = fillUrl('/products', {}, queryParams || {});
-    return this.http.get<ProductListResponse>(url, { headers })
+    const url = fillUrl('/products', {});
+    return this.http.get<ProductListResponse>(url, { headers, params: queryParams })
       .pipe(
         map(response => ProductListResponseSchema.parse(response))
       );
@@ -45,7 +45,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product found
    */
   getProductByID(productId: string, headers?: HttpHeaders): Observable<Product> {
-    const url = fillUrl('/products/{productId}', { productId: productId }, {});
+    const url = fillUrl('/products/{productId}', { productId: productId });
     return this.http.get<Product>(url, { headers })
       .pipe(
         map(response => ProductSchema.parse(response))
@@ -61,7 +61,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product updated
    */
   updateProduct(productId: string, dto: UpdateProductRequest, headers?: HttpHeaders): Observable<Product> {
-    const url = fillUrl('/products/{productId}', { productId: productId }, {});
+    const url = fillUrl('/products/{productId}', { productId: productId });
     return this.http.put<Product>(url, dto, { headers })
       .pipe(
         map(response => ProductSchema.parse(response))
