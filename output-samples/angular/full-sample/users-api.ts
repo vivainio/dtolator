@@ -2,7 +2,7 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -14,11 +14,16 @@ import type {
   User,
   UserListResponse,
 } from "./dto";
-import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
 
   /**
    * Get All Users With Pagination
@@ -33,7 +38,7 @@ export class UsersApi {
    * @returns Observable<UserListResponse> - Successful response
    */
   getAllUsersWithPagination(queryParams?: AllUsersWithPaginationQueryParams, headers?: AllUsersWithPaginationHeaders & Record<string, string>): Observable<UserListResponse> {
-    const url = fillUrl('/users', {});
+    const url = `${this.baseUrl}/users`;
     return this.http.get<UserListResponse>(url, { headers, params: queryParams })
       .pipe(
         map(response => UserListResponseSchema.parse(response))
@@ -50,7 +55,7 @@ export class UsersApi {
    * @returns Observable<User> - User created successfully
    */
   createNewUserAccount(dto: CreateUserRequest, headers?: HttpHeaders): Observable<User> {
-    const url = fillUrl('/users', {});
+    const url = `${this.baseUrl}/users`;
     return this.http.post<User>(url, dto, { headers })
       .pipe(
         map(response => UserSchema.parse(response))
@@ -65,7 +70,7 @@ export class UsersApi {
    * @returns Observable<User> - User found
    */
   getUserProfileByID(userId: string, headers?: HttpHeaders): Observable<User> {
-    const url = fillUrl('/users/{userId}', { userId: userId });
+    const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}`;
     return this.http.get<User>(url, { headers })
       .pipe(
         map(response => UserSchema.parse(response))

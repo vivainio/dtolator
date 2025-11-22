@@ -2,18 +2,23 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
 
 import { CategorySchema } from "./dto";
 import type { Category, CreateCategoryRequest } from "./dto";
-import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class CategoriesApi {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
 
   /**
    * Get All Product Categories
@@ -22,7 +27,7 @@ export class CategoriesApi {
    * @returns Observable<Category[]> - Categories list
    */
   getAllProductCategories(headers?: HttpHeaders): Observable<Category[]> {
-    const url = fillUrl('/categories', {});
+    const url = `${this.baseUrl}/categories`;
     return this.http.get<Category[]>(url, { headers })
       .pipe(
         map(response => z.array(CategorySchema).parse(response))
@@ -37,7 +42,7 @@ export class CategoriesApi {
    * @returns Observable<Category> - Category created
    */
   createNewCategory(dto: CreateCategoryRequest, headers?: HttpHeaders): Observable<Category> {
-    const url = fillUrl('/categories', {});
+    const url = `${this.baseUrl}/categories`;
     return this.http.post<Category>(url, dto, { headers })
       .pipe(
         map(response => CategorySchema.parse(response))

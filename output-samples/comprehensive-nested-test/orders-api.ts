@@ -2,7 +2,7 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -12,11 +12,16 @@ import type {
   Order,
   UpdateOrderStatusRequest,
 } from "./dto";
-import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class OrdersApi {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
 
   /**
    * Create New Order
@@ -26,7 +31,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order created
    */
   createNewOrder(dto: CreateOrderRequest, headers?: HttpHeaders): Observable<Order> {
-    const url = fillUrl('/orders', {});
+    const url = `${this.baseUrl}/orders`;
     return this.http.post<Order>(url, dto, { headers })
       .pipe(
         map(response => OrderSchema.parse(response))
@@ -41,7 +46,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order found
    */
   getOrderByID(orderId: string, headers?: HttpHeaders): Observable<Order> {
-    const url = fillUrl('/orders/{orderId}', { orderId: orderId });
+    const url = `${this.baseUrl}/orders/${encodeURIComponent(orderId)}`;
     return this.http.get<Order>(url, { headers })
       .pipe(
         map(response => OrderSchema.parse(response))
@@ -57,7 +62,7 @@ export class OrdersApi {
    * @returns Observable<Order> - Order status updated
    */
   updateOrderStatus(orderId: string, dto: UpdateOrderStatusRequest, headers?: HttpHeaders): Observable<Order> {
-    const url = fillUrl('/orders/{orderId}', { orderId: orderId });
+    const url = `${this.baseUrl}/orders/${encodeURIComponent(orderId)}`;
     return this.http.patch<Order>(url, dto, { headers })
       .pipe(
         map(response => OrderSchema.parse(response))

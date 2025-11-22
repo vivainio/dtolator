@@ -2,18 +2,23 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import { lastValueFrom } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
 
 import { ApiResponseSchema, UserSchema } from "./dto";
 import type { ApiResponse, CreateUserRequest, User } from "./dto";
-import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
 
   /**
    * List All Users
@@ -24,7 +29,7 @@ export class UsersApi {
    * @returns Promise<User[]> - Successful response
    */
   listAllUsers(headers?: HttpHeaders): Promise<User[]> {
-    const url = fillUrl('/users', {});
+    const url = `${this.baseUrl}/users`;
     return lastValueFrom(this.http.get<User[]>(url, { headers })
       .pipe(
         map(response => z.array(UserSchema).parse(response))
@@ -41,7 +46,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User created successfully
    */
   createNewUser(dto: CreateUserRequest, headers?: HttpHeaders): Promise<ApiResponse> {
-    const url = fillUrl('/users', {});
+    const url = `${this.baseUrl}/users`;
     return lastValueFrom(this.http.post<ApiResponse>(url, dto, { headers })
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -58,7 +63,7 @@ export class UsersApi {
    * @returns Promise<User> - User found
    */
   getUserByID(userId: number, headers?: HttpHeaders): Promise<User> {
-    const url = fillUrl('/users/{userId}', { userId: userId });
+    const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}`;
     return lastValueFrom(this.http.get<User>(url, { headers })
       .pipe(
         map(response => UserSchema.parse(response))
@@ -76,7 +81,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User updated successfully
    */
   updateUserProfile(userId: number, dto: CreateUserRequest, headers?: HttpHeaders): Promise<ApiResponse> {
-    const url = fillUrl('/users/{userId}', { userId: userId });
+    const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}`;
     return lastValueFrom(this.http.put<ApiResponse>(url, dto, { headers })
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -93,7 +98,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User deleted successfully
    */
   deleteUserAccount(userId: number, headers?: HttpHeaders): Promise<ApiResponse> {
-    const url = fillUrl('/users/{userId}', { userId: userId });
+    const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}`;
     return lastValueFrom(this.http.delete<ApiResponse>(url, { headers })
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -110,7 +115,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User activated successfully
    */
   activateUserAccount(userId: number, headers?: HttpHeaders): Promise<ApiResponse> {
-    const url = fillUrl('/users/{userId}/activate', { userId: userId });
+    const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}/activate`;
     return lastValueFrom(this.http.post<ApiResponse>(url, null, { headers })
       .pipe(
         map(response => ApiResponseSchema.parse(response))
@@ -127,7 +132,7 @@ export class UsersApi {
    * @returns Promise<ApiResponse> - User deactivated successfully
    */
   deactivateUserAccount(userId: number, headers?: HttpHeaders): Promise<ApiResponse> {
-    const url = fillUrl('/users/{userId}/deactivate', { userId: userId });
+    const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}/deactivate`;
     return lastValueFrom(this.http.post<ApiResponse>(url, null, { headers })
       .pipe(
         map(response => ApiResponseSchema.parse(response))

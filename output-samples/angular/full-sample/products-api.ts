@@ -2,7 +2,7 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -13,11 +13,16 @@ import type {
   SearchProductsWithFiltersQueryParams,
   UpdateProductRequest,
 } from "./dto";
-import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class ProductsApi {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
 
   /**
    * Search Products With Filters
@@ -30,7 +35,7 @@ export class ProductsApi {
    * @returns Observable<ProductListResponse> - Products list
    */
   searchProductsWithFilters(queryParams?: SearchProductsWithFiltersQueryParams, headers?: HttpHeaders): Observable<ProductListResponse> {
-    const url = fillUrl('/products', {});
+    const url = `${this.baseUrl}/products`;
     return this.http.get<ProductListResponse>(url, { headers, params: queryParams })
       .pipe(
         map(response => ProductListResponseSchema.parse(response))
@@ -45,7 +50,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product found
    */
   getProductByID(productId: string, headers?: HttpHeaders): Observable<Product> {
-    const url = fillUrl('/products/{productId}', { productId: productId });
+    const url = `${this.baseUrl}/products/${encodeURIComponent(productId)}`;
     return this.http.get<Product>(url, { headers })
       .pipe(
         map(response => ProductSchema.parse(response))
@@ -61,7 +66,7 @@ export class ProductsApi {
    * @returns Observable<Product> - Product updated
    */
   updateProduct(productId: string, dto: UpdateProductRequest, headers?: HttpHeaders): Observable<Product> {
-    const url = fillUrl('/products/{productId}', { productId: productId });
+    const url = `${this.baseUrl}/products/${encodeURIComponent(productId)}`;
     return this.http.put<Product>(url, dto, { headers })
       .pipe(
         map(response => ProductSchema.parse(response))

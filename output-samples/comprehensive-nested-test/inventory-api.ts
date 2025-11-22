@@ -2,7 +2,7 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -13,11 +13,16 @@ import type {
   InventoryResponse,
   UpdateInventoryRequest,
 } from "./dto";
-import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class InventoryApi {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
 
   /**
    * Get Inventory Levels
@@ -28,7 +33,7 @@ export class InventoryApi {
    * @returns Observable<InventoryResponse> - Inventory levels
    */
   getInventoryLevels(queryParams?: InventoryLevelsQueryParams, headers?: HttpHeaders): Observable<InventoryResponse> {
-    const url = fillUrl('/inventory', {});
+    const url = `${this.baseUrl}/inventory`;
     return this.http.get<InventoryResponse>(url, { headers, params: queryParams })
       .pipe(
         map(response => InventoryResponseSchema.parse(response))
@@ -44,7 +49,7 @@ export class InventoryApi {
    * @returns Observable<Inventory> - Inventory updated
    */
   updateProductInventory(productId: string, dto: UpdateInventoryRequest, headers?: HttpHeaders): Observable<Inventory> {
-    const url = fillUrl('/inventory/{productId}', { productId: productId });
+    const url = `${this.baseUrl}/inventory/${encodeURIComponent(productId)}`;
     return this.http.put<Inventory>(url, dto, { headers })
       .pipe(
         map(response => InventorySchema.parse(response))

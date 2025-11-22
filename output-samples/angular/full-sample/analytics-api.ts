@@ -2,7 +2,7 @@
 // Do not modify manually
 
 import type { HttpClient, HttpHeaders } from "@angular/common/http";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -12,11 +12,16 @@ import type {
   SalesAnalytics,
   SalesAnalyticsQueryParams,
 } from "./dto";
-import { fillUrl } from "./fill-url";
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApi {
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
 
   /**
    * Get Sales Analytics
@@ -28,7 +33,7 @@ export class AnalyticsApi {
    * @returns Observable<SalesAnalytics> - Sales analytics data
    */
   getSalesAnalytics(queryParams?: SalesAnalyticsQueryParams, headers?: HttpHeaders): Observable<SalesAnalytics> {
-    const url = fillUrl('/analytics/sales', {});
+    const url = `${this.baseUrl}/analytics/sales`;
     return this.http.get<SalesAnalytics>(url, { headers, params: queryParams })
       .pipe(
         map(response => SalesAnalyticsSchema.parse(response))
@@ -42,7 +47,7 @@ export class AnalyticsApi {
    * @returns Observable<ProductAnalytics> - Product analytics data
    */
   getProductAnalytics(headers?: HttpHeaders): Observable<ProductAnalytics> {
-    const url = fillUrl('/analytics/products', {});
+    const url = `${this.baseUrl}/analytics/products`;
     return this.http.get<ProductAnalytics>(url, { headers })
       .pipe(
         map(response => ProductAnalyticsSchema.parse(response))

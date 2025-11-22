@@ -761,26 +761,12 @@ fn generate_angular_services(
         }
     }
 
-    // Generate fill-url utility function
-    let angular_generator = AngularGenerator::new();
-    let fill_url_content = angular_generator.generate_fill_url_func(command_string);
-    let fill_url_path = output_dir.join("fill-url.ts");
-    if !skip_files.contains(&"fill-url.ts".to_string()) {
-        fs::write(&fill_url_path, fill_url_content).with_context(|| {
-            format!(
-                "Failed to write fill-url.ts file: {}",
-                fill_url_path.display()
-            )
-        })?;
-    }
+    // fill-url.ts generation removed
 
     // Parse and split the Angular generator output into individual service files
     let mut files_generated = Vec::new();
     if !skip_files.contains(&"dto.ts".to_string()) {
         files_generated.push(dto_path.display().to_string());
-    }
-    if !skip_files.contains(&"fill-url.ts".to_string()) {
-        files_generated.push(fill_url_path.display().to_string());
     }
 
     if debug {
