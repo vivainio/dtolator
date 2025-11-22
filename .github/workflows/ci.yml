@@ -37,7 +37,7 @@ jobs:
         node-version: '24'
     
     - name: Install npm dependencies
-      run: npm ci
+      run: npm ci --registry=https://registry.npmjs.org/
     
     - name: Run TypeScript type checking
       run: python run-tests.py --typecheck
