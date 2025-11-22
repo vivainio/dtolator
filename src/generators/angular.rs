@@ -418,8 +418,11 @@ impl AngularGenerator {
                 .collect();
 
             if !query_params.is_empty() {
+                let has_mandatory = query_params.iter().any(|p| p.required.unwrap_or(false));
+                let optional_marker = if has_mandatory { "" } else { "?" };
+
                 if let Some(type_name) = self.get_query_param_type_name(operation) {
-                    params.push(format!("queryParams?: {type_name}"));
+                    params.push(format!("queryParams{optional_marker}: {type_name}"));
                 } else {
                     // Fallback to inline type if no good name can be generated
                     let mut query_type = "{ ".to_string();
@@ -436,7 +439,7 @@ impl AngularGenerator {
                         }
                     }
                     query_type.push_str(" }");
-                    params.push(format!("queryParams?: {query_type}"));
+                    params.push(format!("queryParams{optional_marker}: {query_type}"));
                 }
             }
         }
@@ -903,19 +906,48 @@ impl AngularGenerator {
                                         ));
                                     }
 
-                                    types.push_str(&format!(
-                                        "export type {type_name} = Partial<{{\n"
-                                    ));
-                                    for param in &query_params {
-                                        let param_type = self.get_parameter_type(param);
-                                        // We make all properties required inside Partial since Partial makes them optional
-                                        // This is cleaner than having optional properties inside an interface
-                                        types.push_str(&format!(
-                                            "  {}: {};\n",
-                                            param.name, param_type
-                                        ));
+                                    let mandatory_params: Vec<&Parameter> = query_params
+                                        .iter()
+                                        .filter(|p| p.required.unwrap_or(false))
+                                        .cloned()
+                                        .collect();
+
+                                    let optional_params: Vec<&Parameter> = query_params
+                                        .iter()
+                                        .filter(|p| !p.required.unwrap_or(false))
+                                        .cloned()
+                                        .collect();
+
+                                    types.push_str(&format!("export type {type_name} = "));
+
+                                    if !mandatory_params.is_empty() {
+                                        types.push_str("{\n");
+                                        for param in &mandatory_params {
+                                            let param_type = self.get_parameter_type(param);
+                                            types.push_str(&format!(
+                                                "  {}: {};\n",
+                                                param.name, param_type
+                                            ));
+                                        }
+                                        types.push_str("}");
                                     }
-                                    types.push_str("}>;\n\n");
+
+                                    if !optional_params.is_empty() {
+                                        if !mandatory_params.is_empty() {
+                                            types.push_str(" & ");
+                                        }
+                                        types.push_str("Partial<{\n");
+                                        for param in &optional_params {
+                                            let param_type = self.get_parameter_type(param);
+                                            types.push_str(&format!(
+                                                "  {}: {};\n",
+                                                param.name, param_type
+                                            ));
+                                        }
+                                        types.push_str("}>");
+                                    }
+
+                                    types.push_str(";\n\n");
                                 }
                             }
                         }
