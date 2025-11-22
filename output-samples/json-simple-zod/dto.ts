@@ -9,12 +9,10 @@ import {
 } from "./schema";
 import type { Profile, ProfileSocialLinks, Root, RootAddress } from "./schema";
 
-export type { RootAddress };
-export type { ProfileSocialLinks };
-export type { Profile };
-export type { Root };
-
-export { RootAddressSchema };
-export { ProfileSocialLinksSchema };
-export { ProfileSchema };
-export { RootSchema };
+export {
+  ProfileSchema,
+  ProfileSocialLinksSchema,
+  RootAddressSchema,
+  RootSchema,
+} from "./schema";
+export type { Profile, ProfileSocialLinks, Root, RootAddress } from "./schema";

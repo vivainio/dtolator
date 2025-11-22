@@ -17,12 +17,10 @@ export interface CreateUserRequest {
   address?: Address;
 }
 
-export type { User };
-export type { UserProfile };
-export type { Address };
-export type { ApiResponse };
-
-export { UserSchema };
-export { UserProfileSchema };
-export { AddressSchema };
-export { ApiResponseSchema };
+export {
+  AddressSchema,
+  ApiResponseSchema,
+  UserProfileSchema,
+  UserSchema,
+} from "./schema";
+export type { Address, ApiResponse, User, UserProfile } from "./schema";

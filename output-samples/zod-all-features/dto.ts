@@ -4,6 +4,5 @@
 import { RootSchema } from "./schema";
 import type { Root } from "./schema";
 
-export type { Root };
-
-export { RootSchema };
+export { RootSchema } from "./schema";
+export type { Root } from "./schema";

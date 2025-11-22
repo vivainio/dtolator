@@ -28,26 +28,29 @@ import type {
   User,
 } from "./schema";
 
-export type { Metadata };
-export type { MetadataPreferences };
-export type { MetadataPreferencesNotifications };
-export type { Organization };
-export type { OrganizationSettings };
-export type { OrganizationSettingsFeatures };
-export type { PasswordPolicy };
-export type { Root };
-export type { RootStatistics };
-export type { Security };
-export type { User };
-
-export { MetadataSchema };
-export { MetadataPreferencesSchema };
-export { MetadataPreferencesNotificationsSchema };
-export { OrganizationSchema };
-export { OrganizationSettingsSchema };
-export { OrganizationSettingsFeaturesSchema };
-export { PasswordPolicySchema };
-export { RootSchema };
-export { RootStatisticsSchema };
-export { SecuritySchema };
-export { UserSchema };
+export {
+  MetadataPreferencesNotificationsSchema,
+  MetadataPreferencesSchema,
+  MetadataSchema,
+  OrganizationSchema,
+  OrganizationSettingsFeaturesSchema,
+  OrganizationSettingsSchema,
+  PasswordPolicySchema,
+  RootSchema,
+  RootStatisticsSchema,
+  SecuritySchema,
+  UserSchema,
+} from "./schema";
+export type {
+  Metadata,
+  MetadataPreferences,
+  MetadataPreferencesNotifications,
+  Organization,
+  OrganizationSettings,
+  OrganizationSettingsFeatures,
+  PasswordPolicy,
+  Root,
+  RootStatistics,
+  Security,
+  User,
+} from "./schema";

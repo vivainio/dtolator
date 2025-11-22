@@ -866,8 +866,8 @@ impl AngularGenerator {
         let path_params = self.extract_path_params(path);
         for param in path_params {
             let camel_param = self.to_camel_case(&param);
-            let replacement = format!("${{encodeURIComponent({})}}", camel_param);
-            template = template.replace(&format!("{{{}}}", param), &replacement);
+            let replacement = format!("${{encodeURIComponent({camel_param})}}");
+            template = template.replace(&format!("{{{param}}}"), &replacement);
         }
 
         template
@@ -929,7 +929,7 @@ impl AngularGenerator {
                                                 param.name, param_type
                                             ));
                                         }
-                                        types.push_str("}");
+                                        types.push('}');
                                     }
 
                                     if !optional_params.is_empty() {

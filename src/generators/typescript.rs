@@ -563,15 +563,25 @@ impl TypeScriptGenerator {
                         output.push_str(&query_param_types);
                     }
 
-                    // Re-export types and schemas from schema.ts
-                    for name in &response_types {
-                        output.push_str(&format!("export type {{ {name} }};\n"));
-                    }
-                    output.push('\n');
+                    // Re-export types and schemas from schema.ts using export from syntax
+                    if !response_types.is_empty() {
+                        let mut export_gen = ImportGenerator::new();
 
-                    // Re-export only response schemas
-                    for name in &response_types {
-                        output.push_str(&format!("export {{ {name}Schema }};\n"));
+                        // Add type exports
+                        let response_types_vec: Vec<&str> =
+                            response_types.iter().map(|s| s.as_str()).collect();
+                        export_gen.add_exports("./schema", response_types_vec.clone(), true);
+
+                        // Add schema exports (runtime values)
+                        let schema_names: Vec<String> = response_types
+                            .iter()
+                            .map(|name| format!("{name}Schema"))
+                            .collect();
+                        let schema_names_refs: Vec<&str> =
+                            schema_names.iter().map(|s| s.as_str()).collect();
+                        export_gen.add_exports("./schema", schema_names_refs, false);
+
+                        output.push_str(&export_gen.generate());
                     }
                 }
             }
