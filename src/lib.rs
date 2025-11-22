@@ -10,8 +10,8 @@ pub mod openapi;
 use generators::{
     angular::AngularGenerator, dotnet::DotNetGenerator, endpoints::EndpointsGenerator,
     json_schema::JsonSchemaGenerator, pydantic::PydanticGenerator,
-    python_dict::PythonDictGenerator, typescript::TypeScriptGenerator, zod::ZodGenerator,
-    Generator,
+    python_dict::PythonDictGenerator, rust_serde::RustSerdeGenerator,
+    typescript::TypeScriptGenerator, zod::ZodGenerator, Generator,
 };
 use indexmap::IndexMap;
 use openapi::{Components, Info, OpenApiSchema, Schema};
@@ -40,6 +40,7 @@ pub enum GeneratorType {
     DotNet,
     JsonSchema,
     Endpoints,
+    RustSerde,
 }
 
 /// Options for library-based generation
@@ -109,6 +110,9 @@ fn build_command_string_from_options(options: &GenerateOptions) -> String {
         }
         GeneratorType::Zod => {
             parts.push("--zod".to_string());
+        }
+        GeneratorType::RustSerde => {
+            parts.push("--rust-serde".to_string());
         }
     }
 
@@ -301,6 +305,15 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 })?;
             }
         }
+        GeneratorType::RustSerde => {
+            let rust_generator = RustSerdeGenerator::new();
+            let rust_output = rust_generator.generate_with_command(&schema, &command_string)?;
+
+            let models_path = options.output_dir.join("models.rs");
+            fs::write(&models_path, rust_output).with_context(|| {
+                format!("Failed to write models.rs file: {}", models_path.display())
+            })?;
+        }
     }
 
     Ok(())
@@ -361,6 +374,10 @@ pub struct Cli {
     /// Generate API endpoint types from OpenAPI paths
     #[arg(short, long)]
     pub endpoints: bool,
+
+    /// Generate Rust structs with Serde serialization/deserialization
+    #[arg(long)]
+    pub rust_serde: bool,
 
     /// Generate promises using lastValueFrom instead of Observables (only works with --angular)
     #[arg(long)]
@@ -446,6 +463,10 @@ impl Cli {
 
         if self.endpoints {
             parts.push("--endpoints".to_string());
+        }
+
+        if self.rust_serde {
+            parts.push("--rust-serde".to_string());
         }
 
         if self.promises {
@@ -608,6 +629,19 @@ where
 
                 println!("Generated files:");
                 println!("  - {}", schema_path.display());
+            } else if cli.rust_serde {
+                // Generate Rust structs with Serde to a Rust file
+                let rust_serde_generator = RustSerdeGenerator::new();
+                let rust_serde_output =
+                    rust_serde_generator.generate_with_command(&schema, &command_string)?;
+
+                let models_path = output_dir.join("models.rs");
+                fs::write(&models_path, rust_serde_output).with_context(|| {
+                    format!("Failed to write models.rs file: {}", models_path.display())
+                })?;
+
+                println!("Generated files:");
+                println!("  - {}", models_path.display());
             } else if cli.zod {
                 // Generate both dto.ts (with imports) and schema.ts
 
@@ -670,6 +704,9 @@ where
                 generator.generate_with_command(&schema, &command_string)?
             } else if cli.json_schema {
                 let generator = JsonSchemaGenerator::new();
+                generator.generate_with_command(&schema, &command_string)?
+            } else if cli.rust_serde {
+                let generator = RustSerdeGenerator::new();
                 generator.generate_with_command(&schema, &command_string)?
             } else {
                 let generator = ZodGenerator::new();

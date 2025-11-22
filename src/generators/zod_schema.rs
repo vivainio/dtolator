@@ -67,8 +67,8 @@ impl ZodValue {
                     // Chain intersections: a.and(b).and(c) or z.intersection(a, b).and(c)
                     let mut result =
                         format!("z.intersection({}, {})", value_strs[0], value_strs[1]);
-                    for i in 2..value_strs.len() {
-                        result = format!("{}.and({})", result, value_strs[i]);
+                    for val_str in value_strs.iter().skip(2) {
+                        result = format!("{result}.and({val_str})");
                     }
                     result
                 }
