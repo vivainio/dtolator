@@ -50,3 +50,4 @@ dist/
 *.tsbuildinfo
 .cursor/rules/general/
 .cursor/rules/python/
+/.gemini/
