@@ -649,7 +649,6 @@ impl AngularGenerator {
         }
 
         // Local imports
-        // fillUrl import removed
 
         if !service_data.imports.is_empty() {
             let imports: Vec<String> = service_data.imports.iter().cloned().collect();

@@ -761,8 +761,6 @@ fn generate_angular_services(
         }
     }
 
-    // fill-url.ts generation removed
-
     // Parse and split the Angular generator output into individual service files
     let mut files_generated = Vec::new();
     if !skip_files.contains(&"dto.ts".to_string()) {
