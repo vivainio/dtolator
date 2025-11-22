@@ -19,6 +19,12 @@ def run_tests(refresh: bool = False) -> None:
     )
 
 
+def run_typecheck() -> None:
+    """Run TypeScript type checking"""
+    print("Running TypeScript type checking...")
+    subprocess.run("npm run typecheck", shell=True, check=True)
+
+
 def run_biome() -> None:
     """Run biome formatter and linter on output-samples"""
     print("Running biome on output-samples...")
@@ -68,6 +74,9 @@ def main() -> None:
         action="store_true",
         help="Refresh tests and run biome formatter/linter",
     )
+    parser.add_argument(
+        "--typecheck", action="store_true", help="Run TypeScript type checking"
+    )
 
     args = parser.parse_args()
 
@@ -76,6 +85,8 @@ def main() -> None:
     elif args.biome:
         run_tests(refresh=True)
         run_biome()
+    elif args.typecheck:
+        run_typecheck()
     elif args.refresh:
         run_tests(refresh=True)
     else:

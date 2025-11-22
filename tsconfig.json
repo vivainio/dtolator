@@ -23,15 +23,8 @@
     "noImplicitOverride": false,
     "noPropertyAccessFromIndexSignature": false,
     "noUncheckedIndexedAccess": false,
-    "allowJs": true,
-    "baseUrl": ".",
-    "paths": {
-      "@angular/core": ["./ts-stubs/angular-core"],
-      "@angular/common/http": ["./ts-stubs/angular-http"],
-      "rxjs": ["./ts-stubs/rxjs-stubs"],
-      "rxjs/operators": ["./ts-stubs/rxjs-operators"]
-    }
+    "allowJs": true
   },
-  "include": ["*.ts", "**/*.ts", "ts-stubs/**/*.ts"],
-  "exclude": ["node_modules", "dist", "target"]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist", "target", "test-output", "output-samples/endpoints-test"]
 }

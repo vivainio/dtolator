@@ -39,14 +39,11 @@ export const RootSchema = z.object({
   tags: z.array(z.string()).optional(),
   score: z.number().min(0).max(1).optional(),
 })),
-  intersectionField: z.intersection([
-  z.object({
+  intersectionField: z.intersection(z.object({
   id: z.uuid(),
-}),
-  z.object({
+}), z.object({
   email: z.email(),
-})
-]),
+})),
 });
 
 export type Root = z.infer<typeof RootSchema>;

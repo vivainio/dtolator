@@ -59,10 +59,18 @@ impl ZodValue {
             }
             ZodValue::Intersection(values) => {
                 let value_strs: Vec<String> = values.iter().map(|v| v.render()).collect();
-                if value_strs.len() > 1 {
-                    format!("z.intersection([\n  {}\n])", value_strs.join(",\n  "))
+                if value_strs.is_empty() {
+                    "z.object({})".to_string()
+                } else if value_strs.len() == 1 {
+                    value_strs[0].clone()
                 } else {
-                    format!("z.intersection([{}])", value_strs.join(", "))
+                    // Chain intersections: a.and(b).and(c) or z.intersection(a, b).and(c)
+                    let mut result =
+                        format!("z.intersection({}, {})", value_strs[0], value_strs[1]);
+                    for i in 2..value_strs.len() {
+                        result = format!("{}.and({})", result, value_strs[i]);
+                    }
+                    result
                 }
             }
             ZodValue::Enum(values) => {

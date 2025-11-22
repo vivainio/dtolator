@@ -633,7 +633,7 @@ impl AngularGenerator {
         import_gen.add_imports(
             "@angular/common/http",
             vec!["HttpClient", "HttpHeaders"],
-            true,
+            false,
         );
         import_gen.add_imports("@angular/core", vec!["Injectable", "inject"], false);
 
