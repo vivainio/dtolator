@@ -225,6 +225,18 @@ impl TestSuite {
                 command_args: vec!["--from-json-schema".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/zod-all-features".to_string(),
             },
+            // Angular Base URL Argument Mode
+            TestCase {
+                name: "Angular Base URL Argument".to_string(),
+                input_file: "input-files/simple-sample.json".to_string(),
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--zod".to_string(),
+                    "--base-url".to_string(),
+                    "argument".to_string(),
+                ],
+                expected_dir: "output-samples/angular-base-url-argument".to_string(),
+            },
         ];
 
         Self {
@@ -483,6 +495,11 @@ impl TestSuite {
             root_name: "Root".to_string(),
             debug: false,
             skip_files,
+            base_url_mode: if let Some(idx) = test_case.command_args.iter().position(|arg| arg == "--base-url") {
+                test_case.command_args.get(idx + 1).cloned().unwrap_or("global".to_string())
+            } else {
+                "global".to_string()
+            },
         };
 
         if let Err(e) = generate(options) {

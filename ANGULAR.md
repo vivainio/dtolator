@@ -2,43 +2,6 @@
 
 ## Overview
 
-This document outlines the practices and conventions for automatically generating TypeScript interfaces, DTOs, and Angular services from OpenAPI specifications.
-
-## Using the dtolator Tool
-
-### Command Line Usage
-
-The dtolator tool now supports Angular API generation with the `--angular` flag:
-
-```bash
-# Generate Angular API services in a directory
-dtolator --input openapi.json --output ./src/app/api --angular
-
-# Generate Angular API services with Zod validation
-dtolator --input openapi.json --output ./src/app/api --angular --zod
-
-# Generate with Promises instead of Observables
-dtolator --input openapi.json --output ./src/app/api --angular --promises
-
-# Generate to stdout (single combined output)  
-dtolator --input openapi.json --angular
-```
-
-### Generated Files Structure
-
-When using `--angular` with an output directory, the following files are generated:
-
-```
-api-output/
-├── dto.ts                    # TypeScript interfaces
-├── users-api.ts             # Service for Users tag
-├── products-api.ts          # Service for Products tag (if exists)
-└── index.ts                 # Barrel exports
-```
-
-When using `--angular --zod` with an output directory, additional validation is included:
-
-```
 api-output/
 ├── dto.ts                    # TypeScript type re-exports from schema.ts
 ├── schema.ts                 # Zod validation schemas with runtime validation
@@ -671,5 +634,309 @@ export class UserApi {
 The generation process will:
 - **Skip endpoints** without tags (with console warning)
 - **Continue processing** if individual endpoints fail
+  "summary": "Get User Profile By ID"  // Becomes method name: getUserProfileByID()
+}
+```
+
+#### 3. Response Schemas (Required)
+```json
+{
+  "responses": {
+    "200": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/UserDTO"  // Must reference a DTO
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+#### 4. Schema Naming Convention
+- **DTOs**: Must end with `DTO` (e.g., `UserDTO`, `CreateUserRequestDTO`)
+- **Enums**: Must end with `Enum` (e.g., `UserStatusEnum`)
+- Other schemas are skipped
+
+## Best Practices for OpenAPI Specifications
+
+### 1. Meaningful Summary Fields
+❌ **Bad**: Generic summaries
+```json
+"summary": "Get users"
+"summary": "Create user" 
+"summary": "List products"
+```
+
+✅ **Good**: Descriptive summaries
+```json
+"summary": "Get All Users With Pagination"
+"summary": "Create New User Account"
+"summary": "Search Products With Filters"
+```
+
+### 2. Consistent Tagging
+❌ **Bad**: Inconsistent or missing tags
+```json
+// No tags - endpoint will be skipped
+"get": { "summary": "Get Users" }
+
+// Inconsistent casing
+"tags": ["users", "Users", "user"]
+```
+
+✅ **Good**: Consistent tag naming
+```json
+"tags": ["Users"]     // All user-related endpoints
+"tags": ["Products"]  // All product-related endpoints
+"tags": ["Orders"]    // All order-related endpoints
+```
+
+### 3. Proper DTO Structure
+```json
+{
+  "components": {
+    "schemas": {
+      "UserDTO": {
+        "type": "object",
+        "required": ["id", "email"],
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string", "format": "email" }
+        }
+      }
+    }
+  }
+}
+```
+
+## Generated Service Example
+
+Given this OpenAPI specification:
+```json
+{
+  "paths": {
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get All Users With Pagination",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserListDTO" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Generates this Angular service:
+```typescript
+// users-api.ts
+import type { HttpClient, HttpHeaders } from "@angular/common/http";
+import { Injectable, inject } from "@angular/core";
+import type { Observable } from "rxjs";
+
+import type { UserListDTO } from "./dto";
+
+@Injectable({ providedIn: 'root' })
+export class UsersApi {
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
+
+  getAllUsersWithPagination(headers?: HttpHeaders): Observable<UserListDTO> {
+    const url = `${this.baseUrl}/users`;
+    return this.http.get<UserListDTO>(url, { headers });
+  }
+}
+```
+
+## Alternative Naming Convention
+
+### Simplified Structure
+```
+angular-apis/
+├── user-api.ts         # UserApi class
+├── product-api.ts      # ProductApi class  
+├── order-api.ts        # OrderApi class
+└── index.ts            # Barrel exports
+```
+
+### Simplified Naming Convention
+- **File Names**: `{tag}-api.ts` (e.g., `user-api.ts`, `product-api.ts`)
+- **Class Names**: `{Tag}Api` (e.g., `UserApi`, `ProductApi`)
+- **Method Names**: Same camelCase convention from summary
+
+### Example Generated Service (Alternative)
+```typescript
+// user-api.ts
+import { Injectable, inject } from '@angular/core';
+import type { HttpClient, HttpHeaders } from '@angular/common/http';
+import type { Observable } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class UserApi {
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
+
+  getAllUsersWithPagination(headers?: HttpHeaders): Observable<UserListDTO> {
+    const url = `${this.baseUrl}/users`;
+    return this.http.get<UserListDTO>(url, { headers });
+  }
+
+  createNewUserAccount(dto: CreateUserRequestDTO, headers?: HttpHeaders): Observable<UserDTO> {
+    const url = `${this.baseUrl}/users`;
+    return this.http.post<UserDTO>(url, dto, { headers });
+  }
+}
+```
+
+## Current Limitations
+
+1. **Tag Dependency**: Endpoints without tags are completely skipped
+2. **First Tag Only**: Only the first tag is used for grouping
+3. **DTO Naming**: Only schemas ending with "DTO" or "Enum" are processed
+4. **Response Assumption**: Assumes 200 responses always exist
+5. **Fixed File Structure**: No flexibility in generated file organization
+
+## Recommendations
+
+1. **Always include tags** in your OpenAPI specification
+2. **Use descriptive summaries** that translate to good method names
+3. **Follow DTO naming conventions** with proper suffixes
+4. **Group related endpoints** under the same tag
+5. **Test generated code** with sample OpenAPI specs before production use
+
+## Error Handling
+
+The generation process will:
+- **Skip endpoints** without tags (with console warning)
+- **Continue processing** if individual endpoints fail
 - **Report errors** for missing response schemas
 - **Validate DTO naming** and skip non-conforming schemas
+
+## Base URL Configuration Modes
+
+The `--base-url` flag controls how the API base URL is provided to the generated services.
+
+### Global Mode (Default)
+
+**Usage**: `--base-url global` (or omit the flag entirely)
+
+In this mode, services use a global `API_URL` variable configured at application startup:
+
+- **Service Property**: `private baseUrl: string` initialized in the constructor
+- **Method Parameter**: None
+- **URL Construction**: ``const url = `${this.baseUrl}/...` ``
+
+#### Example (Global Mode):
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class UsersApi {
+  private http = inject(HttpClient);
+  private baseUrl: string;
+
+  constructor() {
+    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);
+    if (!this.baseUrl) throw new Error('API_URL is not configured');
+  }
+
+  listAllUsers(headers?: HttpHeaders): Observable<User[]> {
+    const url = `${this.baseUrl}/users`;
+    return this.http.get<User[]>(url, { headers });
+  }
+
+  getUserByID(userId: number, headers?: HttpHeaders): Observable<User> {
+    const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}`;
+    return this.http.get<User>(url, { headers });
+  }
+}
+```
+
+**Usage in Components** (Global Mode):
+```typescript
+// Set API_URL globally in main.ts
+(globalThis as any).API_URL = 'https://api.example.com/v1';
+
+// Use without baseUrl parameter
+this.usersApi.listAllUsers().subscribe(...);
+```
+
+### Argument Mode
+
+**Usage**: `--base-url argument`
+
+In this mode, the base URL must be provided as a parameter to every method call:
+
+- **Service Property**: None
+- **Method Parameter**: `baseUrl: string` (mandatory, **first parameter** for consistency)
+- **URL Construction**: ``const url = `${baseUrl}/...` ``
+
+#### Example (Argument Mode):
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class UsersApi {
+  private http = inject(HttpClient);
+
+  listAllUsers(baseUrl: string, headers?: HttpHeaders): Observable<User[]> {
+    const url = `${baseUrl}/users`;
+    return this.http.get<User[]>(url, { headers });
+  }
+
+  getUserByID(baseUrl: string, userId: number, headers?: HttpHeaders): Observable<User> {
+    const url = `${baseUrl}/users/${encodeURIComponent(userId)}`;
+    return this.http.get<User>(url, { headers });
+  }
+}
+```
+
+**Usage in Components** (Argument Mode):
+```typescript
+// Store base URL in a configuration service or environment
+private apiBaseUrl = 'https://api.example.com/v1';
+
+// Must provide baseUrl to every call
+this.usersApi.listAllUsers(this.apiBaseUrl).subscribe(...);
+this.usersApi.getUserByID(this.apiBaseUrl, 123).subscribe(...);
+```
+
+### Parameter Ordering (Argument Mode)
+
+When using `--base-url argument`, the `baseUrl` parameter is always the **first parameter** for consistency across all methods:
+
+- **No path params**: `method(baseUrl, dto?, headers?)`
+- **One path param**: `method(baseUrl, id, dto?, headers?)`
+- **Two path params**: `method(baseUrl, id1, id2, dto?, headers?)`
+
+This ensures a predictable API where `baseUrl` is always in the same position, regardless of the number of path parameters.
+
+### Which Mode to Choose?
+
+**Use Global Mode** when:
+- You have a single API base URL for your entire application
+- You prefer configuring the URL once at application startup
+- You want the simplest method signatures
+
+**Use Argument Mode** when:
+- You need to work with multiple API base URLs in the same application
+- You want explicit control over the base URL for each request
+- You want to avoid global state and prefer dependency injection patterns

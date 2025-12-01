@@ -8,6 +8,7 @@ pub struct AngularGenerator {
     with_zod: bool,
     debug: bool,
     promises: bool,
+    base_url_mode: String,
 }
 
 impl Default for AngularGenerator {
@@ -22,6 +23,7 @@ impl AngularGenerator {
             with_zod: false,
             debug: false,
             promises: false,
+            base_url_mode: "global".to_string(),
         }
     }
 
@@ -37,6 +39,11 @@ impl AngularGenerator {
 
     pub fn with_promises(mut self, promises: bool) -> Self {
         self.promises = promises;
+        self
+    }
+
+    pub fn with_base_url_mode(mut self, mode: &str) -> Self {
+        self.base_url_mode = mode.to_string();
         self
     }
 }
@@ -246,9 +253,15 @@ impl AngularGenerator {
         // Generate URL building
         let path_template = self.format_path_template(path);
 
-        method.push_str(&format!(
-            "    const url = `${{this.baseUrl}}{path_template}`;\n"
-        ));
+        if self.base_url_mode == "global" {
+            method.push_str(&format!(
+                "    const url = `${{this.baseUrl}}{path_template}`;\n"
+            ));
+        } else {
+            method.push_str(&format!(
+                "    const url = `${{baseUrl}}{path_template}`;\n"
+            ));
+        }
 
         // Check for query params
         let has_query_params = if let Some(parameters) = &operation.parameters {
@@ -395,6 +408,11 @@ impl AngularGenerator {
 
     fn get_method_parameters(&self, operation: &Operation) -> Result<String> {
         let mut params = Vec::new();
+
+        // Add mandatory baseUrl parameter as the first parameter for consistency
+        if self.base_url_mode != "global" {
+            params.push("baseUrl: string".to_string());
+        }
 
         // Path parameters
         if let Some(parameters) = &operation.parameters {
@@ -686,11 +704,16 @@ impl AngularGenerator {
         service.push_str("@Injectable({ providedIn: 'root' })\n");
         service.push_str(&format!("export class {class_name} {{\n"));
         service.push_str("  private http = inject(HttpClient);\n");
-        service.push_str("  private baseUrl: string;\n\n");
-        service.push_str("  constructor() {\n");
-        service.push_str("    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);\n");
-        service.push_str("    if (!this.baseUrl) throw new Error('API_URL is not configured');\n");
-        service.push_str("  }\n\n");
+
+        if self.base_url_mode == "global" {
+            service.push_str("  private baseUrl: string;\n\n");
+            service.push_str("  constructor() {\n");
+            service.push_str("    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);\n");
+            service.push_str("    if (!this.baseUrl) throw new Error('API_URL is not configured');\n");
+            service.push_str("  }\n\n");
+        } else {
+            service.push_str("\n");
+        }
 
         // Methods
         for method in &service_data.methods {
@@ -1041,6 +1064,11 @@ impl AngularGenerator {
         }
 
         comment.push_str("   *\n");
+
+        // Document mandatory baseUrl parameter first for consistency
+        if self.base_url_mode != "global" {
+            comment.push_str("   * @param baseUrl - Base URL for the request\n");
+        }
 
         // Document path parameters
         if let Some(parameters) = &operation.parameters {

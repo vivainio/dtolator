@@ -56,6 +56,7 @@ pub struct GenerateOptions {
     pub root_name: String,
     pub debug: bool,
     pub skip_files: Vec<String>,
+    pub base_url_mode: String,
 }
 
 fn build_command_string_from_options(options: &GenerateOptions) -> String {
@@ -202,6 +203,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 options.with_promises,
                 &command_string,
                 &options.skip_files,
+                &options.base_url_mode,
             )?;
         }
         GeneratorType::Pydantic => {
@@ -394,6 +396,10 @@ pub struct Cli {
     /// Skip writing specific file(s) to output directory (can be used multiple times)
     #[arg(long)]
     pub skip_file: Vec<String>,
+
+    /// Base URL generation mode: 'global' (default) or 'argument'
+    #[arg(long, default_value = "global")]
+    pub base_url: String,
 }
 
 impl Cli {
@@ -475,6 +481,10 @@ impl Cli {
 
         if self.debug {
             parts.push("--debug".to_string());
+        }
+
+        if self.base_url != "global" {
+            parts.push(format!("--base-url {}", self.base_url));
         }
 
         parts.join(" ")
@@ -570,6 +580,7 @@ where
                     cli.promises,
                     &command_string,
                     &cli.skip_file,
+                    &cli.base_url,
                 )?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
@@ -691,7 +702,8 @@ where
             } else if cli.angular {
                 let generator = AngularGenerator::new()
                     .with_zod_validation(cli.zod)
-                    .with_promises(cli.promises);
+                    .with_promises(cli.promises)
+                    .with_base_url_mode(&cli.base_url);
                 generator.generate_with_command(&schema, &command_string)?
             } else if cli.pydantic {
                 let generator = PydanticGenerator::new();
@@ -733,11 +745,13 @@ fn generate_angular_services(
     promises: bool,
     command_string: &str,
     skip_files: &[String],
+    base_url_mode: &str,
 ) -> Result<()> {
     let angular_generator = AngularGenerator::new()
         .with_zod_validation(with_zod)
         .with_debug(debug)
-        .with_promises(promises);
+        .with_promises(promises)
+        .with_base_url_mode(base_url_mode);
     let output = angular_generator.generate_with_command(schema, command_string)?;
 
     // Also generate DTOs and utility function
