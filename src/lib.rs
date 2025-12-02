@@ -43,6 +43,24 @@ pub enum GeneratorType {
     RustSerde,
 }
 
+/// Base URL mode for Angular API generation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+pub enum BaseUrlMode {
+    /// Use global API_URL variable (default)
+    Global,
+    /// Pass baseUrl as mandatory first parameter
+    Argument,
+}
+
+impl BaseUrlMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            BaseUrlMode::Global => "global",
+            BaseUrlMode::Argument => "argument",
+        }
+    }
+}
+
 /// Options for library-based generation
 #[derive(Debug, Clone)]
 pub struct GenerateOptions {
@@ -56,7 +74,7 @@ pub struct GenerateOptions {
     pub root_name: String,
     pub debug: bool,
     pub skip_files: Vec<String>,
-    pub base_url_mode: String,
+    pub base_url_mode: BaseUrlMode,
 }
 
 fn build_command_string_from_options(options: &GenerateOptions) -> String {
@@ -203,7 +221,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 options.with_promises,
                 &command_string,
                 &options.skip_files,
-                &options.base_url_mode,
+                options.base_url_mode,
             )?;
         }
         GeneratorType::Pydantic => {
@@ -399,7 +417,7 @@ pub struct Cli {
 
     /// Base URL generation mode: 'global' (default) or 'argument'
     #[arg(long, default_value = "global")]
-    pub base_url: String,
+    pub base_url: BaseUrlMode,
 }
 
 impl Cli {
@@ -483,8 +501,8 @@ impl Cli {
             parts.push("--debug".to_string());
         }
 
-        if self.base_url != "global" {
-            parts.push(format!("--base-url {}", self.base_url));
+        if self.base_url != BaseUrlMode::Global {
+            parts.push(format!("--base-url {}", self.base_url.as_str()));
         }
 
         parts.join(" ")
@@ -580,7 +598,7 @@ where
                     cli.promises,
                     &command_string,
                     &cli.skip_file,
-                    &cli.base_url,
+                    cli.base_url,
                 )?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
@@ -703,7 +721,7 @@ where
                 let generator = AngularGenerator::new()
                     .with_zod_validation(cli.zod)
                     .with_promises(cli.promises)
-                    .with_base_url_mode(&cli.base_url);
+                    .with_base_url_mode(cli.base_url);
                 generator.generate_with_command(&schema, &command_string)?
             } else if cli.pydantic {
                 let generator = PydanticGenerator::new();
@@ -745,7 +763,7 @@ fn generate_angular_services(
     promises: bool,
     command_string: &str,
     skip_files: &[String],
-    base_url_mode: &str,
+    base_url_mode: BaseUrlMode,
 ) -> Result<()> {
     let angular_generator = AngularGenerator::new()
         .with_zod_validation(with_zod)

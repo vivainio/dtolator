@@ -495,10 +495,17 @@ impl TestSuite {
             root_name: "Root".to_string(),
             debug: false,
             skip_files,
-            base_url_mode: if let Some(idx) = test_case.command_args.iter().position(|arg| arg == "--base-url") {
-                test_case.command_args.get(idx + 1).cloned().unwrap_or("global".to_string())
+            base_url_mode: if let Some(idx) = test_case
+                .command_args
+                .iter()
+                .position(|arg| arg == "--base-url")
+            {
+                match test_case.command_args.get(idx + 1).map(|s| s.as_str()) {
+                    Some("argument") => dtolator::BaseUrlMode::Argument,
+                    _ => dtolator::BaseUrlMode::Global,
+                }
             } else {
-                "global".to_string()
+                dtolator::BaseUrlMode::Global
             },
         };
 

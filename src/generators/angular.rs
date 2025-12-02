@@ -1,6 +1,7 @@
 use crate::generators::import_generator::ImportGenerator;
 use crate::generators::Generator;
 use crate::openapi::{OpenApiSchema, Operation, Parameter};
+use crate::BaseUrlMode;
 use anyhow::Result;
 use std::collections::BTreeMap;
 
@@ -8,7 +9,7 @@ pub struct AngularGenerator {
     with_zod: bool,
     debug: bool,
     promises: bool,
-    base_url_mode: String,
+    base_url_mode: BaseUrlMode,
 }
 
 impl Default for AngularGenerator {
@@ -23,7 +24,7 @@ impl AngularGenerator {
             with_zod: false,
             debug: false,
             promises: false,
-            base_url_mode: "global".to_string(),
+            base_url_mode: BaseUrlMode::Global,
         }
     }
 
@@ -42,8 +43,8 @@ impl AngularGenerator {
         self
     }
 
-    pub fn with_base_url_mode(mut self, mode: &str) -> Self {
-        self.base_url_mode = mode.to_string();
+    pub fn with_base_url_mode(mut self, mode: BaseUrlMode) -> Self {
+        self.base_url_mode = mode;
         self
     }
 }
@@ -253,14 +254,12 @@ impl AngularGenerator {
         // Generate URL building
         let path_template = self.format_path_template(path);
 
-        if self.base_url_mode == "global" {
+        if self.base_url_mode == BaseUrlMode::Global {
             method.push_str(&format!(
                 "    const url = `${{this.baseUrl}}{path_template}`;\n"
             ));
         } else {
-            method.push_str(&format!(
-                "    const url = `${{baseUrl}}{path_template}`;\n"
-            ));
+            method.push_str(&format!("    const url = `${{baseUrl}}{path_template}`;\n"));
         }
 
         // Check for query params
@@ -410,7 +409,7 @@ impl AngularGenerator {
         let mut params = Vec::new();
 
         // Add mandatory baseUrl parameter as the first parameter for consistency
-        if self.base_url_mode != "global" {
+        if self.base_url_mode != BaseUrlMode::Global {
             params.push("baseUrl: string".to_string());
         }
 
@@ -705,11 +704,12 @@ impl AngularGenerator {
         service.push_str(&format!("export class {class_name} {{\n"));
         service.push_str("  private http = inject(HttpClient);\n");
 
-        if self.base_url_mode == "global" {
+        if self.base_url_mode == BaseUrlMode::Global {
             service.push_str("  private baseUrl: string;\n\n");
             service.push_str("  constructor() {\n");
             service.push_str("    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);\n");
-            service.push_str("    if (!this.baseUrl) throw new Error('API_URL is not configured');\n");
+            service
+                .push_str("    if (!this.baseUrl) throw new Error('API_URL is not configured');\n");
             service.push_str("  }\n\n");
         } else {
             service.push_str("\n");
@@ -1066,7 +1066,7 @@ impl AngularGenerator {
         comment.push_str("   *\n");
 
         // Document mandatory baseUrl parameter first for consistency
-        if self.base_url_mode != "global" {
+        if self.base_url_mode != BaseUrlMode::Global {
             comment.push_str("   * @param baseUrl - Base URL for the request\n");
         }
 
