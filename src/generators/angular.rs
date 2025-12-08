@@ -952,7 +952,7 @@ impl AngularGenerator {
 
                     for (prop_name, prop_schema) in props {
                         let is_optional = !required_fields.contains(prop_name);
-                        
+
                         // Determine if this property is a file/blob or needs string conversion
                         let is_binary = matches!(
                             prop_schema,
@@ -961,7 +961,7 @@ impl AngularGenerator {
                                 ..
                             } if f == "binary"
                         );
-                        
+
                         let is_array = matches!(
                             prop_schema,
                             crate::openapi::Schema::Object {
@@ -969,7 +969,7 @@ impl AngularGenerator {
                                 ..
                             } if t == "array"
                         );
-                        
+
                         let is_string = matches!(
                             prop_schema,
                             crate::openapi::Schema::Object {
@@ -977,7 +977,7 @@ impl AngularGenerator {
                                 ..
                             } if t == "string"
                         );
-                        
+
                         let is_object = matches!(
                             prop_schema,
                             crate::openapi::Schema::Object {
