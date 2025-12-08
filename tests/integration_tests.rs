@@ -237,6 +237,25 @@ impl TestSuite {
                 ],
                 expected_dir: "output-samples/angular-base-url-argument".to_string(),
             },
+            // Multipart/form-data tests
+            TestCase {
+                name: "Multipart Angular with Zod".to_string(),
+                input_file: "input-files/test-multipart.json".to_string(),
+                command_args: vec!["--angular".to_string(), "--zod".to_string()],
+                expected_dir: "output-samples/multipart-angular-zod".to_string(),
+            },
+            TestCase {
+                name: "Multipart Angular without Zod".to_string(),
+                input_file: "input-files/test-multipart.json".to_string(),
+                command_args: vec!["--angular".to_string()],
+                expected_dir: "output-samples/multipart-angular".to_string(),
+            },
+            TestCase {
+                name: "Multipart TypeScript".to_string(),
+                input_file: "input-files/test-multipart.json".to_string(),
+                command_args: vec!["--typescript".to_string()],
+                expected_dir: "output-samples/multipart-typescript".to_string(),
+            },
         ];
 
         Self {

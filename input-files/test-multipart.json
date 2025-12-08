@@ -1,0 +1,388 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Multipart Upload API",
+    "version": "1.0.0",
+    "description": "API for testing multipart/form-data file uploads"
+  },
+  "paths": {
+    "/upload/avatar": {
+      "post": {
+        "summary": "Upload User Avatar",
+        "description": "Upload a single avatar image file",
+        "tags": ["Upload"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "userId"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Avatar image file"
+                  },
+                  "userId": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "ID of the user"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Optional description for the avatar"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/documents": {
+      "post": {
+        "summary": "Upload Multiple Documents",
+        "description": "Upload multiple document files with metadata",
+        "tags": ["Upload"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["files", "category"],
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Array of document files"
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": ["invoice", "contract", "report", "other"],
+                    "description": "Document category"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Tags for organizing documents"
+                  },
+                  "isPublic": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether the documents are publicly accessible"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documents uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiUploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/profile": {
+      "post": {
+        "summary": "Upload Profile with Photo",
+        "description": "Create a user profile with photo and detailed information",
+        "tags": ["Upload"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Profile created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/mixed/{projectId}": {
+      "put": {
+        "summary": "Update Project Files",
+        "description": "Update project with new files and metadata",
+        "tags": ["Upload"],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Project identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "Project name"
+                  },
+                  "thumbnail": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Project thumbnail image"
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Additional project files"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "description": "Additional metadata as JSON",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/{fileId}": {
+      "get": {
+        "summary": "Get File Information",
+        "description": "Retrieve metadata for an uploaded file",
+        "tags": ["Files"],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File information retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UploadResponse": {
+        "type": "object",
+        "required": ["success", "fileId"],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "fileId": {
+            "type": "string",
+            "description": "Unique identifier for the uploaded file"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to access the uploaded file"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "MultiUploadResponse": {
+        "type": "object",
+        "required": ["success", "uploadedCount"],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "uploadedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fileIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FileInfo"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ProfileUploadRequest": {
+        "type": "object",
+        "required": ["email", "firstName", "lastName", "photo"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "photo": {
+            "type": "string",
+            "format": "binary",
+            "description": "Profile photo"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^\\+?[1-9]\\d{1,14}$"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "resume": {
+            "type": "string",
+            "format": "binary",
+            "description": "Optional resume file"
+          }
+        }
+      },
+      "ProfileResponse": {
+        "type": "object",
+        "required": ["success", "profileId"],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "profileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "photoUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "resumeUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "FileInfo": {
+        "type": "object",
+        "required": ["id", "filename", "size", "uploadedAt"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "File size in bytes"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    }
+  }
+}
