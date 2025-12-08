@@ -78,7 +78,13 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] GET {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "GET", path, operation, full_schema)?;
+                    self.add_operation_to_services(
+                        &mut services,
+                        "GET",
+                        path,
+                        operation,
+                        full_schema,
+                    )?;
                 }
                 if let Some(operation) = &path_item.post {
                     if self.debug {
@@ -90,7 +96,13 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] POST {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "POST", path, operation, full_schema)?;
+                    self.add_operation_to_services(
+                        &mut services,
+                        "POST",
+                        path,
+                        operation,
+                        full_schema,
+                    )?;
                 }
                 if let Some(operation) = &path_item.put {
                     if self.debug {
@@ -102,7 +114,13 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] PUT {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "PUT", path, operation, full_schema)?;
+                    self.add_operation_to_services(
+                        &mut services,
+                        "PUT",
+                        path,
+                        operation,
+                        full_schema,
+                    )?;
                 }
                 if let Some(operation) = &path_item.delete {
                     if self.debug {
@@ -114,7 +132,13 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] DELETE {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "DELETE", path, operation, full_schema)?;
+                    self.add_operation_to_services(
+                        &mut services,
+                        "DELETE",
+                        path,
+                        operation,
+                        full_schema,
+                    )?;
                 }
                 if let Some(operation) = &path_item.patch {
                     if self.debug {
@@ -126,7 +150,13 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] PATCH {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "PATCH", path, operation, full_schema)?;
+                    self.add_operation_to_services(
+                        &mut services,
+                        "PATCH",
+                        path,
+                        operation,
+                        full_schema,
+                    )?;
                 }
             }
         }
@@ -281,7 +311,7 @@ impl AngularGenerator {
         if is_multipart {
             // Generate explicit FormData conversion based on schema fields
             method.push_str("    const formData = new FormData();\n");
-            
+
             if let Some(request_body) = &operation.request_body {
                 if let Some(content) = &request_body.content {
                     if let Some(media_type) = content.get("multipart/form-data") {
@@ -907,7 +937,7 @@ impl AngularGenerator {
     ) -> Result<()> {
         // Resolve the schema if it's a reference
         let resolved_schema = self.resolve_schema_ref(schema, full_schema);
-        
+
         match resolved_schema {
             crate::openapi::Schema::Object {
                 properties,
@@ -971,7 +1001,7 @@ impl AngularGenerator {
                 method.push_str("    });\n");
             }
         }
-        
+
         Ok(())
     }
 

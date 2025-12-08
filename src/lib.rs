@@ -1641,7 +1641,7 @@ fn strip_json_comments(content: &str) -> String {
 /// Extract inline request body schemas (especially multipart/form-data) and add them to components.schemas
 fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSchema> {
     let mut new_schemas = IndexMap::new();
-    
+
     if let Some(paths) = &mut schema.paths {
         for (_path, path_item) in paths {
             let operations = [
@@ -1651,7 +1651,7 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
                 &mut path_item.delete,
                 &mut path_item.patch,
             ];
-            
+
             for operation_opt in operations {
                 if let Some(operation) = operation_opt {
                     if let Some(request_body) = &mut operation.request_body {
@@ -1663,14 +1663,21 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
                                     if matches!(inline_schema, Schema::Object { .. }) {
                                         // Generate a DTO name from the operation summary
                                         if let Some(summary) = &operation.summary {
-                                            let dto_name = generate_dto_name_from_summary(summary, content_type);
-                                            
+                                            let dto_name = generate_dto_name_from_summary(
+                                                summary,
+                                                content_type,
+                                            );
+
                                             // Clone the schema and add it to new_schemas
-                                            new_schemas.insert(dto_name.clone(), inline_schema.clone());
-                                            
+                                            new_schemas
+                                                .insert(dto_name.clone(), inline_schema.clone());
+
                                             // Replace the inline schema with a reference
                                             media_type.schema = Some(Schema::Reference {
-                                                reference: format!("#/components/schemas/{}", dto_name),
+                                                reference: format!(
+                                                    "#/components/schemas/{}",
+                                                    dto_name
+                                                ),
                                             });
                                         }
                                     }
@@ -1682,7 +1689,7 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
             }
         }
     }
-    
+
     // Add the extracted schemas to components.schemas
     if !new_schemas.is_empty() {
         if let Some(components) = &mut schema.components {
@@ -1702,7 +1709,7 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
             });
         }
     }
-    
+
     Ok(schema)
 }
 
@@ -1719,7 +1726,7 @@ fn generate_dto_name_from_summary(summary: &str, content_type: &str) -> String {
             }
         })
         .collect();
-    
+
     // Add content type suffix if it's multipart
     if content_type.contains("multipart") {
         format!("{}Dto", pascal_case)
