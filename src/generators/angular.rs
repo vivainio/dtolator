@@ -57,6 +57,9 @@ impl Generator for AngularGenerator {
             println!("🔍 [DEBUG] Angular Generator: Starting endpoint processing");
         }
 
+        // Store reference to the full schema for later lookup
+        let full_schema = schema;
+
         // Group endpoints by tag
         if let Some(paths) = &schema.paths {
             for (path, path_item) in paths {
@@ -75,7 +78,7 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] GET {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "GET", path, operation)?;
+                    self.add_operation_to_services(&mut services, "GET", path, operation, full_schema)?;
                 }
                 if let Some(operation) = &path_item.post {
                     if self.debug {
@@ -87,7 +90,7 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] POST {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "POST", path, operation)?;
+                    self.add_operation_to_services(&mut services, "POST", path, operation, full_schema)?;
                 }
                 if let Some(operation) = &path_item.put {
                     if self.debug {
@@ -99,7 +102,7 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] PUT {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "PUT", path, operation)?;
+                    self.add_operation_to_services(&mut services, "PUT", path, operation, full_schema)?;
                 }
                 if let Some(operation) = &path_item.delete {
                     if self.debug {
@@ -111,7 +114,7 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] DELETE {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "DELETE", path, operation)?;
+                    self.add_operation_to_services(&mut services, "DELETE", path, operation, full_schema)?;
                 }
                 if let Some(operation) = &path_item.patch {
                     if self.debug {
@@ -123,7 +126,7 @@ impl Generator for AngularGenerator {
                             .unwrap_or(&default_tag);
                         println!("🔍 [DEBUG] PATCH {path} -> tag: {tag}");
                     }
-                    self.add_operation_to_services(&mut services, "PATCH", path, operation)?;
+                    self.add_operation_to_services(&mut services, "PATCH", path, operation, full_schema)?;
                 }
             }
         }
@@ -166,6 +169,7 @@ impl AngularGenerator {
         method: &str,
         path: &str,
         operation: &Operation,
+        full_schema: &OpenApiSchema,
     ) -> Result<()> {
         let tag = operation
             .tags
@@ -210,8 +214,8 @@ impl AngularGenerator {
             }
         }
 
-        // Generate method
-        let method_code = self.generate_method(method, path, operation)?;
+        // Generate method with schema for reference resolution
+        let method_code = self.generate_method(method, path, operation, full_schema)?;
         service_data.methods.push(method_code);
 
         // Collect imports
@@ -225,6 +229,7 @@ impl AngularGenerator {
         http_method: &str,
         path: &str,
         operation: &Operation,
+        full_schema: &OpenApiSchema,
     ) -> Result<String> {
         let method_name = self.get_method_name(operation);
         let parameters = self.get_method_parameters(operation)?;
@@ -260,6 +265,32 @@ impl AngularGenerator {
             ));
         } else {
             method.push_str(&format!("    const url = `${{baseUrl}}{path_template}`;\n"));
+        }
+
+        // Check for multipart/form-data and generate FormData conversion
+        let is_multipart = if let Some(request_body) = &operation.request_body {
+            if let Some(content) = &request_body.content {
+                content.contains_key("multipart/form-data")
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        if is_multipart {
+            // Generate explicit FormData conversion based on schema fields
+            method.push_str("    const formData = new FormData();\n");
+            
+            if let Some(request_body) = &operation.request_body {
+                if let Some(content) = &request_body.content {
+                    if let Some(media_type) = content.get("multipart/form-data") {
+                        if let Some(schema) = &media_type.schema {
+                            self.generate_formdata_conversion(&mut method, schema, full_schema)?;
+                        }
+                    }
+                }
+            }
         }
 
         // Check for query params
@@ -469,6 +500,11 @@ impl AngularGenerator {
                         let type_name = self.get_schema_type_name(schema);
                         params.push(format!("dto: {type_name}"));
                     }
+                } else if let Some(media_type) = content.get("multipart/form-data") {
+                    if let Some(schema) = &media_type.schema {
+                        let type_name = self.get_schema_type_name(schema);
+                        params.push(format!("data: {type_name}"));
+                    }
                 }
             }
         }
@@ -530,8 +566,16 @@ impl AngularGenerator {
     }
 
     fn get_request_body(&self, operation: &Operation) -> Result<String> {
-        if operation.request_body.is_some() {
-            Ok(", dto".to_string())
+        if let Some(request_body) = &operation.request_body {
+            if let Some(content) = &request_body.content {
+                if content.contains_key("multipart/form-data") {
+                    Ok(", formData".to_string())
+                } else {
+                    Ok(", dto".to_string())
+                }
+            } else {
+                Ok(", dto".to_string())
+            }
         } else {
             Ok("".to_string())
         }
@@ -560,6 +604,15 @@ impl AngularGenerator {
         if let Some(request_body) = &operation.request_body {
             if let Some(content) = &request_body.content {
                 if let Some(media_type) = content.get("application/json") {
+                    if let Some(schema) = &media_type.schema {
+                        if let Some(type_name) = self.extract_type_name(schema) {
+                            service_data.imports.insert(type_name.clone());
+                            if self.with_zod {
+                                service_data.request_types.insert(type_name);
+                            }
+                        }
+                    }
+                } else if let Some(media_type) = content.get("multipart/form-data") {
                     if let Some(schema) = &media_type.schema {
                         if let Some(type_name) = self.extract_type_name(schema) {
                             service_data.imports.insert(type_name.clone());
@@ -844,6 +897,82 @@ impl AngularGenerator {
                 }
             })
             .collect()
+    }
+
+    fn generate_formdata_conversion(
+        &self,
+        method: &mut String,
+        schema: &crate::openapi::Schema,
+        full_schema: &OpenApiSchema,
+    ) -> Result<()> {
+        // Resolve the schema if it's a reference
+        let resolved_schema = self.resolve_schema_ref(schema, full_schema);
+        
+        match resolved_schema {
+            crate::openapi::Schema::Object {
+                properties,
+                required,
+                ..
+            } => {
+                if let Some(props) = properties {
+                    let required_fields: std::collections::HashSet<String> = required
+                        .as_ref()
+                        .map(|r| r.iter().cloned().collect())
+                        .unwrap_or_default();
+
+                    for (prop_name, prop_schema) in props {
+                        let is_optional = !required_fields.contains(prop_name);
+                        let is_array = matches!(
+                            prop_schema,
+                            crate::openapi::Schema::Object {
+                                schema_type: Some(t),
+                                ..
+                            } if t == "array"
+                        );
+
+                        if is_optional {
+                            method.push_str(&format!("    if (data.{}) {{\n", prop_name));
+                            if is_array {
+                                method.push_str(&format!(
+                                    "      data.{}.forEach(item => formData.append('{}', item));\n",
+                                    prop_name, prop_name
+                                ));
+                            } else {
+                                method.push_str(&format!(
+                                    "      formData.append('{}', data.{});\n",
+                                    prop_name, prop_name
+                                ));
+                            }
+                            method.push_str("    }\n");
+                        } else {
+                            if is_array {
+                                method.push_str(&format!(
+                                    "    data.{}.forEach(item => formData.append('{}', item));\n",
+                                    prop_name, prop_name
+                                ));
+                            } else {
+                                method.push_str(&format!(
+                                    "    formData.append('{}', data.{});\n",
+                                    prop_name, prop_name
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+            crate::openapi::Schema::Reference { .. } => {
+                // For references, we can't resolve at generation time, so fall back to generic approach
+                method.push_str("    Object.entries(data).forEach(([key, value]) => {\n");
+                method.push_str("      if (Array.isArray(value)) {\n");
+                method.push_str("        value.forEach(item => formData.append(key, item));\n");
+                method.push_str("      } else if (value !== undefined && value !== null) {\n");
+                method.push_str("        formData.append(key, value);\n");
+                method.push_str("      }\n");
+                method.push_str("    });\n");
+            }
+        }
+        
+        Ok(())
     }
 
     fn get_query_param_type_name(&self, operation: &Operation) -> Option<String> {
@@ -1180,6 +1309,32 @@ impl AngularGenerator {
         comment.push_str("   */\n");
 
         Ok(comment)
+    }
+
+    /// Resolve a schema reference by looking it up in components.schemas
+    fn resolve_schema_ref<'a>(
+        &self,
+        schema: &'a crate::openapi::Schema,
+        full_schema: &'a OpenApiSchema,
+    ) -> &'a crate::openapi::Schema {
+        match schema {
+            crate::openapi::Schema::Reference { reference } => {
+                // Extract the schema name from the reference
+                if let Some(schema_name) = reference.strip_prefix("#/components/schemas/") {
+                    // Look it up in components.schemas
+                    if let Some(components) = &full_schema.components {
+                        if let Some(schemas) = &components.schemas {
+                            if let Some(resolved) = schemas.get(schema_name) {
+                                return resolved;
+                            }
+                        }
+                    }
+                }
+                // If we can't resolve, return the original
+                schema
+            }
+            _ => schema,
+        }
     }
 }
 

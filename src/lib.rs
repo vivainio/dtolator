@@ -200,6 +200,9 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
         }
     };
 
+    // Extract inline request body schemas and add them to components
+    let schema = extract_inline_request_schemas(schema)?;
+
     // Build the command string used in generated file headers
     let command_string = build_command_string_from_options(&options);
 
@@ -577,6 +580,9 @@ where
     } else {
         unreachable!() // We validated above that exactly one of them is Some
     };
+
+    // Extract inline request body schemas and add them to components
+    let schema = extract_inline_request_schemas(schema)?;
 
     match cli.output {
         Some(output_dir) => {
@@ -1630,4 +1636,94 @@ fn strip_json_comments(content: &str) -> String {
     }
 
     result
+}
+
+/// Extract inline request body schemas (especially multipart/form-data) and add them to components.schemas
+fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSchema> {
+    let mut new_schemas = IndexMap::new();
+    
+    if let Some(paths) = &mut schema.paths {
+        for (_path, path_item) in paths {
+            let operations = [
+                &mut path_item.get,
+                &mut path_item.post,
+                &mut path_item.put,
+                &mut path_item.delete,
+                &mut path_item.patch,
+            ];
+            
+            for operation_opt in operations {
+                if let Some(operation) = operation_opt {
+                    if let Some(request_body) = &mut operation.request_body {
+                        if let Some(content) = &mut request_body.content {
+                            // Check for multipart/form-data or any other content type with inline schema
+                            for (content_type, media_type) in content.iter_mut() {
+                                if let Some(inline_schema) = &media_type.schema {
+                                    // Only extract if it's an inline schema (not a reference)
+                                    if matches!(inline_schema, Schema::Object { .. }) {
+                                        // Generate a DTO name from the operation summary
+                                        if let Some(summary) = &operation.summary {
+                                            let dto_name = generate_dto_name_from_summary(summary, content_type);
+                                            
+                                            // Clone the schema and add it to new_schemas
+                                            new_schemas.insert(dto_name.clone(), inline_schema.clone());
+                                            
+                                            // Replace the inline schema with a reference
+                                            media_type.schema = Some(Schema::Reference {
+                                                reference: format!("#/components/schemas/{}", dto_name),
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Add the extracted schemas to components.schemas
+    if !new_schemas.is_empty() {
+        if let Some(components) = &mut schema.components {
+            if let Some(existing_schemas) = &mut components.schemas {
+                for (name, inline_schema) in new_schemas {
+                    // Only add if not already present
+                    if !existing_schemas.contains_key(&name) {
+                        existing_schemas.insert(name, inline_schema);
+                    }
+                }
+            } else {
+                components.schemas = Some(new_schemas);
+            }
+        } else {
+            schema.components = Some(Components {
+                schemas: Some(new_schemas),
+            });
+        }
+    }
+    
+    Ok(schema)
+}
+
+/// Generate a DTO name from an operation summary and content type
+fn generate_dto_name_from_summary(summary: &str, content_type: &str) -> String {
+    // Convert "Push message" -> "PushMessage"
+    let pascal_case: String = summary
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        })
+        .collect();
+    
+    // Add content type suffix if it's multipart
+    if content_type.contains("multipart") {
+        format!("{}Dto", pascal_case)
+    } else {
+        format!("{}Dto", pascal_case)
+    }
 }
