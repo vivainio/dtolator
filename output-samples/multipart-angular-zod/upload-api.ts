@@ -43,7 +43,7 @@ export class UploadApi {
     const url = `${this.baseUrl}/upload/avatar`;
     const formData = new FormData();
     formData.append('file', data.file);
-    formData.append('userId', data.userId);
+    formData.append('userId', String(data.userId));
     if (data.description) {
       formData.append('description', data.description);
     }
@@ -70,7 +70,7 @@ export class UploadApi {
       data.tags.forEach(item => formData.append('tags', item));
     }
     if (data.isPublic) {
-      formData.append('isPublic', data.isPublic);
+      formData.append('isPublic', String(data.isPublic));
     }
     return this.http.post<MultiUploadResponse>(url, formData, { headers })
       .pipe(
@@ -131,7 +131,7 @@ export class UploadApi {
       data.attachments.forEach(item => formData.append('attachments', item));
     }
     if (data.metadata) {
-      formData.append('metadata', data.metadata);
+      formData.append('metadata', JSON.stringify(data.metadata));
     }
     return this.http.put<UploadResponse>(url, formData, { headers })
       .pipe(

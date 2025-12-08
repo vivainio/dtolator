@@ -952,12 +952,38 @@ impl AngularGenerator {
 
                     for (prop_name, prop_schema) in props {
                         let is_optional = !required_fields.contains(prop_name);
+                        
+                        // Determine if this property is a file/blob or needs string conversion
+                        let is_binary = matches!(
+                            prop_schema,
+                            crate::openapi::Schema::Object {
+                                format: Some(ref f),
+                                ..
+                            } if f == "binary"
+                        );
+                        
                         let is_array = matches!(
                             prop_schema,
                             crate::openapi::Schema::Object {
                                 schema_type: Some(t),
                                 ..
                             } if t == "array"
+                        );
+                        
+                        let is_string = matches!(
+                            prop_schema,
+                            crate::openapi::Schema::Object {
+                                schema_type: Some(ref t),
+                                ..
+                            } if t == "string"
+                        );
+                        
+                        let is_object = matches!(
+                            prop_schema,
+                            crate::openapi::Schema::Object {
+                                schema_type: Some(ref t),
+                                ..
+                            } if t == "object"
                         );
 
                         if is_optional {
@@ -967,9 +993,22 @@ impl AngularGenerator {
                                     "      data.{}.forEach(item => formData.append('{}', item));\n",
                                     prop_name, prop_name
                                 ));
-                            } else {
+                            } else if is_binary || is_string {
+                                // Files/blobs and strings can be appended directly
                                 method.push_str(&format!(
                                     "      formData.append('{}', data.{});\n",
+                                    prop_name, prop_name
+                                ));
+                            } else if is_object {
+                                // Objects need to be stringified as JSON
+                                method.push_str(&format!(
+                                    "      formData.append('{}', JSON.stringify(data.{}));\n",
+                                    prop_name, prop_name
+                                ));
+                            } else {
+                                // Numbers, booleans, etc. need to be converted to string
+                                method.push_str(&format!(
+                                    "      formData.append('{}', String(data.{}));\n",
                                     prop_name, prop_name
                                 ));
                             }
@@ -980,9 +1019,22 @@ impl AngularGenerator {
                                     "    data.{}.forEach(item => formData.append('{}', item));\n",
                                     prop_name, prop_name
                                 ));
-                            } else {
+                            } else if is_binary || is_string {
+                                // Files/blobs and strings can be appended directly
                                 method.push_str(&format!(
                                     "    formData.append('{}', data.{});\n",
+                                    prop_name, prop_name
+                                ));
+                            } else if is_object {
+                                // Objects need to be stringified as JSON
+                                method.push_str(&format!(
+                                    "    formData.append('{}', JSON.stringify(data.{}));\n",
+                                    prop_name, prop_name
+                                ));
+                            } else {
+                                // Numbers, booleans, etc. need to be converted to string
+                                method.push_str(&format!(
+                                    "    formData.append('{}', String(data.{}));\n",
                                     prop_name, prop_name
                                 ));
                             }
@@ -996,7 +1048,13 @@ impl AngularGenerator {
                 method.push_str("      if (Array.isArray(value)) {\n");
                 method.push_str("        value.forEach(item => formData.append(key, item));\n");
                 method.push_str("      } else if (value !== undefined && value !== null) {\n");
-                method.push_str("        formData.append(key, value);\n");
+                method.push_str("        if (typeof value === 'object' && !(value instanceof Blob) && !(value instanceof File)) {\n");
+                method.push_str("          formData.append(key, JSON.stringify(value));\n");
+                method.push_str("        } else if (typeof value === 'string' || value instanceof Blob || value instanceof File) {\n");
+                method.push_str("          formData.append(key, value);\n");
+                method.push_str("        } else {\n");
+                method.push_str("          formData.append(key, String(value));\n");
+                method.push_str("        }\n");
                 method.push_str("      }\n");
                 method.push_str("    });\n");
             }
