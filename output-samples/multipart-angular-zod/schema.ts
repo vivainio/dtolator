@@ -27,26 +27,26 @@ export const ProfileUploadRequestSchema = z.object({
   email: z.email(),
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
-  photo: z.string(),
+  photo: z.instanceof(File),
   dateOfBirth: z.iso.date().optional(),
   phoneNumber: z.string().regex(/^\\+?[1-9]\\d{1,14}$/).optional(),
   bio: z.string().max(500).optional(),
-  resume: z.string().optional(),
+  resume: z.instanceof(File).optional(),
 });
 
 export type ProfileUploadRequest = z.infer<typeof ProfileUploadRequestSchema>;
 
 export const UpdateProjectFilesDtoSchema = z.object({
   name: z.string().min(1).max(100),
-  thumbnail: z.string().optional(),
-  attachments: z.array(z.string()).optional(),
+  thumbnail: z.instanceof(File).optional(),
+  attachments: z.array(z.instanceof(File)).optional(),
   metadata: z.object({}).optional(),
 });
 
 export type UpdateProjectFilesDto = z.infer<typeof UpdateProjectFilesDtoSchema>;
 
 export const UploadMultipleDocumentsDtoSchema = z.object({
-  files: z.array(z.string()),
+  files: z.array(z.instanceof(File)),
   category: z.enum(["invoice", "contract", "report", "other"]),
   tags: z.array(z.string()).optional(),
   isPublic: z.boolean().optional(),
@@ -64,7 +64,7 @@ export const UploadResponseSchema = z.object({
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;
 
 export const UploadUserAvatarDtoSchema = z.object({
-  file: z.string(),
+  file: z.instanceof(File),
   userId: z.number().int(),
   description: z.string().max(200).optional(),
 });
