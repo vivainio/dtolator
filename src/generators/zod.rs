@@ -236,6 +236,9 @@ impl ZodGenerator {
                                     .map(|s| s.to_string())
                                     .collect();
                                 ZodValue::Enum(enum_strings)
+                            } else if format.as_deref() == Some("binary") {
+                                // For multipart file uploads, use z.instanceof(File)
+                                ZodValue::File
                             } else {
                                 ZodValue::String(StringConstraints {
                                     format: format.clone(),

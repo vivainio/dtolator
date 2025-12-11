@@ -15,6 +15,7 @@ pub enum ZodValue {
     Intersection(Vec<ZodValue>),
     Enum(Vec<String>),
     Nullable(Box<ZodValue>),
+    File, // For multipart file uploads (z.instanceof(File))
     Unknown,
 }
 
@@ -85,6 +86,7 @@ impl ZodValue {
                 }
             }
             ZodValue::Nullable(inner) => format!("{}.nullable()", inner.render()),
+            ZodValue::File => "z.instanceof(File)".to_string(),
             ZodValue::Unknown => "z.unknown()".to_string(),
         }
     }
