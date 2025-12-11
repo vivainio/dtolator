@@ -103,7 +103,7 @@ impl RustSerdeGenerator {
 
         let mut zero_degree_nodes: Vec<_> = in_degree
             .iter()
-            .filter(|(_, &degree)| degree == 0)
+            .filter(|&(_, &degree)| degree == 0)
             .map(|(name, _)| name.clone())
             .collect();
         zero_degree_nodes.sort();

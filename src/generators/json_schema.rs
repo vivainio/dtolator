@@ -2,7 +2,7 @@ use crate::generators::Generator;
 use crate::openapi::{OpenApiSchema, Schema};
 use anyhow::Result;
 use indexmap::IndexMap;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 pub struct JsonSchemaGenerator {
@@ -115,7 +115,7 @@ impl JsonSchemaGenerator {
         // Start with nodes that have no incoming edges (sorted for deterministic output)
         let mut zero_degree_nodes: Vec<_> = in_degree
             .iter()
-            .filter(|(_, &degree)| degree == 0)
+            .filter(|&(_, &degree)| degree == 0)
             .map(|(name, _)| name.clone())
             .collect();
         zero_degree_nodes.sort();

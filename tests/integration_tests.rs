@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
-use dtolator::{generate, GenerateOptions, GeneratorType, InputType};
+use dtolator::{GenerateOptions, GeneratorType, InputType, generate};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::path::{Path, PathBuf};
