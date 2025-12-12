@@ -34,31 +34,24 @@ impl EndpointsGenerator {
 
                 for operation in operations.into_iter().flatten() {
                     // Collect request body types
-                    if let Some(request_body) = &operation.request_body {
-                        if let Some(content) = &request_body.content {
-                            if let Some(media_type) = content.get("application/json") {
-                                if let Some(schema) = &media_type.schema {
-                                    if let Some(type_name) = self.extract_schema_type_name(schema) {
-                                        used_types.insert(type_name);
-                                    }
-                                }
-                            }
-                        }
+                    if let Some(request_body) = &operation.request_body
+                        && let Some(content) = &request_body.content
+                        && let Some(media_type) = content.get("application/json")
+                        && let Some(schema) = &media_type.schema
+                        && let Some(type_name) = self.extract_schema_type_name(schema)
+                    {
+                        used_types.insert(type_name);
                     }
 
                     // Collect response types
                     if let Some(responses) = &operation.responses {
                         for (_status, response) in responses {
-                            if let Some(content) = &response.content {
-                                if let Some(media_type) = content.get("application/json") {
-                                    if let Some(schema) = &media_type.schema {
-                                        if let Some(type_name) =
-                                            self.extract_schema_type_name(schema)
-                                        {
-                                            used_types.insert(type_name);
-                                        }
-                                    }
-                                }
+                            if let Some(content) = &response.content
+                                && let Some(media_type) = content.get("application/json")
+                                && let Some(schema) = &media_type.schema
+                                && let Some(type_name) = self.extract_schema_type_name(schema)
+                            {
+                                used_types.insert(type_name);
                             }
                         }
                     }
@@ -188,31 +181,25 @@ impl EndpointsGenerator {
         }
 
         // Generate request body for POST/PUT/PATCH
-        if matches!(method, "POST" | "PUT" | "PATCH") {
-            if let Some(request_body) = &operation.request_body {
-                if let Some(content) = &request_body.content {
-                    if let Some(media_type) = content.get("application/json") {
-                        if let Some(schema) = &media_type.schema {
-                            let type_name = self.get_schema_type_name(schema);
-                            output.push_str(&format!("    request: {type_name};\n"));
-                        }
-                    }
-                }
-            }
+        if matches!(method, "POST" | "PUT" | "PATCH")
+            && let Some(request_body) = &operation.request_body
+            && let Some(content) = &request_body.content
+            && let Some(media_type) = content.get("application/json")
+            && let Some(schema) = &media_type.schema
+        {
+            let type_name = self.get_schema_type_name(schema);
+            output.push_str(&format!("    request: {type_name};\n"));
         }
 
         // Generate response type
-        if let Some(responses) = &operation.responses {
-            if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
-                if let Some(content) = &success_response.content {
-                    if let Some(media_type) = content.get("application/json") {
-                        if let Some(schema) = &media_type.schema {
-                            let type_name = self.get_schema_type_name(schema);
-                            output.push_str(&format!("    response: {type_name};\n"));
-                        }
-                    }
-                }
-            }
+        if let Some(responses) = &operation.responses
+            && let Some(success_response) = responses.get("200").or_else(|| responses.get("201"))
+            && let Some(content) = &success_response.content
+            && let Some(media_type) = content.get("application/json")
+            && let Some(schema) = &media_type.schema
+        {
+            let type_name = self.get_schema_type_name(schema);
+            output.push_str(&format!("    response: {type_name};\n"));
         }
 
         output.push_str("  };\n");

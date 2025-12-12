@@ -312,14 +312,12 @@ impl AngularGenerator {
             // Generate explicit FormData conversion based on schema fields
             method.push_str("    const formData = new FormData();\n");
 
-            if let Some(request_body) = &operation.request_body {
-                if let Some(content) = &request_body.content {
-                    if let Some(media_type) = content.get("multipart/form-data") {
-                        if let Some(schema) = &media_type.schema {
-                            self.generate_formdata_conversion(&mut method, schema, full_schema)?;
-                        }
-                    }
-                }
+            if let Some(request_body) = &operation.request_body
+                && let Some(content) = &request_body.content
+                && let Some(media_type) = content.get("multipart/form-data")
+                && let Some(schema) = &media_type.schema
+            {
+                self.generate_formdata_conversion(&mut method, schema, full_schema)?;
             }
         }
 
@@ -525,19 +523,19 @@ impl AngularGenerator {
         }
 
         // Request body
-        if let Some(request_body) = &operation.request_body {
-            if let Some(content) = &request_body.content {
-                if let Some(media_type) = content.get("application/json") {
-                    if let Some(schema) = &media_type.schema {
-                        let type_name = self.get_schema_type_name(schema);
-                        params.push(format!("dto: {type_name}"));
-                    }
-                } else if let Some(media_type) = content.get("multipart/form-data") {
-                    if let Some(schema) = &media_type.schema {
-                        let type_name = self.get_schema_type_name(schema);
-                        params.push(format!("data: {type_name}"));
-                    }
-                }
+        if let Some(request_body) = &operation.request_body
+            && let Some(content) = &request_body.content
+        {
+            if let Some(media_type) = content.get("application/json")
+                && let Some(schema) = &media_type.schema
+            {
+                let type_name = self.get_schema_type_name(schema);
+                params.push(format!("dto: {type_name}"));
+            } else if let Some(media_type) = content.get("multipart/form-data")
+                && let Some(schema) = &media_type.schema
+            {
+                let type_name = self.get_schema_type_name(schema);
+                params.push(format!("data: {type_name}"));
             }
         }
 
@@ -583,16 +581,13 @@ impl AngularGenerator {
     }
 
     fn get_return_type(&self, operation: &Operation) -> Result<String> {
-        if let Some(responses) = &operation.responses {
-            if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
-                if let Some(content) = &success_response.content {
-                    if let Some(media_type) = content.get("application/json") {
-                        if let Some(schema) = &media_type.schema {
-                            return Ok(self.get_schema_type_name(schema));
-                        }
-                    }
-                }
-            }
+        if let Some(responses) = &operation.responses
+            && let Some(success_response) = responses.get("200").or_else(|| responses.get("201"))
+            && let Some(content) = &success_response.content
+            && let Some(media_type) = content.get("application/json")
+            && let Some(schema) = &media_type.schema
+        {
+            return Ok(self.get_schema_type_name(schema));
         }
         Ok("void".to_string())
     }
@@ -615,44 +610,38 @@ impl AngularGenerator {
 
     fn collect_imports(&self, operation: &Operation, service_data: &mut ServiceData) -> Result<()> {
         // Collect response types (always import both type and schema when using Zod)
-        if let Some(responses) = &operation.responses {
-            if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
-                if let Some(content) = &success_response.content {
-                    if let Some(media_type) = content.get("application/json") {
-                        if let Some(schema) = &media_type.schema {
-                            if let Some(type_name) = self.extract_type_name(schema) {
-                                service_data.imports.insert(type_name.clone());
-                                if self.with_zod {
-                                    service_data.response_types.insert(type_name);
-                                }
-                            }
-                        }
-                    }
-                }
+        if let Some(responses) = &operation.responses
+            && let Some(success_response) = responses.get("200").or_else(|| responses.get("201"))
+            && let Some(content) = &success_response.content
+            && let Some(media_type) = content.get("application/json")
+            && let Some(schema) = &media_type.schema
+            && let Some(type_name) = self.extract_type_name(schema)
+        {
+            service_data.imports.insert(type_name.clone());
+            if self.with_zod {
+                service_data.response_types.insert(type_name);
             }
         }
 
         // Collect request body types (always import the TypeScript type, but don't import schema when using Zod)
-        if let Some(request_body) = &operation.request_body {
-            if let Some(content) = &request_body.content {
-                if let Some(media_type) = content.get("application/json") {
-                    if let Some(schema) = &media_type.schema {
-                        if let Some(type_name) = self.extract_type_name(schema) {
-                            service_data.imports.insert(type_name.clone());
-                            if self.with_zod {
-                                service_data.request_types.insert(type_name);
-                            }
-                        }
-                    }
-                } else if let Some(media_type) = content.get("multipart/form-data") {
-                    if let Some(schema) = &media_type.schema {
-                        if let Some(type_name) = self.extract_type_name(schema) {
-                            service_data.imports.insert(type_name.clone());
-                            if self.with_zod {
-                                service_data.request_types.insert(type_name);
-                            }
-                        }
-                    }
+        if let Some(request_body) = &operation.request_body
+            && let Some(content) = &request_body.content
+        {
+            if let Some(media_type) = content.get("application/json")
+                && let Some(schema) = &media_type.schema
+                && let Some(type_name) = self.extract_type_name(schema)
+            {
+                service_data.imports.insert(type_name.clone());
+                if self.with_zod {
+                    service_data.request_types.insert(type_name);
+                }
+            } else if let Some(media_type) = content.get("multipart/form-data")
+                && let Some(schema) = &media_type.schema
+                && let Some(type_name) = self.extract_type_name(schema)
+            {
+                service_data.imports.insert(type_name.clone());
+                if self.with_zod {
+                    service_data.request_types.insert(type_name);
                 }
             }
         }
@@ -1328,22 +1317,20 @@ impl AngularGenerator {
         }
 
         // Document request body
-        if let Some(request_body) = &operation.request_body {
-            if let Some(content) = &request_body.content {
-                if let Some(media_type) = content.get("application/json") {
-                    if let Some(schema) = &media_type.schema {
-                        let type_name = self.get_schema_type_name(schema);
-                        let description = request_body
-                            .description
-                            .as_ref()
-                            .map(|d| format!(" - {d}"))
-                            .unwrap_or_default();
-                        comment.push_str(&format!(
-                            "   * @param dto - Request body of type {type_name}{description}\n"
-                        ));
-                    }
-                }
-            }
+        if let Some(request_body) = &operation.request_body
+            && let Some(content) = &request_body.content
+            && let Some(media_type) = content.get("application/json")
+            && let Some(schema) = &media_type.schema
+        {
+            let type_name = self.get_schema_type_name(schema);
+            let description = request_body
+                .description
+                .as_ref()
+                .map(|d| format!(" - {d}"))
+                .unwrap_or_default();
+            comment.push_str(&format!(
+                "   * @param dto - Request body of type {type_name}{description}\n"
+            ));
         }
 
         // Document headers parameter
@@ -1409,16 +1396,13 @@ impl AngularGenerator {
     ) -> &'a crate::openapi::Schema {
         match schema {
             crate::openapi::Schema::Reference { reference } => {
-                // Extract the schema name from the reference
-                if let Some(schema_name) = reference.strip_prefix("#/components/schemas/") {
-                    // Look it up in components.schemas
-                    if let Some(components) = &full_schema.components {
-                        if let Some(schemas) = &components.schemas {
-                            if let Some(resolved) = schemas.get(schema_name) {
-                                return resolved;
-                            }
-                        }
-                    }
+                // Extract the schema name from the reference and look it up in components.schemas
+                if let Some(schema_name) = reference.strip_prefix("#/components/schemas/")
+                    && let Some(components) = &full_schema.components
+                    && let Some(schemas) = &components.schemas
+                    && let Some(resolved) = schemas.get(schema_name)
+                {
+                    return resolved;
                 }
                 // If we can't resolve, return the original
                 schema

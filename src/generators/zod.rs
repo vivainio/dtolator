@@ -307,18 +307,17 @@ impl Generator for ZodGenerator {
         import_gen.add_import("zod", "z", false);
         output.push_str(&import_gen.generate());
 
-        if let Some(components) = &schema.components {
-            if let Some(schemas) = &components.schemas {
-                if !schemas.is_empty() {
-                    // Sort schemas topologically to handle dependencies
-                    let sorted_names = self.topological_sort(schemas)?;
+        if let Some(components) = &schema.components
+            && let Some(schemas) = &components.schemas
+            && !schemas.is_empty()
+        {
+            // Sort schemas topologically to handle dependencies
+            let sorted_names = self.topological_sort(schemas)?;
 
-                    for name in sorted_names {
-                        if let Some(schema_def) = schemas.get(&name) {
-                            let zod_schema = self.generate_schema(&name, schema_def)?;
-                            output.push_str(&zod_schema);
-                        }
-                    }
+            for name in sorted_names {
+                if let Some(schema_def) = schemas.get(&name) {
+                    let zod_schema = self.generate_schema(&name, schema_def)?;
+                    output.push_str(&zod_schema);
                 }
             }
         }

@@ -363,14 +363,14 @@ impl Generator for RustSerdeGenerator {
 
         output.push_str("use serde::{Deserialize, Serialize};\n\n");
 
-        if let Some(components) = &schema.components {
-            if let Some(schemas) = &components.schemas {
-                let sorted_names = self.topological_sort(schemas)?;
+        if let Some(components) = &schema.components
+            && let Some(schemas) = &components.schemas
+        {
+            let sorted_names = self.topological_sort(schemas)?;
 
-                for name in sorted_names {
-                    if let Some(schema) = schemas.get(&name) {
-                        output.push_str(&self.generate_struct(&name, schema)?);
-                    }
+            for name in sorted_names {
+                if let Some(schema) = schemas.get(&name) {
+                    output.push_str(&self.generate_struct(&name, schema)?);
                 }
             }
         }

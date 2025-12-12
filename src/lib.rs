@@ -938,27 +938,27 @@ fn generate_angular_services(
     let parts: Vec<&str> = output.split("// FILE: ").collect();
     if !parts.is_empty() {
         let first_service_content = parts[0].trim();
-        if !first_service_content.is_empty() && parts.len() > 1 {
-            // Extract filename from the first FILE marker
-            if let Some(first_marker) = parts.get(1) {
-                if let Some(newline_pos) = first_marker.find('\n') {
-                    let first_file_name = &first_marker[..newline_pos];
-                    if !skip_files.contains(&first_file_name.to_string()) {
-                        let service_path = output_dir.join(first_file_name);
-                        fs::write(&service_path, first_service_content).with_context(|| {
-                            format!(
-                                "Failed to write {} file: {}",
-                                first_file_name,
-                                service_path.display()
-                            )
-                        })?;
+        // Extract filename from the first FILE marker
+        if !first_service_content.is_empty()
+            && parts.len() > 1
+            && let Some(first_marker) = parts.get(1)
+            && let Some(newline_pos) = first_marker.find('\n')
+        {
+            let first_file_name = &first_marker[..newline_pos];
+            if !skip_files.contains(&first_file_name.to_string()) {
+                let service_path = output_dir.join(first_file_name);
+                fs::write(&service_path, first_service_content).with_context(|| {
+                    format!(
+                        "Failed to write {} file: {}",
+                        first_file_name,
+                        service_path.display()
+                    )
+                })?;
 
-                        // Add to files_generated if not already there
-                        let file_path_str = service_path.display().to_string();
-                        if !files_generated.contains(&file_path_str) {
-                            files_generated.push(file_path_str);
-                        }
-                    }
+                // Add to files_generated if not already there
+                let file_path_str = service_path.display().to_string();
+                if !files_generated.contains(&file_path_str) {
+                    files_generated.push(file_path_str);
                 }
             }
         }
@@ -1663,36 +1663,27 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
             ];
 
             for operation_opt in operations {
-                if let Some(operation) = operation_opt {
-                    if let Some(request_body) = &mut operation.request_body {
-                        if let Some(content) = &mut request_body.content {
-                            // Check for multipart/form-data or any other content type with inline schema
-                            for (content_type, media_type) in content.iter_mut() {
-                                if let Some(inline_schema) = &media_type.schema {
-                                    // Only extract if it's an inline schema (not a reference)
-                                    if matches!(inline_schema, Schema::Object { .. }) {
-                                        // Generate a DTO name from the operation summary
-                                        if let Some(summary) = &operation.summary {
-                                            let dto_name = generate_dto_name_from_summary(
-                                                summary,
-                                                content_type,
-                                            );
+                if let Some(operation) = operation_opt
+                    && let Some(request_body) = &mut operation.request_body
+                    && let Some(content) = &mut request_body.content
+                {
+                    // Check for multipart/form-data or any other content type with inline schema
+                    for (content_type, media_type) in content.iter_mut() {
+                        // Only extract if it's an inline schema (not a reference)
+                        if let Some(inline_schema) = &media_type.schema
+                            && matches!(inline_schema, Schema::Object { .. })
+                            && let Some(summary) = &operation.summary
+                        {
+                            // Generate a DTO name from the operation summary
+                            let dto_name = generate_dto_name_from_summary(summary, content_type);
 
-                                            // Clone the schema and add it to new_schemas
-                                            new_schemas
-                                                .insert(dto_name.clone(), inline_schema.clone());
+                            // Clone the schema and add it to new_schemas
+                            new_schemas.insert(dto_name.clone(), inline_schema.clone());
 
-                                            // Replace the inline schema with a reference
-                                            media_type.schema = Some(Schema::Reference {
-                                                reference: format!(
-                                                    "#/components/schemas/{}",
-                                                    dto_name
-                                                ),
-                                            });
-                                        }
-                                    }
-                                }
-                            }
+                            // Replace the inline schema with a reference
+                            media_type.schema = Some(Schema::Reference {
+                                reference: format!("#/components/schemas/{}", dto_name),
+                            });
                         }
                     }
                 }
