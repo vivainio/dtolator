@@ -834,11 +834,11 @@ The generation process will:
 
 ## Base URL Configuration Modes
 
-The `--base-url` flag controls how the API base URL is provided to the generated services.
+The `--base-url-mode` flag controls how the API base URL is provided to the generated services.
 
 ### Global Mode (Default)
 
-**Usage**: `--base-url global` (or omit the flag entirely)
+**Usage**: `--base-url-mode global` (or omit the flag entirely)
 
 In this mode, services use a global `API_URL` variable configured at application startup:
 
@@ -882,7 +882,7 @@ this.usersApi.listAllUsers().subscribe(...);
 
 ### Argument Mode
 
-**Usage**: `--base-url argument`
+**Usage**: `--base-url-mode argument`
 
 In this mode, the base URL must be provided as a parameter to every method call:
 
@@ -921,7 +921,7 @@ this.usersApi.getUserByID(this.apiBaseUrl, 123).subscribe(...);
 
 ### Parameter Ordering (Argument Mode)
 
-When using `--base-url argument`, the `baseUrl` parameter is always the **first parameter** for consistency across all methods:
+When using `--base-url-mode argument`, the `baseUrl` parameter is always the **first parameter** for consistency across all methods:
 
 - **No path params**: `method(baseUrl, dto?, headers?)`
 - **One path param**: `method(baseUrl, id, dto?, headers?)`

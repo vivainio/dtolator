@@ -153,6 +153,13 @@ fn build_command_string_from_options(options: &GenerateOptions) -> String {
         parts.push("--debug".to_string());
     }
 
+    if options.base_url_mode != BaseUrlMode::Global {
+        parts.push(format!(
+            "--base-url-mode {}",
+            options.base_url_mode.as_str()
+        ));
+    }
+
     parts.join(" ")
 }
 
@@ -419,7 +426,7 @@ pub struct Cli {
     pub skip_file: Vec<String>,
 
     /// Base URL generation mode: 'global' (default) or 'argument'
-    #[arg(long, default_value = "global")]
+    #[arg(long = "base-url-mode", default_value = "global")]
     pub base_url: BaseUrlMode,
 }
 
@@ -505,7 +512,7 @@ impl Cli {
         }
 
         if self.base_url != BaseUrlMode::Global {
-            parts.push(format!("--base-url {}", self.base_url.as_str()));
+            parts.push(format!("--base-url-mode {}", self.base_url.as_str()));
         }
 
         parts.join(" ")

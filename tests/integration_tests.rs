@@ -232,7 +232,7 @@ impl TestSuite {
                 command_args: vec![
                     "--angular".to_string(),
                     "--zod".to_string(),
-                    "--base-url".to_string(),
+                    "--base-url-mode".to_string(),
                     "argument".to_string(),
                 ],
                 expected_dir: "output-samples/angular-base-url-argument".to_string(),
@@ -517,7 +517,7 @@ impl TestSuite {
             base_url_mode: if let Some(idx) = test_case
                 .command_args
                 .iter()
-                .position(|arg| arg == "--base-url")
+                .position(|arg| arg == "--base-url-mode")
             {
                 match test_case.command_args.get(idx + 1).map(|s| s.as_str()) {
                     Some("argument") => dtolator::BaseUrlMode::Argument,
