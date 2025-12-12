@@ -325,16 +325,16 @@ mod tests {
 
     #[test]
     fn test_import_generator() {
-        let mut gen = ImportGenerator::new();
-        gen.add_import("@angular/core", "Injectable", false);
-        gen.add_imports(
+        let mut generator = ImportGenerator::new();
+        generator.add_import("@angular/core", "Injectable", false);
+        generator.add_imports(
             "@angular/common/http",
             vec!["HttpClient", "HttpHeaders"],
             true,
         );
-        gen.add_import("./dto", "User", true);
+        generator.add_import("./dto", "User", true);
 
-        let output = gen.generate();
+        let output = generator.generate();
 
         // External imports should come before internal
         let angular_pos = output.find("@angular").unwrap();
@@ -347,15 +347,15 @@ mod tests {
 
     #[test]
     fn test_import_and_export_generator() {
-        let mut gen = ImportGenerator::new();
+        let mut generator = ImportGenerator::new();
         // Imports first
-        gen.add_import("./schema", "User", true);
-        gen.add_import("./schema", "Product", true);
+        generator.add_import("./schema", "User", true);
+        generator.add_import("./schema", "Product", true);
         // Exports
-        gen.add_export("./schema", "UserSchema", false);
-        gen.add_export("./schema", "ProductSchema", false);
+        generator.add_export("./schema", "UserSchema", false);
+        generator.add_export("./schema", "ProductSchema", false);
 
-        let output = gen.generate();
+        let output = generator.generate();
 
         // Imports should come before exports
         let import_pos = output.find("import").unwrap();

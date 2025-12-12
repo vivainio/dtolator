@@ -1,7 +1,7 @@
-use crate::generators::import_generator::ImportGenerator;
-use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Operation, Parameter};
 use crate::BaseUrlMode;
+use crate::generators::Generator;
+use crate::generators::import_generator::ImportGenerator;
+use crate::openapi::{OpenApiSchema, Operation, Parameter};
 use anyhow::Result;
 use std::collections::BTreeMap;
 
@@ -369,7 +369,9 @@ impl AngularGenerator {
             }
             _ => {
                 if has_query_params {
-                    format!("this.http.request<{return_type}>('{http_method}', {{ url, headers, params: queryParams }})")
+                    format!(
+                        "this.http.request<{return_type}>('{http_method}', {{ url, headers, params: queryParams }})"
+                    )
                 } else {
                     format!("this.http.request<{return_type}>('{http_method}', {{ url, headers }})")
                 }
@@ -957,7 +959,7 @@ impl AngularGenerator {
                         let is_binary = matches!(
                             prop_schema,
                             crate::openapi::Schema::Object {
-                                format: Some(ref f),
+                                format: Some(f),
                                 ..
                             } if f == "binary"
                         );
@@ -973,7 +975,7 @@ impl AngularGenerator {
                         let is_string = matches!(
                             prop_schema,
                             crate::openapi::Schema::Object {
-                                schema_type: Some(ref t),
+                                schema_type: Some(t),
                                 ..
                             } if t == "string"
                         );
@@ -981,7 +983,7 @@ impl AngularGenerator {
                         let is_object = matches!(
                             prop_schema,
                             crate::openapi::Schema::Object {
-                                schema_type: Some(ref t),
+                                schema_type: Some(t),
                                 ..
                             } if t == "object"
                         );

@@ -8,10 +8,10 @@ pub mod generators;
 pub mod openapi;
 
 use generators::{
-    angular::AngularGenerator, dotnet::DotNetGenerator, endpoints::EndpointsGenerator,
+    Generator, angular::AngularGenerator, dotnet::DotNetGenerator, endpoints::EndpointsGenerator,
     json_schema::JsonSchemaGenerator, pydantic::PydanticGenerator,
     python_dict::PythonDictGenerator, rust_serde::RustSerdeGenerator,
-    typescript::TypeScriptGenerator, zod::ZodGenerator, Generator,
+    typescript::TypeScriptGenerator, zod::ZodGenerator,
 };
 use indexmap::IndexMap;
 use openapi::{Components, Info, OpenApiSchema, Schema};
@@ -528,26 +528,36 @@ where
         .count();
 
     if input_count == 0 {
-        return Err(anyhow::anyhow!("Please specify exactly one input type: --from-openapi, --from-json, or --from-json-schema"));
+        return Err(anyhow::anyhow!(
+            "Please specify exactly one input type: --from-openapi, --from-json, or --from-json-schema"
+        ));
     }
 
     if input_count > 1 {
-        return Err(anyhow::anyhow!("Please specify only one input type: --from-openapi, --from-json, or --from-json-schema"));
+        return Err(anyhow::anyhow!(
+            "Please specify only one input type: --from-openapi, --from-json, or --from-json-schema"
+        ));
     }
 
     // Validate that Angular generation is only used with OpenAPI input
     if cli.angular && cli.from_openapi.is_none() {
-        return Err(anyhow::anyhow!("--angular flag requires --from-openapi input. Angular services need API endpoint information that is only available in OpenAPI specifications."));
+        return Err(anyhow::anyhow!(
+            "--angular flag requires --from-openapi input. Angular services need API endpoint information that is only available in OpenAPI specifications."
+        ));
     }
 
     // Validate that endpoints generation is only used with OpenAPI input
     if cli.endpoints && cli.from_openapi.is_none() {
-        return Err(anyhow::anyhow!("--endpoints flag requires --from-openapi input. API endpoint types need path information that is only available in OpenAPI specifications."));
+        return Err(anyhow::anyhow!(
+            "--endpoints flag requires --from-openapi input. API endpoint types need path information that is only available in OpenAPI specifications."
+        ));
     }
 
     // Validate that promises flag is only used with Angular
     if cli.promises && !cli.angular {
-        return Err(anyhow::anyhow!("--promises flag can only be used with --angular. Use --angular --promises to generate Angular services with Promise-based methods."));
+        return Err(anyhow::anyhow!(
+            "--promises flag can only be used with --angular. Use --angular --promises to generate Angular services with Promise-based methods."
+        ));
     }
 
     // Read and parse the input file

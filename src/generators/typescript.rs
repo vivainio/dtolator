@@ -1,5 +1,5 @@
-use crate::generators::import_generator::ImportGenerator;
 use crate::generators::Generator;
+use crate::generators::import_generator::ImportGenerator;
 use crate::openapi::{OpenApiSchema, Schema};
 use anyhow::Result;
 use indexmap::IndexMap;
@@ -115,7 +115,7 @@ impl TypeScriptGenerator {
         // Start with nodes that have no incoming edges (sorted for deterministic output)
         let mut zero_degree_nodes: Vec<_> = in_degree
             .iter()
-            .filter(|(_, &degree)| degree == 0)
+            .filter(|&(_, &degree)| degree == 0)
             .map(|(name, _)| name.clone())
             .collect();
         zero_degree_nodes.sort();
