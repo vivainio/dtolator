@@ -612,33 +612,25 @@ impl TypeScriptGenerator {
 
                 for operation in operations.into_iter().flatten() {
                     // Collect request body types
-                    if let Some(request_body) = &operation.request_body {
-                        if let Some(content) = &request_body.content {
-                            if let Some(media_type) = content.get("application/json") {
-                                if let Some(schema_ref) = &media_type.schema {
-                                    if let Some(type_name) =
-                                        self.extract_type_name_from_schema(schema_ref)
-                                    {
-                                        request_types.insert(type_name);
-                                    }
-                                }
-                            }
-                        }
+                    if let Some(request_body) = &operation.request_body
+                        && let Some(content) = &request_body.content
+                        && let Some(media_type) = content.get("application/json")
+                        && let Some(schema_ref) = &media_type.schema
+                        && let Some(type_name) = self.extract_type_name_from_schema(schema_ref)
+                    {
+                        request_types.insert(type_name);
                     }
 
                     // Collect response types
                     if let Some(responses) = &operation.responses {
                         for (_status, response) in responses {
-                            if let Some(content) = &response.content {
-                                if let Some(media_type) = content.get("application/json") {
-                                    if let Some(schema_ref) = &media_type.schema {
-                                        if let Some(type_name) =
-                                            self.extract_type_name_from_schema(schema_ref)
-                                        {
-                                            response_types.insert(type_name);
-                                        }
-                                    }
-                                }
+                            if let Some(content) = &response.content
+                                && let Some(media_type) = content.get("application/json")
+                                && let Some(schema_ref) = &media_type.schema
+                                && let Some(type_name) =
+                                    self.extract_type_name_from_schema(schema_ref)
+                            {
+                                response_types.insert(type_name);
                             }
                         }
                     }

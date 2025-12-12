@@ -396,12 +396,12 @@ impl Generator for PydanticGenerator {
         output.push_str("from enum import Enum\n");
         output.push_str("from datetime import datetime\n\n");
 
-        if let Some(components) = &schema.components {
-            if let Some(schemas) = &components.schemas {
-                for (name, schema_def) in schemas {
-                    let model = self.generate_model(name, schema_def)?;
-                    output.push_str(&model);
-                }
+        if let Some(components) = &schema.components
+            && let Some(schemas) = &components.schemas
+        {
+            for (name, schema_def) in schemas {
+                let model = self.generate_model(name, schema_def)?;
+                output.push_str(&model);
             }
         }
 
