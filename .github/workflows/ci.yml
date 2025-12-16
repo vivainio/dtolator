@@ -170,7 +170,7 @@ jobs:
         cp target/${{ matrix.target }}/release/dtolator.exe dist/dtolator.exe
     
     - name: Upload binary
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: ${{ matrix.name }}
         path: dist/
