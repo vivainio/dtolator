@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
@@ -72,7 +72,7 @@ jobs:
     if: github.event_name == 'release'
     
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
         ref: main
@@ -129,7 +129,7 @@ jobs:
             name: dtolator-macos-aarch64
     
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         ref: main
     
@@ -182,7 +182,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     
     - name: Download all artifacts
       uses: actions/download-artifact@v7
