@@ -256,6 +256,16 @@ impl TestSuite {
                 command_args: vec!["--typescript".to_string()],
                 expected_dir: "output-samples/multipart-typescript".to_string(),
             },
+            // Angular Separate Models Test
+            TestCase {
+                name: "Angular Separate Models".to_string(),
+                input_file: "input-files/full-sample.json".to_string(),
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--separate-models".to_string(),
+                ],
+                expected_dir: "output-samples/angular-separate-models".to_string(),
+            },
         ];
 
         Self {
@@ -488,6 +498,7 @@ impl TestSuite {
         let generator_type = Self::determine_generator_type(&test_case.command_args);
         let with_zod = test_case.command_args.iter().any(|arg| arg == "--zod");
         let with_promises = test_case.command_args.iter().any(|arg| arg == "--promises");
+        let generate_models_in_separate_files = test_case.command_args.iter().any(|arg| arg == "--separate-models");
 
         // Parse skip_files from command_args
         let mut skip_files = Vec::new();
@@ -526,6 +537,7 @@ impl TestSuite {
             } else {
                 dtolator::BaseUrlMode::Global
             },
+            generate_models_in_separate_files,
         };
 
         if let Err(e) = generate(options) {
