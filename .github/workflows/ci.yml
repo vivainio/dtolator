@@ -159,13 +159,13 @@ jobs:
             binary=$(ls "$dir")
             extension="${binary##*.}"
             if [ "$extension" = "exe" ]; then
-              mv "$dir$binary" "../${dirname}.exe"
+              mv "$dir$binary" "${dirname}.exe"
             else
-              mv "$dir$binary" "../$dirname"
+              mv "$dir$binary" "$dirname"
             fi
+            rm -rf "$dir"
           fi
         done
-        rm -rf */
     
     - name: Create Release
       uses: softprops/action-gh-release@v2
