@@ -78,7 +78,7 @@ pub struct GenerateOptions {
 }
 
 fn build_command_string_from_options(options: &GenerateOptions) -> String {
-    let version = env!("CARGO_PKG_VERSION");
+    let version = env!("BUILD_VERSION");
     let command_name = if options.hide_version {
         "dtolator".to_string()
     } else {
@@ -432,7 +432,7 @@ pub struct Cli {
 
 impl Cli {
     fn build_command_string(&self) -> String {
-        let version = env!("CARGO_PKG_VERSION");
+        let version = env!("BUILD_VERSION");
         let command_name = if self.hide_version {
             "dtolator".to_string()
         } else {
