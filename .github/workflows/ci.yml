@@ -154,18 +154,14 @@ jobs:
       run: |
         cd dist
         for dir in */; do
-          if [ -d "$dir" ]; then
-            dirname="${dir%/}"
-            binary=$(ls "$dir")
-            extension="${binary##*.}"
-            if [ "$extension" = "exe" ]; then
-              mv "$dir$binary" "${dirname}.exe"
-            else
-              mv "$dir$binary" "$dirname"
-            fi
-            rm -rf "$dir"
-          fi
+          [ -d "$dir" ] || continue
+          name="${dir%/}"
+          binary=$(find "$dir" -type f | head -1)
+          mv "$binary" "../tmp-binary"
+          rm -rf "$dir"
+          mv "../tmp-binary" "$name"
         done
+        ls -la
     
     - name: Create Release
       uses: softprops/action-gh-release@v2
