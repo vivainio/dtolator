@@ -10,6 +10,7 @@ pub struct AngularGenerator {
     debug: bool,
     promises: bool,
     base_url_mode: BaseUrlMode,
+    generate_models_in_separate_files: bool,
 }
 
 impl Default for AngularGenerator {
@@ -25,6 +26,7 @@ impl AngularGenerator {
             debug: false,
             promises: false,
             base_url_mode: BaseUrlMode::Global,
+            generate_models_in_separate_files: false,
         }
     }
 
@@ -45,6 +47,11 @@ impl AngularGenerator {
 
     pub fn with_base_url_mode(mut self, mode: BaseUrlMode) -> Self {
         self.base_url_mode = mode;
+        self
+    }
+
+    pub fn with_generate_models_in_separate_files(mut self, _separate: bool) -> Self {
+        self.generate_models_in_separate_files = _separate;
         self
     }
 }
@@ -1130,6 +1137,10 @@ impl AngularGenerator {
                                 if !generated_types.contains(&type_name) {
                                     generated_types.insert(type_name.clone());
 
+                                    if self.generate_models_in_separate_files  {
+                                        types.push_str(&format!("// FILE: {type_name}.ts\n"));
+                                    }
+
                                     // Add JSDoc comment for the interface
                                     if let Some(summary) = &operation.summary {
                                         types.push_str(&format!(
@@ -1215,6 +1226,10 @@ impl AngularGenerator {
                             if let Some(type_name) = self.get_header_param_type_name(operation) {
                                 if !generated_types.contains(&type_name) {
                                     generated_types.insert(type_name.clone());
+
+                                    if self.generate_models_in_separate_files  {
+                                        types.push_str(&format!("// FILE: {type_name}.ts\n"));
+                                    }
 
                                     if let Some(summary) = &operation.summary {
                                         types.push_str(&format!(
