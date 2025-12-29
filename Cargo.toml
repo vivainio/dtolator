@@ -24,7 +24,7 @@ indexmap = { version = "2.12", features = ["serde"] }
 walkdir = "2.4"
 similar = "2.3"
 colored = "3.0"
-tempfile = "3.8"
+tempfile = "3.24"
 
 [[test]]
 name = "integration_tests"
