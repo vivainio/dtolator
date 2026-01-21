@@ -1,6 +1,8 @@
 use crate::generators::Generator;
 use crate::openapi::{OpenApiSchema, Schema};
 use anyhow::Result;
+use indexmap::IndexMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct PythonDictGenerator {
     indent_level: usize,
@@ -19,6 +21,132 @@ impl PythonDictGenerator {
 
     fn indent(&self) -> String {
         "    ".repeat(self.indent_level)
+    }
+
+    /// Collect all schema references (dependencies) from a schema
+    fn collect_dependencies(
+        &self,
+        schema: &Schema,
+        known_schemas: &HashSet<&str>,
+    ) -> HashSet<String> {
+        let mut deps = HashSet::new();
+        self.collect_dependencies_recursive(schema, known_schemas, &mut deps);
+        deps
+    }
+
+    fn collect_dependencies_recursive(
+        &self,
+        schema: &Schema,
+        known_schemas: &HashSet<&str>,
+        deps: &mut HashSet<String>,
+    ) {
+        match schema {
+            Schema::Reference { reference } => {
+                if let Some(type_name) = reference.strip_prefix("#/components/schemas/") {
+                    if known_schemas.contains(type_name) {
+                        deps.insert(type_name.to_string());
+                    }
+                }
+            }
+            Schema::Object {
+                properties,
+                items,
+                one_of,
+                any_of,
+                ..
+            } => {
+                if let Some(props) = properties {
+                    for prop_schema in props.values() {
+                        self.collect_dependencies_recursive(prop_schema, known_schemas, deps);
+                    }
+                }
+                if let Some(item_schema) = items {
+                    self.collect_dependencies_recursive(item_schema, known_schemas, deps);
+                }
+                if let Some(schemas) = one_of {
+                    for s in schemas {
+                        self.collect_dependencies_recursive(s, known_schemas, deps);
+                    }
+                }
+                if let Some(schemas) = any_of {
+                    for s in schemas {
+                        self.collect_dependencies_recursive(s, known_schemas, deps);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Topologically sort schemas so dependencies come before dependents
+    fn topological_sort<'a>(
+        &self,
+        schemas: &'a IndexMap<String, Schema>,
+    ) -> Result<Vec<&'a String>> {
+        let known_schemas: HashSet<&str> = schemas.keys().map(|s| s.as_str()).collect();
+
+        // Build dependency graph
+        let mut dependencies: HashMap<&String, HashSet<String>> = HashMap::new();
+        for (name, schema) in schemas {
+            dependencies.insert(name, self.collect_dependencies(schema, &known_schemas));
+        }
+
+        // DFS-based topological sort
+        let mut result: Vec<&String> = Vec::new();
+        let mut visited: HashSet<&String> = HashSet::new();
+        let mut in_stack: HashSet<&String> = HashSet::new();
+
+        fn visit<'a>(
+            name: &'a String,
+            dependencies: &HashMap<&'a String, HashSet<String>>,
+            schemas: &'a IndexMap<String, Schema>,
+            visited: &mut HashSet<&'a String>,
+            in_stack: &mut HashSet<&'a String>,
+            result: &mut Vec<&'a String>,
+        ) -> Result<()> {
+            if in_stack.contains(name) {
+                // Circular dependency - skip to avoid infinite loop
+                return Ok(());
+            }
+            if visited.contains(name) {
+                return Ok(());
+            }
+
+            in_stack.insert(name);
+
+            if let Some(deps) = dependencies.get(name) {
+                // Sort dependencies for deterministic order
+                let mut sorted_deps: Vec<&String> = deps.iter().collect();
+                sorted_deps.sort();
+                for dep in sorted_deps {
+                    if let Some(dep_name) = schemas.keys().find(|k| *k == dep) {
+                        visit(dep_name, dependencies, schemas, visited, in_stack, result)?;
+                    }
+                }
+            }
+
+            in_stack.remove(name);
+            visited.insert(name);
+            result.push(name);
+
+            Ok(())
+        }
+
+        // Sort keys alphabetically for deterministic output order
+        let mut sorted_keys: Vec<&String> = schemas.keys().collect();
+        sorted_keys.sort();
+
+        for name in sorted_keys {
+            visit(
+                name,
+                &dependencies,
+                schemas,
+                &mut visited,
+                &mut in_stack,
+                &mut result,
+            )?;
+        }
+
+        Ok(result)
     }
 
     fn generate_typed_dict(&self, name: &str, schema: &Schema) -> Result<String> {
@@ -54,31 +182,29 @@ impl PythonDictGenerator {
                     return Ok(output);
                 }
 
-                // Handle composition types
+                // Handle composition types (Python 3.10+ union syntax)
                 if let Some(one_of_schemas) = one_of {
-                    // For oneOf, we'll create a Union type
                     let types: Result<Vec<String>, _> = one_of_schemas
                         .iter()
                         .map(|s| self.schema_to_python_type(s))
                         .collect();
                     output.push_str(&format!(
-                        "{}{} = Union[{}]\n\n",
+                        "{}{} = {}\n\n",
                         self.indent(),
                         name,
-                        types?.join(", ")
+                        types?.join(" | ")
                     ));
                     return Ok(output);
                 } else if let Some(any_of_schemas) = any_of {
-                    // For anyOf, we'll also create a Union type
                     let types: Result<Vec<String>, _> = any_of_schemas
                         .iter()
                         .map(|s| self.schema_to_python_type(s))
                         .collect();
                     output.push_str(&format!(
-                        "{}{} = Union[{}]\n\n",
+                        "{}{} = {}\n\n",
                         self.indent(),
                         name,
-                        types?.join(", ")
+                        types?.join(" | ")
                     ));
                     return Ok(output);
                 }
@@ -215,15 +341,15 @@ impl PythonDictGenerator {
                 any_of,
                 ..
             } => {
-                // Handle composition types
+                // Handle composition types (Python 3.10+ union syntax)
                 if let Some(one_of_schemas) = one_of {
                     let types: Result<Vec<String>, _> = one_of_schemas
                         .iter()
                         .map(|s| self.schema_to_python_type(s))
                         .collect();
-                    let union_type = format!("Union[{}]", types?.join(", "));
+                    let union_type = types?.join(" | ");
                     return Ok(if nullable.unwrap_or(false) {
-                        format!("Optional[{union_type}]")
+                        format!("{union_type} | None")
                     } else {
                         union_type
                     });
@@ -232,9 +358,9 @@ impl PythonDictGenerator {
                         .iter()
                         .map(|s| self.schema_to_python_type(s))
                         .collect();
-                    let union_type = format!("Union[{}]", types?.join(", "));
+                    let union_type = types?.join(" | ");
                     return Ok(if nullable.unwrap_or(false) {
-                        format!("Optional[{union_type}]")
+                        format!("{union_type} | None")
                     } else {
                         union_type
                     });
@@ -250,7 +376,7 @@ impl PythonDictGenerator {
                             .collect();
                         let literal_type = format!("Literal[{}]", values.join(", "));
                         return Ok(if nullable.unwrap_or(false) {
-                            format!("Optional[{literal_type}]")
+                            format!("{literal_type} | None")
                         } else {
                             literal_type
                         });
@@ -274,15 +400,15 @@ impl PythonDictGenerator {
                             if let Some(item_schema) = items {
                                 let item_type = self.schema_to_python_type(item_schema)?;
                                 return Ok(if nullable.unwrap_or(false) {
-                                    format!("Optional[List[{item_type}]]")
+                                    format!("list[{item_type}] | None")
                                 } else {
-                                    format!("List[{item_type}]")
+                                    format!("list[{item_type}]")
                                 });
                             } else {
-                                "List[Any]"
+                                "list[Any]"
                             }
                         }
-                        "object" => "Dict[str, Any]",
+                        "object" => "dict[str, Any]",
                         _ => "Any",
                     }
                 } else {
@@ -291,7 +417,7 @@ impl PythonDictGenerator {
                 .to_string();
 
                 Ok(if nullable.unwrap_or(false) {
-                    format!("Optional[{base_type}]")
+                    format!("{base_type} | None")
                 } else {
                     base_type
                 })
@@ -314,16 +440,20 @@ impl Generator for PythonDictGenerator {
         output.push_str(&format!("# Generated by {command}\n"));
         output.push_str("# Do not modify manually\n\n");
 
-        // Add imports
-        output.push_str("from typing import TypedDict, Optional, Union, List, Dict, Any\n");
+        // Add imports (Python 3.10+ syntax)
+        output.push_str("from typing import TypedDict, Literal, Any\n");
         output.push_str("from enum import Enum\n");
         output.push_str("from datetime import datetime\n\n");
 
         if let Some(components) = &schema.components {
             if let Some(schemas) = &components.schemas {
-                for (name, schema_def) in schemas {
-                    let typed_dict = self.generate_typed_dict(name, schema_def)?;
-                    output.push_str(&typed_dict);
+                // Sort schemas topologically so dependencies come first
+                let sorted_names = self.topological_sort(schemas)?;
+                for name in sorted_names {
+                    if let Some(schema_def) = schemas.get(name) {
+                        let typed_dict = self.generate_typed_dict(name, schema_def)?;
+                        output.push_str(&typed_dict);
+                    }
                 }
             }
         }
