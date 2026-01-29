@@ -75,6 +75,7 @@ pub struct GenerateOptions {
     pub debug: bool,
     pub skip_files: Vec<String>,
     pub base_url_mode: BaseUrlMode,
+    pub generate_models_in_separate_files: bool
 }
 
 fn build_command_string_from_options(options: &GenerateOptions) -> String {
@@ -160,6 +161,10 @@ fn build_command_string_from_options(options: &GenerateOptions) -> String {
         ));
     }
 
+    if options.generate_models_in_separate_files {
+        parts.push("--separate-models".to_string());
+    }
+
     parts.join(" ")
 }
 
@@ -232,6 +237,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 &command_string,
                 &options.skip_files,
                 options.base_url_mode,
+                options.generate_models_in_separate_files
             )?;
         }
         GeneratorType::Pydantic => {
@@ -326,13 +332,19 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 })?;
             } else {
                 // TypeScript only
-                let ts_generator = TypeScriptGenerator::new();
+                let ts_generator = TypeScriptGenerator::new()
+                    .with_generate_models_in_separate_files(options.generate_models_in_separate_files);
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
-                let dto_path = options.output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output).with_context(|| {
-                    format!("Failed to write dto.ts file: {}", dto_path.display())
-                })?;
+                if options.generate_models_in_separate_files {
+                    extract_output_to_files_by_markers(&ts_output, &options.output_dir, &options.skip_files, options.debug)?;
+                }
+                else {
+                    let dto_path = options.output_dir.join("dto.ts");
+                    fs::write(&dto_path, ts_output).with_context(|| {
+                        format!("Failed to write dto.ts file: {}", dto_path.display())
+                    })?;
+                }
             }
         }
         GeneratorType::RustSerde => {
@@ -428,6 +440,9 @@ pub struct Cli {
     /// Base URL generation mode: 'global' (default) or 'argument'
     #[arg(long = "base-url-mode", default_value = "global")]
     pub base_url: BaseUrlMode,
+
+    #[arg(long = "separate-models")]
+    pub generate_models_in_separate_files: bool,
 }
 
 impl Cli {
@@ -515,6 +530,10 @@ impl Cli {
             parts.push(format!("--base-url-mode {}", self.base_url.as_str()));
         }
 
+        if self.generate_models_in_separate_files {
+            parts.push("--separate-models".to_string());
+        }
+
         parts.join(" ")
     }
 }
@@ -566,6 +585,14 @@ where
             "--promises flag can only be used with --angular. Use --angular --promises to generate Angular services with Promise-based methods."
         ));
     }
+
+    // Validate that the models flag is only used with no zod and TypeScript or Angular
+    if cli.generate_models_in_separate_files && cli.zod && !(cli.typescript || cli.angular) {
+        return Err(anyhow::anyhow!(
+            "--separate-models flag can only be used with (--typescript or --angular) and without --zod. Use --typescript --separate-models or --angular --separate-models to generate models in separate files."
+        ));
+    }
+   
 
     // Read and parse the input file
     let schema = if let Some(openapi_path) = &cli.from_openapi {
@@ -622,6 +649,7 @@ where
                     &command_string,
                     &cli.skip_file,
                     cli.base_url,
+                    cli.generate_models_in_separate_files,
                 )?;
             } else if cli.pydantic {
                 // Generate Pydantic models to a Python file
@@ -711,25 +739,34 @@ where
                 let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
                 let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output).with_context(|| {
+                fs::write(&dto_path, &ts_output).with_context(|| {
                     format!("Failed to write dto.ts file: {}", dto_path.display())
                 })?;
 
-                println!("Generated files:");
+                println!("Generated schema files:");
                 println!("  - {}", dto_path.display());
                 println!("  - {}", schema_path.display());
             } else {
                 // Generate only dto.ts with TypeScript interfaces
-                let ts_generator = TypeScriptGenerator::new();
+                let ts_generator = TypeScriptGenerator::new()
+                    .with_generate_models_in_separate_files(cli.generate_models_in_separate_files);
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
-                let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output).with_context(|| {
-                    format!("Failed to write dto.ts file: {}", dto_path.display())
-                })?;
-
-                println!("Generated files:");
-                println!("  - {}", dto_path.display());
+                if cli.generate_models_in_separate_files {
+                    let generated_files = extract_output_to_files_by_markers(&ts_output, &output_dir, &cli.skip_file, cli.debug)?;
+                    println!("Generated model files:");
+                    for file in generated_files {
+                        println!("  - {file}");
+                    }     
+                }
+                else {
+                    let dto_path = output_dir.join("dto.ts");
+                    fs::write(&dto_path, &ts_output).with_context(|| {
+                        format!("Failed to write dto.ts file: {}", dto_path.display())
+                    })?;
+                    println!("Generated files:");
+                    println!("  - {}", dto_path.display());
+                }
             }
         }
         None => {
@@ -787,12 +824,14 @@ fn generate_angular_services(
     command_string: &str,
     skip_files: &[String],
     base_url_mode: BaseUrlMode,
+    generate_models_in_separate_files: bool,
 ) -> Result<()> {
     let angular_generator = AngularGenerator::new()
         .with_zod_validation(with_zod)
         .with_debug(debug)
         .with_promises(promises)
-        .with_base_url_mode(base_url_mode);
+        .with_base_url_mode(base_url_mode)
+        .with_generate_models_in_separate_files(generate_models_in_separate_files);
     let output = angular_generator.generate_with_command(schema, command_string)?;
 
     // Also generate DTOs and utility function
@@ -829,11 +868,13 @@ fn generate_angular_services(
         }
     } else {
         // Generate only TypeScript interfaces
-        let ts_generator = TypeScriptGenerator::new();
+        let ts_generator = TypeScriptGenerator::new()
+            .with_generate_models_in_separate_files(generate_models_in_separate_files);
         let mut dto_output = ts_generator.generate_with_command(schema, command_string)?;
 
         // Add query parameter types for Angular services
-        let angular_generator = AngularGenerator::new();
+        let angular_generator = AngularGenerator::new()
+            .with_generate_models_in_separate_files(generate_models_in_separate_files);
         let query_param_types = angular_generator.generate_query_param_types(schema)?;
         if !query_param_types.trim().is_empty() {
             dto_output.push('\n');
@@ -848,14 +889,24 @@ fn generate_angular_services(
         }
 
         if !skip_files.contains(&"dto.ts".to_string()) {
-            fs::write(&dto_path, dto_output)
-                .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+            if generate_models_in_separate_files {
+                let parsed_files = extract_output_to_files_by_markers(&dto_output, output_dir, skip_files, debug)?;
+                println!("Generated model files:");
+                for file in parsed_files {
+                    println!("  - {file}");
+                }   
+            }
+            else {  
+                fs::write(&dto_path, &dto_output)
+                    .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+            }
         }
+        
     }
 
     // Parse and split the Angular generator output into individual service files
     let mut files_generated = Vec::new();
-    if !skip_files.contains(&"dto.ts".to_string()) {
+    if !skip_files.contains(&"dto.ts".to_string()) && !generate_models_in_separate_files {
         files_generated.push(dto_path.display().to_string());
     }
 
@@ -866,80 +917,9 @@ fn generate_angular_services(
         println!("--- END OUTPUT ---");
     }
 
-    // Split by the FILE markers and match content to files
-    let mut current_content = String::new();
-    let mut current_file = String::new();
-    let mut in_file_section = false;
-
-    for line in output.lines() {
-        if debug {
-            println!("🔍 [DEBUG] Processing line: {line}");
-        }
-
-        if let Some(stripped) = line.strip_prefix("// FILE: ") {
-            if debug {
-                println!("🔍 [DEBUG] Found FILE marker: {line}");
-            }
-
-            // If we were collecting content for a previous file, write it now
-            if !current_file.is_empty() && !current_content.is_empty() {
-                if debug {
-                    println!(
-                        "🔍 [DEBUG] Writing previous file: {} ({} chars)",
-                        current_file,
-                        current_content.len()
-                    );
-                }
-
-                if !skip_files.contains(&current_file) {
-                    let service_path = output_dir.join(&current_file);
-                    fs::write(&service_path, &current_content).with_context(|| {
-                        format!(
-                            "Failed to write {} file: {}",
-                            current_file,
-                            service_path.display()
-                        )
-                    })?;
-                    files_generated.push(service_path.display().to_string());
-                }
-            }
-
-            // Start collecting for the new file
-            current_file = stripped.to_string();
-            current_content.clear();
-            in_file_section = true;
-
-            if debug {
-                println!("🔍 [DEBUG] Started collecting for file: {current_file}");
-            }
-        } else if in_file_section {
-            // If we haven't hit a FILE marker yet, this line belongs to the current file
-            if !current_content.is_empty() {
-                current_content.push('\n');
-            }
-            current_content.push_str(line);
-
-            if debug {
-                println!("🔍 [DEBUG] Added line to {current_file}: {line}");
-            }
-        }
-    }
-
-    // Write the last file if there is one
-    if !current_file.is_empty()
-        && !current_content.is_empty()
-        && !skip_files.contains(&current_file)
-    {
-        let service_path = output_dir.join(&current_file);
-        fs::write(&service_path, &current_content).with_context(|| {
-            format!(
-                "Failed to write {} file: {}",
-                current_file,
-                service_path.display()
-            )
-        })?;
-        files_generated.push(service_path.display().to_string());
-    }
+    // Use the extracted function to parse and write files
+    let mut parsed_files = extract_output_to_files_by_markers(&output, output_dir, skip_files, debug)?;
+    files_generated.append(&mut parsed_files);
 
     // Special case: extract the service content before the first FILE marker
     let parts: Vec<&str> = output.split("// FILE: ").collect();
@@ -1741,4 +1721,89 @@ fn generate_dto_name_from_summary(summary: &str, content_type: &str) -> String {
     } else {
         format!("{}Dto", pascal_case)
     }
+}
+
+/// Split models from generator output  that uses FILE markers into separate files
+fn extract_output_to_files_by_markers(
+    output: &str,
+    output_dir: &Path,
+    skip_files: &[String],
+    debug: bool,
+) -> Result<Vec<String>> {
+    let mut files_generated = Vec::new();
+    let mut current_content = String::new();
+    let mut current_file = String::new();
+    let mut in_file_section = false;
+
+    for line in output.lines() {
+        if debug {
+            println!("🔍 [DEBUG] Processing line: {line}");
+        }
+
+        if let Some(stripped) = line.strip_prefix("// FILE: ") {
+            if debug {
+                println!("🔍 [DEBUG] Found FILE marker: {line}");
+            }
+
+            // If we were collecting content for a previous file, write it now
+            if !current_file.is_empty() && !current_content.is_empty() {
+                if debug {
+                    println!(
+                        "🔍 [DEBUG] Writing previous file: {} ({} chars)",
+                        current_file,
+                        current_content.len()
+                    );
+                }
+
+                if !skip_files.contains(&current_file) {
+                    let service_path = output_dir.join(&current_file);
+                    fs::write(&service_path, &current_content).with_context(|| {
+                        format!(
+                            "Failed to write {} file: {}",
+                            current_file,
+                            service_path.display()
+                        )
+                    })?;
+                    files_generated.push(service_path.display().to_string());
+                }
+            }
+
+            // Start collecting for the new file
+            current_file = stripped.to_string();
+            current_content.clear();
+            in_file_section = true;
+
+            if debug {
+                println!("🔍 [DEBUG] Started collecting for file: {current_file}");
+            }
+        } else if in_file_section {
+            // If we haven't hit a FILE marker yet, this line belongs to the current file
+            if !current_content.is_empty() {
+                current_content.push('\n');
+            }
+            current_content.push_str(line);
+
+            if debug {
+                println!("🔍 [DEBUG] Added line to {current_file}: {line}");
+            }
+        }
+    }
+
+    // Write the last file if there is one
+    if !current_file.is_empty()
+        && !current_content.is_empty()
+        && !skip_files.contains(&current_file)
+    {
+        let service_path = output_dir.join(&current_file);
+        fs::write(&service_path, &current_content).with_context(|| {
+            format!(
+                "Failed to write {} file: {}",
+                current_file,
+                service_path.display()
+            )
+        })?;
+        files_generated.push(service_path.display().to_string());
+    }
+
+    Ok(files_generated)
 }
