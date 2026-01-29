@@ -1,10 +1,9 @@
 use crate::generators::Generator;
+use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
 use crate::generators::zod_schema::{NumberConstraints, StringConstraints, ZodValue};
 use crate::openapi::{OpenApiSchema, Schema};
 use anyhow::Result;
-use indexmap::IndexMap;
-use std::collections::{HashMap, HashSet, VecDeque};
 
 pub struct ZodGenerator {
     indent_level: usize,
@@ -23,141 +22,6 @@ impl ZodGenerator {
 
     fn indent(&self) -> String {
         "  ".repeat(self.indent_level)
-    }
-
-    // Collect dependencies for a schema
-    fn collect_dependencies(&self, schema: &Schema) -> HashSet<String> {
-        let mut deps = HashSet::new();
-        self.collect_dependencies_recursive(schema, &mut deps);
-        deps
-    }
-
-    fn collect_dependencies_recursive(&self, schema: &Schema, deps: &mut HashSet<String>) {
-        match schema {
-            Schema::Reference { reference: _ } => {
-                if let Some(type_name) = self.extract_type_name(schema) {
-                    deps.insert(type_name);
-                }
-            }
-            Schema::Object {
-                properties,
-                items,
-                all_of,
-                one_of,
-                any_of,
-                ..
-            } => {
-                // Collect dependencies from properties
-                if let Some(props) = properties {
-                    for (_, prop_schema) in props {
-                        self.collect_dependencies_recursive(prop_schema, deps);
-                    }
-                }
-
-                // Collect dependencies from array items
-                if let Some(items_schema) = items {
-                    self.collect_dependencies_recursive(items_schema, deps);
-                }
-
-                // Collect dependencies from composition schemas
-                if let Some(schemas) = all_of {
-                    for s in schemas {
-                        self.collect_dependencies_recursive(s, deps);
-                    }
-                }
-                if let Some(schemas) = one_of {
-                    for s in schemas {
-                        self.collect_dependencies_recursive(s, deps);
-                    }
-                }
-                if let Some(schemas) = any_of {
-                    for s in schemas {
-                        self.collect_dependencies_recursive(s, deps);
-                    }
-                }
-            }
-        }
-    }
-
-    // Topological sort to order schemas by dependencies
-    fn topological_sort(&self, schemas: &IndexMap<String, Schema>) -> Result<Vec<String>> {
-        let mut graph: HashMap<String, HashSet<String>> = HashMap::new();
-        let mut in_degree: HashMap<String, usize> = HashMap::new();
-
-        // Initialize graph and in-degree map
-        for name in schemas.keys() {
-            graph.insert(name.clone(), HashSet::new());
-            in_degree.insert(name.clone(), 0);
-        }
-
-        // Build dependency graph
-        for (name, schema) in schemas {
-            let deps = self.collect_dependencies(schema);
-            for dep in deps {
-                if schemas.contains_key(&dep) {
-                    graph.get_mut(&dep).unwrap().insert(name.clone());
-                    *in_degree.get_mut(name).unwrap() += 1;
-                }
-            }
-        }
-
-        // Kahn's algorithm for topological sorting
-        let mut queue = VecDeque::new();
-        let mut result = Vec::new();
-
-        // Start with nodes that have no incoming edges (sorted for deterministic output)
-        let mut zero_degree_nodes: Vec<_> = in_degree
-            .iter()
-            .filter(|&(_, &degree)| degree == 0)
-            .map(|(name, _)| name.clone())
-            .collect();
-        zero_degree_nodes.sort();
-        for name in zero_degree_nodes {
-            queue.push_back(name);
-        }
-
-        while let Some(current) = queue.pop_front() {
-            result.push(current.clone());
-
-            // Reduce in-degree for all dependent nodes (sorted for deterministic output)
-            if let Some(dependents) = graph.get(&current) {
-                let mut new_zero_degree: Vec<_> = dependents
-                    .iter()
-                    .filter_map(|dependent| {
-                        let degree = in_degree.get_mut(dependent).unwrap();
-                        *degree -= 1;
-                        if *degree == 0 {
-                            Some(dependent.clone())
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                new_zero_degree.sort();
-                for dependent in new_zero_degree {
-                    queue.push_back(dependent);
-                }
-            }
-        }
-
-        // Check for circular dependencies
-        if result.len() != schemas.len() {
-            return Err(anyhow::anyhow!("Circular dependency detected in schemas"));
-        }
-
-        Ok(result)
-    }
-
-    fn extract_type_name(&self, schema: &crate::openapi::Schema) -> Option<String> {
-        match schema {
-            crate::openapi::Schema::Reference { reference } => Some(
-                reference
-                    .strip_prefix("#/components/schemas/")
-                    .unwrap_or(reference)
-                    .to_string(),
-            ),
-            _ => None,
-        }
     }
 
     fn generate_schema(&self, name: &str, schema: &Schema) -> Result<String> {
@@ -312,7 +176,7 @@ impl Generator for ZodGenerator {
             && !schemas.is_empty()
         {
             // Sort schemas topologically to handle dependencies
-            let sorted_names = self.topological_sort(schemas)?;
+            let sorted_names = common::topological_sort(schemas)?;
 
             for name in sorted_names {
                 if let Some(schema_def) = schemas.get(&name) {

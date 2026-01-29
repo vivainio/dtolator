@@ -1,4 +1,5 @@
 pub mod angular;
+pub mod common;
 pub mod dotnet;
 pub mod endpoints;
 pub mod import_generator;

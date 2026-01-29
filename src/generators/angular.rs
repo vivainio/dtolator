@@ -1,5 +1,6 @@
 use crate::BaseUrlMode;
 use crate::generators::Generator;
+use crate::generators::common::extract_type_name;
 use crate::generators::import_generator::ImportGenerator;
 use crate::openapi::{OpenApiSchema, Operation, Parameter};
 use anyhow::Result;
@@ -615,7 +616,7 @@ impl AngularGenerator {
             && let Some(content) = &success_response.content
             && let Some(media_type) = content.get("application/json")
             && let Some(schema) = &media_type.schema
-            && let Some(type_name) = self.extract_type_name(schema)
+            && let Some(type_name) = extract_type_name(schema)
         {
             service_data.imports.insert(type_name.clone());
             if self.with_zod {
@@ -629,7 +630,7 @@ impl AngularGenerator {
         {
             if let Some(media_type) = content.get("application/json")
                 && let Some(schema) = &media_type.schema
-                && let Some(type_name) = self.extract_type_name(schema)
+                && let Some(type_name) = extract_type_name(schema)
             {
                 service_data.imports.insert(type_name.clone());
                 if self.with_zod {
@@ -637,7 +638,7 @@ impl AngularGenerator {
                 }
             } else if let Some(media_type) = content.get("multipart/form-data")
                 && let Some(schema) = &media_type.schema
-                && let Some(type_name) = self.extract_type_name(schema)
+                && let Some(type_name) = extract_type_name(schema)
             {
                 service_data.imports.insert(type_name.clone());
                 if self.with_zod {
@@ -679,18 +680,6 @@ impl AngularGenerator {
         }
 
         Ok(())
-    }
-
-    fn extract_type_name(&self, schema: &crate::openapi::Schema) -> Option<String> {
-        match schema {
-            crate::openapi::Schema::Reference { reference } => Some(
-                reference
-                    .strip_prefix("#/components/schemas/")
-                    .unwrap_or(reference)
-                    .to_string(),
-            ),
-            _ => None,
-        }
     }
 
     #[allow(dead_code)]
