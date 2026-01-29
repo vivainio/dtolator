@@ -979,83 +979,11 @@ fn generate_angular_services(
     Ok(())
 }
 
-#[allow(dead_code)]
-fn longest_common_suffix(strings: &[String]) -> String {
-    if strings.is_empty() {
-        return String::new();
-    }
-    let revs: Vec<Vec<char>> = strings.iter().map(|s| s.chars().rev().collect()).collect();
-    let mut suffix = Vec::new();
-    for i in 0..revs[0].len() {
-        let c = revs[0][i];
-        if revs
-            .iter()
-            .all(|r| r.len() > i && r[i].eq_ignore_ascii_case(&c))
-        {
-            suffix.push(c);
-        } else {
-            break;
-        }
-    }
-    suffix.into_iter().rev().collect()
-}
-
 fn capitalize_first_letter(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
         None => String::new(),
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-    }
-}
-
-#[allow(dead_code)]
-fn update_refs(schemas: &mut IndexMap<String, Schema>, old_names: &[String], new_name: &str) {
-    fn update_schema_refs(schema: &mut Schema, old_names: &[String], new_name: &str) {
-        match schema {
-            Schema::Reference { reference } => {
-                for old in old_names {
-                    let old_ref = format!("#/components/schemas/{old}");
-                    if reference == &old_ref {
-                        *reference = format!("#/components/schemas/{new_name}");
-                    }
-                }
-            }
-            Schema::Object {
-                properties,
-                items,
-                all_of,
-                one_of,
-                any_of,
-                ..
-            } => {
-                if let Some(props) = properties {
-                    for (_k, v) in props.iter_mut() {
-                        update_schema_refs(v, old_names, new_name);
-                    }
-                }
-                if let Some(item) = items {
-                    update_schema_refs(item, old_names, new_name);
-                }
-                if let Some(schemas) = all_of {
-                    for s in schemas.iter_mut() {
-                        update_schema_refs(s, old_names, new_name);
-                    }
-                }
-                if let Some(schemas) = one_of {
-                    for s in schemas.iter_mut() {
-                        update_schema_refs(s, old_names, new_name);
-                    }
-                }
-                if let Some(schemas) = any_of {
-                    for s in schemas.iter_mut() {
-                        update_schema_refs(s, old_names, new_name);
-                    }
-                }
-            }
-        }
-    }
-    for (_k, schema) in schemas.iter_mut() {
-        update_schema_refs(schema, old_names, new_name);
     }
 }
 
