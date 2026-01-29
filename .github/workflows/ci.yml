@@ -23,24 +23,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt, clippy
-    
-    - name: Check formatting
-      run: cargo fmt --check
-      
-    - name: Run clippy
-      run: cargo clippy -- -D clippy::correctness -D clippy::suspicious -A clippy::large_enum_variant -A clippy::type_complexity -A clippy::only_used_in_recursion -A clippy::uninlined_format_args
-    
-    - name: Setup Node.js for TypeScript checking
-      uses: actions/setup-node@v6
-      with:
-        node-version: '24'
-    
-    - name: Install npm dependencies
-      run: npm ci --registry=https://registry.npmjs.org/
-    
-    - name: Run TypeScript type checking
-      run: python run-tests.py --typecheck
-    
+
     - name: Cache cargo
       uses: actions/cache@v5
       with:
@@ -51,7 +34,24 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-cargo-
-    
+
+    - name: Check formatting
+      run: cargo fmt --check
+
+    - name: Run clippy
+      run: cargo clippy -- -D clippy::correctness -D clippy::suspicious -A clippy::large_enum_variant -A clippy::type_complexity -A clippy::only_used_in_recursion -A clippy::uninlined_format_args
+
+    - name: Setup Node.js for TypeScript checking
+      uses: actions/setup-node@v6
+      with:
+        node-version: '24'
+
+    - name: Install npm dependencies
+      run: npm ci --registry=https://registry.npmjs.org/
+
+    - name: Run TypeScript type checking
+      run: python run-tests.py --typecheck
+
     - name: Build
       run: cargo build --verbose
     
