@@ -682,11 +682,6 @@ impl AngularGenerator {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    fn generate_service(&self, tag: &str, service_data: &ServiceData) -> Result<String> {
-        self.generate_service_with_command(tag, service_data, "dtolator")
-    }
-
     fn generate_service_with_command(
         &self,
         tag: &str,
