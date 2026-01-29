@@ -778,6 +778,7 @@ pub fn run_cli() -> Result<()> {
     run_cli_with_args(std::env::args_os())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn generate_angular_services(
     schema: &OpenApiSchema,
     output_dir: &Path,
@@ -1603,14 +1604,14 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
                     && let Some(content) = &mut request_body.content
                 {
                     // Check for multipart/form-data or any other content type with inline schema
-                    for (content_type, media_type) in content.iter_mut() {
+                    for (_content_type, media_type) in content.iter_mut() {
                         // Only extract if it's an inline schema (not a reference)
                         if let Some(inline_schema) = &media_type.schema
                             && matches!(inline_schema, Schema::Object { .. })
                             && let Some(summary) = &operation.summary
                         {
                             // Generate a DTO name from the operation summary
-                            let dto_name = generate_dto_name_from_summary(summary, content_type);
+                            let dto_name = generate_dto_name_from_summary(summary);
 
                             // Clone the schema and add it to new_schemas
                             new_schemas.insert(dto_name.clone(), inline_schema.clone());
@@ -1649,8 +1650,8 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
     Ok(schema)
 }
 
-/// Generate a DTO name from an operation summary and content type
-fn generate_dto_name_from_summary(summary: &str, content_type: &str) -> String {
+/// Generate a DTO name from an operation summary
+fn generate_dto_name_from_summary(summary: &str) -> String {
     // Convert "Push message" -> "PushMessage"
     let pascal_case: String = summary
         .split_whitespace()
@@ -1663,10 +1664,5 @@ fn generate_dto_name_from_summary(summary: &str, content_type: &str) -> String {
         })
         .collect();
 
-    // Add content type suffix if it's multipart
-    if content_type.contains("multipart") {
-        format!("{}Dto", pascal_case)
-    } else {
-        format!("{}Dto", pascal_case)
-    }
+    format!("{}Dto", pascal_case)
 }

@@ -239,10 +239,10 @@ impl AngularGenerator {
         }
 
         // Check if this operation has header parameters
-        if let Some(parameters) = &operation.parameters {
-            if parameters.iter().any(|p| p.location == "header") {
-                service_data.has_header_params = true;
-            }
+        if let Some(parameters) = &operation.parameters
+            && parameters.iter().any(|p| p.location == "header")
+        {
+            service_data.has_header_params = true;
         }
 
         // Generate method with schema for reference resolution
@@ -447,7 +447,7 @@ impl AngularGenerator {
 
     fn get_method_name(&self, operation: &Operation) -> String {
         if let Some(summary) = &operation.summary {
-            let camel_case = summary
+            summary
                 .split_whitespace()
                 .enumerate()
                 .map(|(i, word)| {
@@ -460,8 +460,7 @@ impl AngularGenerator {
                             .unwrap_or_default()
                     }
                 })
-                .collect::<String>();
-            camel_case
+                .collect::<String>()
         } else {
             "unknownMethod".to_string()
         }
@@ -655,11 +654,11 @@ impl AngularGenerator {
                 .collect();
 
             // If there are query parameters and we can generate a good type name, add it to imports
-            if !query_params.is_empty() {
-                if let Some(type_name) = self.get_query_param_type_name(operation) {
-                    service_data.imports.insert(type_name.clone());
-                    service_data.query_param_types.insert(type_name);
-                }
+            if !query_params.is_empty()
+                && let Some(type_name) = self.get_query_param_type_name(operation)
+            {
+                service_data.imports.insert(type_name.clone());
+                service_data.query_param_types.insert(type_name);
             }
 
             // Collect header parameter types
@@ -668,11 +667,11 @@ impl AngularGenerator {
                 .filter(|p| p.location == "header")
                 .collect();
 
-            if !header_params.is_empty() {
-                if let Some(type_name) = self.get_header_param_type_name(operation) {
-                    service_data.imports.insert(type_name.clone());
-                    service_data.query_param_types.insert(type_name);
-                }
+            if !header_params.is_empty()
+                && let Some(type_name) = self.get_header_param_type_name(operation)
+            {
+                service_data.imports.insert(type_name.clone());
+                service_data.query_param_types.insert(type_name);
             }
 
             // Don't collect parameter schema types - they're only referenced in JSDoc comments
@@ -770,7 +769,7 @@ impl AngularGenerator {
                 .push_str("    if (!this.baseUrl) throw new Error('API_URL is not configured');\n");
             service.push_str("  }\n\n");
         } else {
-            service.push_str("\n");
+            service.push('\n');
         }
 
         // Methods
@@ -988,31 +987,29 @@ impl AngularGenerator {
                                 ));
                             }
                             method.push_str("    }\n");
+                        } else if is_array {
+                            method.push_str(&format!(
+                                "    data.{}.forEach(item => formData.append('{}', item));\n",
+                                prop_name, prop_name
+                            ));
+                        } else if is_binary || is_string {
+                            // Files/blobs and strings can be appended directly
+                            method.push_str(&format!(
+                                "    formData.append('{}', data.{});\n",
+                                prop_name, prop_name
+                            ));
+                        } else if is_object {
+                            // Objects need to be stringified as JSON
+                            method.push_str(&format!(
+                                "    formData.append('{}', JSON.stringify(data.{}));\n",
+                                prop_name, prop_name
+                            ));
                         } else {
-                            if is_array {
-                                method.push_str(&format!(
-                                    "    data.{}.forEach(item => formData.append('{}', item));\n",
-                                    prop_name, prop_name
-                                ));
-                            } else if is_binary || is_string {
-                                // Files/blobs and strings can be appended directly
-                                method.push_str(&format!(
-                                    "    formData.append('{}', data.{});\n",
-                                    prop_name, prop_name
-                                ));
-                            } else if is_object {
-                                // Objects need to be stringified as JSON
-                                method.push_str(&format!(
-                                    "    formData.append('{}', JSON.stringify(data.{}));\n",
-                                    prop_name, prop_name
-                                ));
-                            } else {
-                                // Numbers, booleans, etc. need to be converted to string
-                                method.push_str(&format!(
-                                    "    formData.append('{}', String(data.{}));\n",
-                                    prop_name, prop_name
-                                ));
-                            }
+                            // Numbers, booleans, etc. need to be converted to string
+                            method.push_str(&format!(
+                                "    formData.append('{}', String(data.{}));\n",
+                                prop_name, prop_name
+                            ));
                         }
                     }
                 }
@@ -1109,62 +1106,55 @@ impl AngularGenerator {
                             .filter(|p| p.location == "query")
                             .collect();
 
-                        if !query_params.is_empty() {
-                            if let Some(type_name) = self.get_query_param_type_name(operation) {
-                                if !generated_types.contains(&type_name) {
-                                    generated_types.insert(type_name.clone());
+                        if !query_params.is_empty()
+                            && let Some(type_name) = self.get_query_param_type_name(operation)
+                            && !generated_types.contains(&type_name)
+                        {
+                            generated_types.insert(type_name.clone());
 
-                                    // Add JSDoc comment for the interface
-                                    if let Some(summary) = &operation.summary {
-                                        types.push_str(&format!(
-                                            "/**\n * Query parameters for {summary}\n */\n"
-                                        ));
-                                    }
-
-                                    let mandatory_params: Vec<&Parameter> = query_params
-                                        .iter()
-                                        .filter(|p| p.required.unwrap_or(false))
-                                        .cloned()
-                                        .collect();
-
-                                    let optional_params: Vec<&Parameter> = query_params
-                                        .iter()
-                                        .filter(|p| !p.required.unwrap_or(false))
-                                        .cloned()
-                                        .collect();
-
-                                    types.push_str(&format!("export type {type_name} = "));
-
-                                    if !mandatory_params.is_empty() {
-                                        types.push_str("{\n");
-                                        for param in &mandatory_params {
-                                            let param_type = self.get_parameter_type(param);
-                                            types.push_str(&format!(
-                                                "  {}: {};\n",
-                                                param.name, param_type
-                                            ));
-                                        }
-                                        types.push('}');
-                                    }
-
-                                    if !optional_params.is_empty() {
-                                        if !mandatory_params.is_empty() {
-                                            types.push_str(" & ");
-                                        }
-                                        types.push_str("Partial<{\n");
-                                        for param in &optional_params {
-                                            let param_type = self.get_parameter_type(param);
-                                            types.push_str(&format!(
-                                                "  {}: {};\n",
-                                                param.name, param_type
-                                            ));
-                                        }
-                                        types.push_str("}>");
-                                    }
-
-                                    types.push_str(";\n\n");
-                                }
+                            // Add JSDoc comment for the interface
+                            if let Some(summary) = &operation.summary {
+                                types.push_str(&format!(
+                                    "/**\n * Query parameters for {summary}\n */\n"
+                                ));
                             }
+
+                            let mandatory_params: Vec<&Parameter> = query_params
+                                .iter()
+                                .filter(|p| p.required.unwrap_or(false))
+                                .cloned()
+                                .collect();
+
+                            let optional_params: Vec<&Parameter> = query_params
+                                .iter()
+                                .filter(|p| !p.required.unwrap_or(false))
+                                .cloned()
+                                .collect();
+
+                            types.push_str(&format!("export type {type_name} = "));
+
+                            if !mandatory_params.is_empty() {
+                                types.push_str("{\n");
+                                for param in &mandatory_params {
+                                    let param_type = self.get_parameter_type(param);
+                                    types.push_str(&format!("  {}: {};\n", param.name, param_type));
+                                }
+                                types.push('}');
+                            }
+
+                            if !optional_params.is_empty() {
+                                if !mandatory_params.is_empty() {
+                                    types.push_str(" & ");
+                                }
+                                types.push_str("Partial<{\n");
+                                for param in &optional_params {
+                                    let param_type = self.get_parameter_type(param);
+                                    types.push_str(&format!("  {}: {};\n", param.name, param_type));
+                                }
+                                types.push_str("}>");
+                            }
+
+                            types.push_str(";\n\n");
                         }
                     }
                 }
@@ -1195,34 +1185,33 @@ impl AngularGenerator {
                             .filter(|p| p.location == "header")
                             .collect();
 
-                        if !header_params.is_empty() {
-                            if let Some(type_name) = self.get_header_param_type_name(operation) {
-                                if !generated_types.contains(&type_name) {
-                                    generated_types.insert(type_name.clone());
+                        if !header_params.is_empty()
+                            && let Some(type_name) = self.get_header_param_type_name(operation)
+                            && !generated_types.contains(&type_name)
+                        {
+                            generated_types.insert(type_name.clone());
 
-                                    if let Some(summary) = &operation.summary {
-                                        types.push_str(&format!(
-                                            "/**\n * Header parameters for {summary}\n */\n"
-                                        ));
-                                    }
-
-                                    types.push_str(&format!("export interface {type_name} {{\n"));
-                                    for param in &header_params {
-                                        let param_type = self.get_parameter_type(param);
-                                        let optional = if param.required.unwrap_or(false) {
-                                            ""
-                                        } else {
-                                            "?"
-                                        };
-
-                                        types.push_str(&format!(
-                                            "  \"{}\"{}: {};\n",
-                                            param.name, optional, param_type
-                                        ));
-                                    }
-                                    types.push_str("}\n\n");
-                                }
+                            if let Some(summary) = &operation.summary {
+                                types.push_str(&format!(
+                                    "/**\n * Header parameters for {summary}\n */\n"
+                                ));
                             }
+
+                            types.push_str(&format!("export interface {type_name} {{\n"));
+                            for param in &header_params {
+                                let param_type = self.get_parameter_type(param);
+                                let optional = if param.required.unwrap_or(false) {
+                                    ""
+                                } else {
+                                    "?"
+                                };
+
+                                types.push_str(&format!(
+                                    "  \"{}\"{}: {};\n",
+                                    param.name, optional, param_type
+                                ));
+                            }
+                            types.push_str("}\n\n");
                         }
                     }
                 }

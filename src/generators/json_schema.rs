@@ -111,15 +111,13 @@ impl JsonSchemaGenerator {
                     }
                     json_schema.insert("properties".to_string(), Value::Object(properties_json));
 
-                    if let Some(req) = required {
-                        if !req.is_empty() {
-                            json_schema.insert(
-                                "required".to_string(),
-                                Value::Array(
-                                    req.iter().map(|r| Value::String(r.clone())).collect(),
-                                ),
-                            );
-                        }
+                    if let Some(req) = required
+                        && !req.is_empty()
+                    {
+                        json_schema.insert(
+                            "required".to_string(),
+                            Value::Array(req.iter().map(|r| Value::String(r.clone())).collect()),
+                        );
                     }
 
                     json_schema.insert("additionalProperties".to_string(), Value::Bool(false));
@@ -144,13 +142,11 @@ impl JsonSchemaGenerator {
                 }
 
                 // Handle nullable
-                if let Some(nullable_val) = nullable {
-                    if *nullable_val {
-                        if let Some(existing_type) = json_schema.get("type") {
-                            json_schema
-                                .insert("type".to_string(), json!([existing_type.clone(), "null"]));
-                        }
-                    }
+                if let Some(nullable_val) = nullable
+                    && *nullable_val
+                    && let Some(existing_type) = json_schema.get("type")
+                {
+                    json_schema.insert("type".to_string(), json!([existing_type.clone(), "null"]));
                 }
 
                 // Handle number constraints
@@ -195,42 +191,41 @@ impl JsonSchemaGenerator {
         }
 
         // Process schemas
-        if let Some(components) = &schema.components {
-            if let Some(schemas) = &components.schemas {
-                if !schemas.is_empty() {
-                    // Create $defs section for reusable schemas
-                    let mut defs = serde_json::Map::new();
+        if let Some(components) = &schema.components
+            && let Some(schemas) = &components.schemas
+            && !schemas.is_empty()
+        {
+            // Create $defs section for reusable schemas
+            let mut defs = serde_json::Map::new();
 
-                    // Sort schemas by dependencies
-                    let sorted_names = common::topological_sort(schemas)?;
+            // Sort schemas by dependencies
+            let sorted_names = common::topological_sort(schemas)?;
 
-                    for name in sorted_names {
-                        if let Some(schema_def) = schemas.get(&name) {
-                            defs.insert(name.clone(), self.schema_to_json_schema(schema_def)?);
+            for name in sorted_names {
+                if let Some(schema_def) = schemas.get(&name) {
+                    defs.insert(name.clone(), self.schema_to_json_schema(schema_def)?);
+                }
+            }
+
+            json_schema.insert("$defs".to_string(), Value::Object(defs));
+
+            // If there's a root schema, make it the main schema
+            if let Some(root_schema) = schemas.get("Root") {
+                let root_json = self.schema_to_json_schema(root_schema)?;
+                if let Value::Object(root_obj) = root_json {
+                    for (key, value) in root_obj {
+                        if key != "$ref" {
+                            json_schema.insert(key, value);
                         }
                     }
-
-                    json_schema.insert("$defs".to_string(), Value::Object(defs));
-
-                    // If there's a root schema, make it the main schema
-                    if let Some(root_schema) = schemas.get("Root") {
-                        let root_json = self.schema_to_json_schema(root_schema)?;
-                        if let Value::Object(root_obj) = root_json {
-                            for (key, value) in root_obj {
-                                if key != "$ref" {
-                                    json_schema.insert(key, value);
-                                }
-                            }
-                        }
-                    } else {
-                        // If no root schema, reference the first schema
-                        if let Some(first_name) = schemas.keys().next() {
-                            json_schema.insert(
-                                "$ref".to_string(),
-                                Value::String(format!("#/$defs/{first_name}")),
-                            );
-                        }
-                    }
+                }
+            } else {
+                // If no root schema, reference the first schema
+                if let Some(first_name) = schemas.keys().next() {
+                    json_schema.insert(
+                        "$ref".to_string(),
+                        Value::String(format!("#/$defs/{first_name}")),
+                    );
                 }
             }
         }

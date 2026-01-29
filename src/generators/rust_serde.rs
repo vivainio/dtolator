@@ -61,10 +61,10 @@ impl RustSerdeGenerator {
                 items,
                 ..
             } => {
-                if let Some(enum_vals) = enum_values {
-                    if enum_vals.iter().all(|v| v.is_string()) {
-                        return Ok("String".to_string());
-                    }
+                if let Some(enum_vals) = enum_values
+                    && enum_vals.iter().all(|v| v.is_string())
+                {
+                    return Ok("String".to_string());
                 }
 
                 match schema_type.as_deref() {

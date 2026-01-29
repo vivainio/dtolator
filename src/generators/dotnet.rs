@@ -249,12 +249,12 @@ impl Generator for DotNetGenerator {
         output.push_str("using System.ComponentModel.DataAnnotations;\n");
         output.push_str("using System.Text.Json.Serialization;\n\n");
 
-        if let Some(components) = &schema.components {
-            if let Some(schemas) = &components.schemas {
-                for (name, schema_def) in schemas {
-                    let class_def = self.generate_class(name, schema_def)?;
-                    output.push_str(&class_def);
-                }
+        if let Some(components) = &schema.components
+            && let Some(schemas) = &components.schemas
+        {
+            for (name, schema_def) in schemas {
+                let class_def = self.generate_class(name, schema_def)?;
+                output.push_str(&class_def);
             }
         }
 

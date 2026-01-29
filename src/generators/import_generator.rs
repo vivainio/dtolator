@@ -210,10 +210,10 @@ impl ImportGenerator {
 
         for statement in statements {
             // Add blank line between statement types or categories
-            if let (Some(last_type), Some(last_cat)) = (last_statement_type, &last_category) {
-                if last_type != statement.statement_type || last_cat != &statement.category {
-                    output.push('\n');
-                }
+            if let (Some(last_type), Some(last_cat)) = (last_statement_type, &last_category)
+                && (last_type != statement.statement_type || last_cat != &statement.category)
+            {
+                output.push('\n');
             }
 
             output.push_str(&statement.format());

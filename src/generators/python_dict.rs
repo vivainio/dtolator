@@ -42,10 +42,10 @@ impl PythonDictGenerator {
     ) {
         match schema {
             Schema::Reference { reference } => {
-                if let Some(type_name) = reference.strip_prefix("#/components/schemas/") {
-                    if known_schemas.contains(type_name) {
-                        deps.insert(type_name.to_string());
-                    }
+                if let Some(type_name) = reference.strip_prefix("#/components/schemas/")
+                    && known_schemas.contains(type_name)
+                {
+                    deps.insert(type_name.to_string());
                 }
             }
             Schema::Object {
@@ -367,20 +367,20 @@ impl PythonDictGenerator {
                 }
 
                 // Handle enum values
-                if let Some(enum_vals) = enum_values {
-                    if enum_vals.iter().all(|v| v.is_string()) {
-                        let values: Vec<String> = enum_vals
-                            .iter()
-                            .filter_map(|v| v.as_str())
-                            .map(|s| format!("\"{s}\""))
-                            .collect();
-                        let literal_type = format!("Literal[{}]", values.join(", "));
-                        return Ok(if nullable.unwrap_or(false) {
-                            format!("{literal_type} | None")
-                        } else {
-                            literal_type
-                        });
-                    }
+                if let Some(enum_vals) = enum_values
+                    && enum_vals.iter().all(|v| v.is_string())
+                {
+                    let values: Vec<String> = enum_vals
+                        .iter()
+                        .filter_map(|v| v.as_str())
+                        .map(|s| format!("\"{s}\""))
+                        .collect();
+                    let literal_type = format!("Literal[{}]", values.join(", "));
+                    return Ok(if nullable.unwrap_or(false) {
+                        format!("{literal_type} | None")
+                    } else {
+                        literal_type
+                    });
                 }
 
                 let base_type = if let Some(type_str) = schema_type {
@@ -445,15 +445,15 @@ impl Generator for PythonDictGenerator {
         output.push_str("from enum import Enum\n");
         output.push_str("from datetime import datetime\n\n");
 
-        if let Some(components) = &schema.components {
-            if let Some(schemas) = &components.schemas {
-                // Sort schemas topologically so dependencies come first
-                let sorted_names = self.topological_sort(schemas)?;
-                for name in sorted_names {
-                    if let Some(schema_def) = schemas.get(name) {
-                        let typed_dict = self.generate_typed_dict(name, schema_def)?;
-                        output.push_str(&typed_dict);
-                    }
+        if let Some(components) = &schema.components
+            && let Some(schemas) = &components.schemas
+        {
+            // Sort schemas topologically so dependencies come first
+            let sorted_names = self.topological_sort(schemas)?;
+            for name in sorted_names {
+                if let Some(schema_def) = schemas.get(name) {
+                    let typed_dict = self.generate_typed_dict(name, schema_def)?;
+                    output.push_str(&typed_dict);
                 }
             }
         }
