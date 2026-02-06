@@ -7,7 +7,7 @@ export const FileInfoSchema = z.object({
   filename: z.string(),
   size: z.number().int(),
   mimeType: z.string().optional(),
-  uploadedAt: z.iso.datetime(),
+  uploadedAt: z.iso.datetime({ offset: true }),
   url: z.url().optional(),
 });
 

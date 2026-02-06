@@ -9,7 +9,7 @@ export const RootSchema = z.object({
   email: z.email(),
   uri: z.url(),
   date: z.iso.date(),
-  dateTime: z.iso.datetime(),
+  dateTime: z.iso.datetime({ offset: true }),
   basicNumber: z.number(),
   numberWithConstraints: z.number().min(0).max(100),
   integer: z.number().int(),

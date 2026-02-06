@@ -42,7 +42,7 @@ export const ErrorResponseSchema = z.object({
   message: z.string().optional(),
 })).optional(),
   requestId: z.uuid().optional(),
-  timestamp: z.iso.datetime().optional(),
+  timestamp: z.iso.datetime({ offset: true }).optional(),
 }),
 });
 
@@ -228,7 +228,7 @@ export const ProductSchema = z.object({
   inventory: InventorySchema.optional(),
   specifications: z.object({}).optional(),
   isActive: z.boolean().optional(),
-  createdAt: z.iso.datetime().optional(),
+  createdAt: z.iso.datetime({ offset: true }).optional(),
 });
 
 export type Product = z.infer<typeof ProductSchema>;
@@ -257,8 +257,8 @@ export const UserSchema = z.object({
   email: z.email(),
   profile: UserProfileSchema,
   preferences: UserPreferencesSchema.optional(),
-  createdAt: z.iso.datetime().optional(),
-  updatedAt: z.iso.datetime().optional(),
+  createdAt: z.iso.datetime({ offset: true }).optional(),
+  updatedAt: z.iso.datetime({ offset: true }).optional(),
   isActive: z.boolean().optional(),
   roles: z.array(UserRoleSchema).optional(),
 });
@@ -304,7 +304,7 @@ export const OrderSchema = z.object({
   shippingAddress: AddressSchema.optional(),
   billingAddress: AddressSchema.optional(),
   paymentMethod: PaymentMethodSchema.optional(),
-  orderDate: z.iso.datetime().optional(),
+  orderDate: z.iso.datetime({ offset: true }).optional(),
   estimatedDelivery: z.iso.date().nullable().optional(),
   trackingNumber: z.string().nullable().optional(),
 });

@@ -97,7 +97,7 @@ impl ZodValue {
             Some("email") => "z.email()".to_string(),
             Some("uri") => "z.url()".to_string(),
             Some("date") => "z.iso.date()".to_string(),
-            Some("date-time") => "z.iso.datetime()".to_string(),
+            Some("date-time") => "z.iso.datetime({ offset: true })".to_string(),
             _ => "z.string()".to_string(),
         };
 
