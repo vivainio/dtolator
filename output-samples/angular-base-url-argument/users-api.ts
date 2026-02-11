@@ -59,7 +59,7 @@ export class UsersApi {
    * @param headers - Optional HTTP headers
    * @returns Observable<User> - User found
    */
-  getUserByID(baseUrl: string, userId: number, headers?: HttpHeaders): Observable<User> {
+  getUserById(baseUrl: string, userId: number, headers?: HttpHeaders): Observable<User> {
     const url = `${baseUrl}/users/${encodeURIComponent(userId)}`;
     return this.http.get<User>(url, { headers })
       .pipe(

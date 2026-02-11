@@ -447,7 +447,12 @@ impl AngularGenerator {
 
     fn get_method_name(&self, operation: &Operation) -> String {
         if let Some(operation_id) = &operation.operation_id {
-            operation_id.clone()
+            // Convert PascalCase operationId to camelCase for TypeScript convention
+            let mut chars = operation_id.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_lowercase().collect::<String>() + chars.as_str(),
+            }
         } else if let Some(summary) = &operation.summary {
             summary_to_camel_case(summary)
         } else {

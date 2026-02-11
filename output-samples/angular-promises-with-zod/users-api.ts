@@ -62,7 +62,7 @@ export class UsersApi {
    * @param headers - Optional HTTP headers
    * @returns Promise<User> - User found
    */
-  getUserByID(userId: number, headers?: HttpHeaders): Promise<User> {
+  getUserById(userId: number, headers?: HttpHeaders): Promise<User> {
     const url = `${this.baseUrl}/users/${encodeURIComponent(userId)}`;
     return lastValueFrom(this.http.get<User>(url, { headers })
       .pipe(

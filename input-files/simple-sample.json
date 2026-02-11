@@ -8,6 +8,7 @@
   "paths": {
     "/users": {
       "get": {
+        "operationId": "ListAllUsers",
         "summary": "List All Users",
         "description": "Retrieve a list of all users in the system",
         "tags": ["Users"],
@@ -28,6 +29,7 @@
         }
       },
       "post": {
+        "operationId": "CreateNewUser",
         "summary": "Create New User",
         "description": "Create a new user account",
         "tags": ["Users"],
@@ -57,6 +59,7 @@
     },
     "/users/{userId}": {
       "get": {
+        "operationId": "GetUserById",
         "summary": "Get User By ID",
         "description": "Retrieve a specific user by their ID",
         "tags": ["Users"],
@@ -88,6 +91,7 @@
         }
       },
       "put": {
+        "operationId": "UpdateUserProfile",
         "summary": "Update User Profile",
         "description": "Update an existing user's information",
         "tags": ["Users"],
@@ -126,6 +130,7 @@
         }
       },
       "delete": {
+        "operationId": "DeleteUserAccount",
         "summary": "Delete User Account",
         "description": "Permanently delete a user account",
         "tags": ["Users"],
@@ -156,6 +161,7 @@
     },
     "/users/{userId}/activate": {
       "post": {
+        "operationId": "ActivateUserAccount",
         "summary": "Activate User Account",
         "description": "Activate a user's account status",
         "tags": ["Users"],
@@ -186,6 +192,7 @@
     },
     "/users/{userId}/deactivate": {
       "post": {
+        "operationId": "DeactivateUserAccount",
         "summary": "Deactivate User Account",
         "description": "Deactivate a user's account status",
         "tags": ["Users"],
