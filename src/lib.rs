@@ -14,7 +14,7 @@ use generators::{
     typescript::TypeScriptGenerator, zod::ZodGenerator,
 };
 use indexmap::IndexMap;
-use openapi::{Components, Info, OpenApiSchema, Schema};
+use openapi::{AdditionalProperties, Components, Info, OpenApiSchema, Schema};
 
 // Type aliases to reduce complexity
 type StructHashMap =
@@ -1481,7 +1481,13 @@ fn json_schema_object_to_openapi_schema(json_schema: &JsonSchemaObject) -> Resul
     let additional_properties = match &json_schema.additional_properties {
         Some(serde_json::Value::Bool(false)) => None, // Strict mode in JSON Schema
         Some(serde_json::Value::Bool(true)) => None,  // Allow any additional properties
-        Some(_) => None, // More complex additional properties schema - skip for now
+        Some(value) if value.is_object() => {
+            let ap: JsonSchemaObject = serde_json::from_value(value.clone())?;
+            Some(AdditionalProperties::Schema(Box::new(
+                json_schema_object_to_openapi_schema(&ap)?,
+            )))
+        }
+        Some(_) => None,
         None => None,
     };
 

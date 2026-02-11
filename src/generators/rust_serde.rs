@@ -1,6 +1,6 @@
 use crate::generators::Generator;
 use crate::generators::common;
-use crate::openapi::{OpenApiSchema, Schema, schema_type_str};
+use crate::openapi::{AdditionalProperties, OpenApiSchema, Schema, schema_type_str};
 use anyhow::Result;
 
 pub struct RustSerdeGenerator;
@@ -56,6 +56,8 @@ impl RustSerdeGenerator {
             }
             Schema::Object {
                 schema_type,
+                properties,
+                additional_properties,
                 format,
                 enum_values,
                 items,
@@ -95,7 +97,19 @@ impl RustSerdeGenerator {
                             Ok("Vec<serde_json::Value>".to_string())
                         }
                     }
-                    Some("object") => Ok("serde_json::Value".to_string()),
+                    Some("object") => {
+                        if properties.is_none() {
+                            if let Some(AdditionalProperties::Schema(ap_schema)) =
+                                additional_properties
+                            {
+                                let value_type = self.to_rust_type(ap_schema)?;
+                                return Ok(format!(
+                                    "std::collections::HashMap<String, {value_type}>"
+                                ));
+                            }
+                        }
+                        Ok("serde_json::Value".to_string())
+                    }
                     _ => Ok("serde_json::Value".to_string()),
                 }
             }
@@ -109,12 +123,22 @@ impl RustSerdeGenerator {
             Schema::Object {
                 properties,
                 required,
+                additional_properties,
                 enum_values,
                 all_of,
                 one_of,
                 any_of,
                 ..
             } => {
+                // Handle map types (additionalProperties without properties)
+                if properties.is_none()
+                    && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
+                {
+                    let rust_type = self.to_rust_type(schema)?;
+                    output.push_str(&format!("pub type {} = {};\n\n", name, rust_type));
+                    return Ok(output);
+                }
+
                 if let Some(enum_vals) = enum_values {
                     output.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
                     output.push_str("#[serde(rename_all = \"snake_case\")]\n");

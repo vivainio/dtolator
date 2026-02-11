@@ -1,6 +1,8 @@
 use crate::generators::Generator;
 use crate::generators::common;
-use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
+use crate::openapi::{
+    AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
+};
 use anyhow::Result;
 use serde_json::{Value, json};
 
@@ -34,6 +36,7 @@ impl JsonSchemaGenerator {
                 schema_type,
                 properties,
                 required,
+                additional_properties,
                 items,
                 enum_values,
                 format,
@@ -121,6 +124,16 @@ impl JsonSchemaGenerator {
                     }
 
                     json_schema.insert("additionalProperties".to_string(), Value::Bool(false));
+                }
+
+                // Handle additionalProperties schema (map types)
+                if properties.is_none() {
+                    if let Some(AdditionalProperties::Schema(ap_schema)) = additional_properties {
+                        json_schema.insert(
+                            "additionalProperties".to_string(),
+                            self.schema_to_json_schema(ap_schema)?,
+                        );
+                    }
                 }
 
                 // Handle array items

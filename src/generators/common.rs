@@ -1,4 +1,4 @@
-use crate::openapi::Schema;
+use crate::openapi::{AdditionalProperties, Schema};
 use anyhow::Result;
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -71,6 +71,7 @@ pub fn collect_dependencies_recursive(schema: &Schema, deps: &mut HashSet<String
         }
         Schema::Object {
             properties,
+            additional_properties,
             items,
             all_of,
             one_of,
@@ -81,6 +82,10 @@ pub fn collect_dependencies_recursive(schema: &Schema, deps: &mut HashSet<String
                 for (_, prop_schema) in props {
                     collect_dependencies_recursive(prop_schema, deps);
                 }
+            }
+
+            if let Some(AdditionalProperties::Schema(ap_schema)) = additional_properties {
+                collect_dependencies_recursive(ap_schema, deps);
             }
 
             if let Some(items_schema) = items {

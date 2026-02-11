@@ -1,5 +1,7 @@
 use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
+use crate::openapi::{
+    AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
+};
 use anyhow::Result;
 
 pub struct DotNetGenerator {
@@ -41,6 +43,7 @@ impl DotNetGenerator {
                 schema_type,
                 properties,
                 required,
+                additional_properties,
                 enum_values,
                 one_of: _,
                 any_of: _,
@@ -72,6 +75,20 @@ impl DotNetGenerator {
                         }
                     }
                     output.push_str(&format!("\n{}}}\n\n", self.indent()));
+                    return Ok(output);
+                }
+
+                // Handle map types (additionalProperties without properties)
+                if properties.is_none()
+                    && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
+                {
+                    let cs_type = self.schema_to_csharp_type(schema)?;
+                    output.push_str(&format!(
+                        "{}// Type alias: {} = {}\n\n",
+                        self.indent(),
+                        name,
+                        cs_type
+                    ));
                     return Ok(output);
                 }
 
@@ -173,6 +190,8 @@ impl DotNetGenerator {
         match schema {
             Schema::Object {
                 schema_type,
+                properties,
+                additional_properties,
                 format,
                 enum_values,
                 items,
@@ -211,7 +230,17 @@ impl DotNetGenerator {
                                 "List<object>"
                             }
                         }
-                        "object" => "Dictionary<string, object>",
+                        "object" => {
+                            if properties.is_none() {
+                                if let Some(AdditionalProperties::Schema(ap_schema)) =
+                                    additional_properties
+                                {
+                                    let value_type = self.schema_to_csharp_type(ap_schema)?;
+                                    return Ok(format!("Dictionary<string, {value_type}>"));
+                                }
+                            }
+                            "Dictionary<string, object>"
+                        }
                         _ => "object",
                     }
                 } else {

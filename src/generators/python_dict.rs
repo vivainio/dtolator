@@ -1,5 +1,7 @@
 use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
+use crate::openapi::{
+    AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
+};
 use anyhow::Result;
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
@@ -157,6 +159,7 @@ impl PythonDictGenerator {
                 schema_type,
                 properties,
                 required,
+                additional_properties,
                 enum_values,
 
                 one_of,
@@ -206,6 +209,15 @@ impl PythonDictGenerator {
                         name,
                         types?.join(" | ")
                     ));
+                    return Ok(output);
+                }
+
+                // Handle map types (additionalProperties without properties)
+                if properties.is_none()
+                    && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
+                {
+                    let py_type = self.schema_to_python_type(schema)?;
+                    output.push_str(&format!("{}{} = {}\n\n", self.indent(), name, py_type));
                     return Ok(output);
                 }
 
@@ -333,6 +345,8 @@ impl PythonDictGenerator {
         match schema {
             Schema::Object {
                 schema_type,
+                properties,
+                additional_properties,
                 format,
                 enum_values,
                 items,
@@ -408,7 +422,21 @@ impl PythonDictGenerator {
                                 "list[Any]"
                             }
                         }
-                        "object" => "dict[str, Any]",
+                        "object" => {
+                            if properties.is_none() {
+                                if let Some(AdditionalProperties::Schema(ap_schema)) =
+                                    additional_properties
+                                {
+                                    let value_type = self.schema_to_python_type(ap_schema)?;
+                                    return Ok(if is_schema_nullable(nullable, schema_type) {
+                                        format!("dict[str, {value_type}] | None")
+                                    } else {
+                                        format!("dict[str, {value_type}]")
+                                    });
+                                }
+                            }
+                            "dict[str, Any]"
+                        }
                         _ => "Any",
                     }
                 } else {

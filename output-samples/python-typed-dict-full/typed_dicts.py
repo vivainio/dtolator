@@ -138,7 +138,7 @@ class Product(ProductRequired, total=False):
     tags: list[str]
     images: list[ImageUrl]
     inventory: Inventory
-    specifications: dict[str, Any]
+    specifications: dict[str, str | float | bool]
     isActive: bool
     createdAt: str
 
@@ -194,7 +194,7 @@ class ProductAnalyticsRequired(TypedDict):
 
 
 class ProductAnalytics(ProductAnalyticsRequired, total=False):
-    categoryBreakdown: dict[str, Any]
+    categoryBreakdown: dict[str, int]
     lowStockProducts: list[dict[str, Any]]
 
 class ProductListResponseRequired(TypedDict):

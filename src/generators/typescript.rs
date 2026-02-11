@@ -1,7 +1,9 @@
 use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
-use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
+use crate::openapi::{
+    AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
+};
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -81,6 +83,7 @@ impl TypeScriptGenerator {
                 schema_type,
                 properties,
                 required,
+                additional_properties,
                 enum_values,
                 all_of,
                 one_of,
@@ -151,6 +154,15 @@ impl TypeScriptGenerator {
                     return Ok(output);
                 }
 
+                // Handle map types (additionalProperties without properties)
+                if properties.is_none()
+                    && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
+                {
+                    let map_type = self.schema_to_typescript(schema)?;
+                    output.push_str(&format!("export type {name} = {map_type};\n\n"));
+                    return Ok(output);
+                }
+
                 // Handle object types
                 if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     let sanitized_name = self.sanitize_type_name(name);
@@ -207,6 +219,7 @@ impl TypeScriptGenerator {
                 schema_type,
                 properties,
                 required,
+                additional_properties,
                 items,
                 enum_values,
                 nullable,
@@ -267,7 +280,16 @@ impl TypeScriptGenerator {
                             }
                         }
                         Some("object") | None => {
-                            if let Some(props) = properties {
+                            if properties.is_none() {
+                                if let Some(AdditionalProperties::Schema(ap_schema)) =
+                                    additional_properties
+                                {
+                                    let value_type = self.schema_to_typescript(ap_schema)?;
+                                    ts_type = format!("Record<string, {value_type}>");
+                                } else {
+                                    ts_type = "Record<string, unknown>".to_string();
+                                }
+                            } else if let Some(props) = properties {
                                 let mut object_props = Vec::new();
                                 for (prop_name, prop_schema) in props {
                                     let prop_type = self.schema_to_typescript(prop_schema)?;

@@ -116,7 +116,7 @@ export type Price = z.infer<typeof PriceSchema>;
 export const ProductAnalyticsSchema = z.object({
   totalProducts: z.number().min(0).int(),
   activeProducts: z.number().min(0).int(),
-  categoryBreakdown: z.object({}).optional(),
+  categoryBreakdown: z.record(z.string(), z.number().int()).optional(),
   lowStockProducts: z.array(z.object({
   productId: z.uuid().optional(),
   productName: z.string().optional(),
@@ -226,7 +226,11 @@ export const ProductSchema = z.object({
   tags: z.array(z.string()).optional(),
   images: z.array(ImageUrlSchema).optional(),
   inventory: InventorySchema.optional(),
-  specifications: z.object({}).optional(),
+  specifications: z.record(z.string(), z.union([
+  z.string(),
+  z.number(),
+  z.boolean()
+])).optional(),
   isActive: z.boolean().optional(),
   createdAt: z.iso.datetime({ offset: true }).optional(),
 });

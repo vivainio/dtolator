@@ -92,7 +92,7 @@ export interface Price {
 export interface ProductAnalytics {
   totalProducts: number;
   activeProducts: number;
-  categoryBreakdown?: Record<string, unknown>;
+  categoryBreakdown?: Record<string, number>;
   lowStockProducts?: {
     productId?: string;
     productName?: string;
@@ -185,7 +185,7 @@ export interface Product {
   tags?: string[];
   images?: ImageUrl[];
   inventory?: Inventory;
-  specifications?: Record<string, unknown>;
+  specifications?: Record<string, string | number | boolean>;
   isActive?: boolean;
   createdAt?: string;
 }

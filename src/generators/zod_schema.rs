@@ -13,6 +13,7 @@ pub enum ZodValue {
     Reference(String),
     Union(Vec<ZodValue>),
     Intersection(Vec<ZodValue>),
+    Record(Box<ZodValue>),
     Enum(Vec<String>),
     Nullable(Box<ZodValue>),
     File, // For multipart file uploads (z.instanceof(File))
@@ -74,6 +75,7 @@ impl ZodValue {
                     result
                 }
             }
+            ZodValue::Record(inner) => format!("z.record(z.string(), {})", inner.render()),
             ZodValue::Enum(values) => {
                 if values.len() > 5 {
                     let value_strs: Vec<String> =

@@ -1,5 +1,7 @@
 use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
+use crate::openapi::{
+    AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
+};
 use anyhow::Result;
 
 pub struct PydanticGenerator {
@@ -29,6 +31,7 @@ impl PydanticGenerator {
                 schema_type,
                 properties,
                 required,
+                additional_properties,
                 enum_values,
                 all_of,
                 one_of,
@@ -142,6 +145,15 @@ impl PydanticGenerator {
                         name,
                         types?.join(", ")
                     ));
+                    return Ok(output);
+                }
+
+                // Handle map types (additionalProperties without properties)
+                if properties.is_none()
+                    && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
+                {
+                    let py_type = self.schema_to_pydantic_type(schema)?;
+                    output.push_str(&format!("{}{} = {}\n\n", self.indent(), name, py_type));
                     return Ok(output);
                 }
 
@@ -292,7 +304,8 @@ impl PydanticGenerator {
             }
             Schema::Object {
                 schema_type,
-                properties: _properties,
+                properties,
+                additional_properties,
                 items,
                 enum_values,
                 nullable,
@@ -360,8 +373,18 @@ impl PydanticGenerator {
                             }
                         }
                         Some("object") | None => {
-                            // For inline objects, use Dict[str, Any] as fallback
-                            py_type = "Dict[str, Any]".to_string();
+                            if properties.is_none() {
+                                if let Some(AdditionalProperties::Schema(ap_schema)) =
+                                    additional_properties
+                                {
+                                    let value_type = self.schema_to_pydantic_type(ap_schema)?;
+                                    py_type = format!("Dict[str, {value_type}]");
+                                } else {
+                                    py_type = "Dict[str, Any]".to_string();
+                                }
+                            } else {
+                                py_type = "Dict[str, Any]".to_string();
+                            }
                         }
                         _ => {
                             py_type = "Any".to_string();

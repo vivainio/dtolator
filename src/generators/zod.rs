@@ -2,7 +2,9 @@ use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
 use crate::generators::zod_schema::{NumberConstraints, StringConstraints, ZodValue};
-use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
+use crate::openapi::{
+    AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
+};
 use anyhow::Result;
 
 pub struct ZodGenerator {
@@ -80,6 +82,7 @@ impl ZodGenerator {
                 schema_type,
                 properties,
                 required,
+                additional_properties,
                 items,
                 enum_values,
                 format,
@@ -143,7 +146,20 @@ impl ZodGenerator {
                             }
                         }
                         Some("object") | None => {
-                            if let Some(props) = properties {
+                            if properties.is_none() {
+                                if let Some(AdditionalProperties::Schema(ap_schema)) =
+                                    additional_properties
+                                {
+                                    let value_zod = self.schema_to_zod(ap_schema)?;
+                                    ZodValue::Record(Box::new(value_zod))
+                                } else if properties.is_none()
+                                    && schema_type_str(schema_type) == Some("object")
+                                {
+                                    ZodValue::Object(Vec::new())
+                                } else {
+                                    ZodValue::Object(Vec::new())
+                                }
+                            } else if let Some(props) = properties {
                                 let mut object_props = Vec::new();
                                 for (prop_name, prop_schema) in props {
                                     let prop_zod = self.schema_to_zod(prop_schema)?;
