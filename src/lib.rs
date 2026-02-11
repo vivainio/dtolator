@@ -1652,17 +1652,5 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
 
 /// Generate a DTO name from an operation summary
 fn generate_dto_name_from_summary(summary: &str) -> String {
-    // Convert "Push message" -> "PushMessage"
-    let pascal_case: String = summary
-        .split_whitespace()
-        .map(|word| {
-            let mut chars = word.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-            }
-        })
-        .collect();
-
-    format!("{}Dto", pascal_case)
+    format!("{}Dto", generators::common::summary_to_pascal_case(summary))
 }

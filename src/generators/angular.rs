@@ -1,6 +1,6 @@
 use crate::BaseUrlMode;
 use crate::generators::Generator;
-use crate::generators::common::extract_type_name;
+use crate::generators::common::{extract_type_name, summary_to_camel_case};
 use crate::generators::import_generator::ImportGenerator;
 use crate::openapi::{OpenApiSchema, Operation, Parameter};
 use anyhow::Result;
@@ -447,20 +447,7 @@ impl AngularGenerator {
 
     fn get_method_name(&self, operation: &Operation) -> String {
         if let Some(summary) = &operation.summary {
-            summary
-                .split_whitespace()
-                .enumerate()
-                .map(|(i, word)| {
-                    if i == 0 {
-                        word.to_lowercase()
-                    } else {
-                        word.chars()
-                            .next()
-                            .map(|c| c.to_uppercase().collect::<String>() + &word[1..])
-                            .unwrap_or_default()
-                    }
-                })
-                .collect::<String>()
+            summary_to_camel_case(summary)
         } else {
             "unknownMethod".to_string()
         }

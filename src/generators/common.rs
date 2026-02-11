@@ -3,6 +3,50 @@ use anyhow::Result;
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet, VecDeque};
 
+/// Strip non-alphanumeric characters from a word, keeping only letters and digits.
+fn strip_punctuation(word: &str) -> String {
+    word.chars().filter(|c| c.is_alphanumeric()).collect()
+}
+
+/// Convert a summary string to camelCase, stripping punctuation from each word.
+/// e.g. "Get user's data." -> "getUsersData"
+pub fn summary_to_camel_case(summary: &str) -> String {
+    summary
+        .split_whitespace()
+        .map(|word| strip_punctuation(word))
+        .filter(|word| !word.is_empty())
+        .enumerate()
+        .map(|(i, word)| {
+            if i == 0 {
+                word.to_lowercase()
+            } else {
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                }
+            }
+        })
+        .collect::<String>()
+}
+
+/// Convert a summary string to PascalCase, stripping punctuation from each word.
+/// e.g. "Push message." -> "PushMessage"
+pub fn summary_to_pascal_case(summary: &str) -> String {
+    summary
+        .split_whitespace()
+        .map(|word| strip_punctuation(word))
+        .filter(|word| !word.is_empty())
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        })
+        .collect()
+}
+
 /// Extract type name from a schema reference.
 /// Returns the type name without the "#/components/schemas/" prefix.
 pub fn extract_type_name(schema: &Schema) -> Option<String> {
