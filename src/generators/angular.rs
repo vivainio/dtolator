@@ -1,6 +1,6 @@
 use crate::BaseUrlMode;
 use crate::generators::Generator;
-use crate::generators::common::{extract_type_name, summary_to_camel_case};
+use crate::generators::common::{self, summary_to_camel_case};
 use crate::generators::import_generator::ImportGenerator;
 use crate::openapi::{OpenApiSchema, Operation, Parameter, schema_type_str};
 use anyhow::Result;
@@ -609,11 +609,14 @@ impl AngularGenerator {
             && let Some(content) = &success_response.content
             && let Some(media_type) = content.get("application/json")
             && let Some(schema) = &media_type.schema
-            && let Some(type_name) = extract_type_name(schema)
         {
-            service_data.imports.insert(type_name.clone());
-            if self.with_zod {
-                service_data.response_types.insert(type_name);
+            let mut deps = std::collections::HashSet::<String>::new();
+            common::collect_dependencies_recursive(schema, &mut deps);
+            for type_name in deps {
+                service_data.imports.insert(type_name.clone());
+                if self.with_zod {
+                    service_data.response_types.insert(type_name);
+                }
             }
         }
 
@@ -621,21 +624,18 @@ impl AngularGenerator {
         if let Some(request_body) = &operation.request_body
             && let Some(content) = &request_body.content
         {
-            if let Some(media_type) = content.get("application/json")
-                && let Some(schema) = &media_type.schema
-                && let Some(type_name) = extract_type_name(schema)
-            {
-                service_data.imports.insert(type_name.clone());
-                if self.with_zod {
-                    service_data.request_types.insert(type_name);
-                }
-            } else if let Some(media_type) = content.get("multipart/form-data")
-                && let Some(schema) = &media_type.schema
-                && let Some(type_name) = extract_type_name(schema)
-            {
-                service_data.imports.insert(type_name.clone());
-                if self.with_zod {
-                    service_data.request_types.insert(type_name);
+            let body_schema = content
+                .get("application/json")
+                .or_else(|| content.get("multipart/form-data"))
+                .and_then(|mt| mt.schema.as_ref());
+            if let Some(schema) = body_schema {
+                let mut deps = std::collections::HashSet::<String>::new();
+                common::collect_dependencies_recursive(schema, &mut deps);
+                for type_name in deps {
+                    service_data.imports.insert(type_name.clone());
+                    if self.with_zod {
+                        service_data.request_types.insert(type_name);
+                    }
                 }
             }
         }

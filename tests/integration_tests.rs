@@ -256,6 +256,13 @@ impl TestSuite {
                 command_args: vec!["--typescript".to_string()],
                 expected_dir: "output-samples/multipart-typescript".to_string(),
             },
+            // Array return type import test
+            TestCase {
+                name: "Array Return Import".to_string(),
+                input_file: "input-files/test-array-return-import.json".to_string(),
+                command_args: vec!["--angular".to_string(), "--zod".to_string()],
+                expected_dir: "output-samples/array-return-import".to_string(),
+            },
             // Nullable oneOf/anyOf tests (OpenAPI 3.1 pattern)
             TestCase {
                 name: "Nullable oneOf Zod".to_string(),
