@@ -446,7 +446,9 @@ impl AngularGenerator {
     }
 
     fn get_method_name(&self, operation: &Operation) -> String {
-        if let Some(summary) = &operation.summary {
+        if let Some(operation_id) = &operation.operation_id {
+            operation_id.clone()
+        } else if let Some(summary) = &operation.summary {
             summary_to_camel_case(summary)
         } else {
             "unknownMethod".to_string()

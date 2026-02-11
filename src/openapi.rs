@@ -32,6 +32,8 @@ pub struct PathItem {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Operation {
+    #[serde(rename = "operationId")]
+    pub operation_id: Option<String>,
     pub summary: Option<String>,
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,

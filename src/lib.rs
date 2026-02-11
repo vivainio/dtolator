@@ -1608,10 +1608,10 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
                         // Only extract if it's an inline schema (not a reference)
                         if let Some(inline_schema) = &media_type.schema
                             && matches!(inline_schema, Schema::Object { .. })
-                            && let Some(summary) = &operation.summary
                         {
-                            // Generate a DTO name from the operation summary
-                            let dto_name = generate_dto_name_from_summary(summary);
+                            // Generate a DTO name, preferring operationId over summary
+                            let dto_name =
+                                generate_dto_name(&operation.operation_id, &operation.summary);
 
                             // Clone the schema and add it to new_schemas
                             new_schemas.insert(dto_name.clone(), inline_schema.clone());
@@ -1650,7 +1650,21 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
     Ok(schema)
 }
 
-/// Generate a DTO name from an operation summary
-fn generate_dto_name_from_summary(summary: &str) -> String {
-    format!("{}Dto", generators::common::summary_to_pascal_case(summary))
+/// Generate a DTO name from an operation, preferring operationId over summary.
+fn generate_dto_name(operation_id: &Option<String>, summary: &Option<String>) -> String {
+    if let Some(id) = operation_id {
+        // operationId is typically camelCase; capitalize the first letter for PascalCase
+        let pascal = {
+            let mut chars = id.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        };
+        format!("{}Dto", pascal)
+    } else if let Some(summary) = summary {
+        format!("{}Dto", generators::common::summary_to_pascal_case(summary))
+    } else {
+        "UnknownDto".to_string()
+    }
 }
