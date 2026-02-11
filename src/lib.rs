@@ -351,7 +351,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
 
 /// CLI definition (moved from main.rs) so it can be reused and tested.
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = env!("BUILD_VERSION"), about, long_about = None)]
 pub struct Cli {
     /// Input OpenAPI schema JSON file
     #[arg(long)]
