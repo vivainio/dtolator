@@ -1,0 +1,61 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nullable oneOf Test",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {
+      "PaginationCursor": {
+        "type": "string",
+        "description": "An opaque cursor for pagination"
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "street": { "type": "string" },
+          "city": { "type": "string" }
+        },
+        "required": ["street", "city"]
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "oneOf": [
+              { "type": "null" },
+              { "$ref": "#/components/schemas/PaginationCursor" }
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["data"]
+      },
+      "NullableMultiType": {
+        "description": "A oneOf with null and multiple non-null types",
+        "oneOf": [
+          { "type": "null" },
+          { "$ref": "#/components/schemas/PaginationCursor" },
+          { "$ref": "#/components/schemas/Address" }
+        ]
+      },
+      "AnyOfNullable": {
+        "description": "An anyOf with null",
+        "anyOf": [
+          { "type": "null" },
+          { "$ref": "#/components/schemas/Address" }
+        ]
+      },
+      "NonNullableOneOf": {
+        "description": "A oneOf without null should remain a plain union",
+        "oneOf": [
+          { "$ref": "#/components/schemas/PaginationCursor" },
+          { "$ref": "#/components/schemas/Address" }
+        ]
+      }
+    }
+  }
+}

@@ -256,6 +256,19 @@ impl TestSuite {
                 command_args: vec!["--typescript".to_string()],
                 expected_dir: "output-samples/multipart-typescript".to_string(),
             },
+            // Nullable oneOf/anyOf tests (OpenAPI 3.1 pattern)
+            TestCase {
+                name: "Nullable oneOf Zod".to_string(),
+                input_file: "input-files/test-nullable-oneof.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--zod".to_string()],
+                expected_dir: "output-samples/nullable-oneof-zod".to_string(),
+            },
+            TestCase {
+                name: "Nullable oneOf TypeScript".to_string(),
+                input_file: "input-files/test-nullable-oneof.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
+                expected_dir: "output-samples/nullable-oneof-typescript".to_string(),
+            },
         ];
 
         Self {

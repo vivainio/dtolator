@@ -24,6 +24,30 @@ impl ZodGenerator {
         "  ".repeat(self.indent_level)
     }
 
+    /// Build a union from oneOf/anyOf schemas, collapsing `{type: "null"}` variants
+    /// into `.nullable()` on the remaining schema(s).
+    fn union_with_nullable(&self, schemas: &[Schema]) -> Result<ZodValue> {
+        let has_null = schemas.iter().any(|s| s.get_type() == Some("null"));
+        let non_null: Vec<&Schema> = schemas
+            .iter()
+            .filter(|s| s.get_type() != Some("null"))
+            .collect();
+
+        let value = if non_null.len() == 1 {
+            self.schema_to_zod(non_null[0])?
+        } else {
+            let converted: Result<Vec<ZodValue>> =
+                non_null.iter().map(|s| self.schema_to_zod(s)).collect();
+            ZodValue::Union(converted?)
+        };
+
+        if has_null {
+            Ok(ZodValue::Nullable(Box::new(value)))
+        } else {
+            Ok(value)
+        }
+    }
+
     fn generate_schema(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
 
@@ -78,17 +102,9 @@ impl ZodGenerator {
                         .collect();
                     ZodValue::Intersection(schemas?)
                 } else if let Some(one_of_schemas) = one_of {
-                    let schemas: Result<Vec<ZodValue>> = one_of_schemas
-                        .iter()
-                        .map(|s| self.schema_to_zod(s))
-                        .collect();
-                    ZodValue::Union(schemas?)
+                    self.union_with_nullable(one_of_schemas)?
                 } else if let Some(any_of_schemas) = any_of {
-                    let schemas: Result<Vec<ZodValue>> = any_of_schemas
-                        .iter()
-                        .map(|s| self.schema_to_zod(s))
-                        .collect();
-                    ZodValue::Union(schemas?)
+                    self.union_with_nullable(any_of_schemas)?
                 } else {
                     // Handle basic types
                     match schema_type_str(schema_type) {
