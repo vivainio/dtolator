@@ -1,6 +1,47 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+/// Schema type that supports both OpenAPI 3.0 (single string) and 3.1 (array of strings).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum SchemaType {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+impl SchemaType {
+    /// Returns the primary (non-null) type string.
+    pub fn primary_type(&self) -> Option<&str> {
+        match self {
+            SchemaType::Single(s) => Some(s.as_str()),
+            SchemaType::Multiple(types) => types
+                .iter()
+                .find(|t| t.as_str() != "null")
+                .map(|s| s.as_str()),
+        }
+    }
+
+    /// Returns true if "null" is included in the type array.
+    pub fn has_null(&self) -> bool {
+        match self {
+            SchemaType::Single(s) => s == "null",
+            SchemaType::Multiple(types) => types.iter().any(|t| t == "null"),
+        }
+    }
+}
+
+/// Helper to get the primary type string from an `Option<SchemaType>`.
+/// Mirrors the old `Option<String>::as_deref()` pattern.
+pub fn schema_type_str(schema_type: &Option<SchemaType>) -> Option<&str> {
+    schema_type.as_ref().and_then(|t| t.primary_type())
+}
+
+/// Check nullability from both the OpenAPI 3.0 `nullable` field and
+/// the OpenAPI 3.1 type array containing "null".
+pub fn is_schema_nullable(nullable: &Option<bool>, schema_type: &Option<SchemaType>) -> bool {
+    nullable.unwrap_or(false) || schema_type.as_ref().is_some_and(|t| t.has_null())
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OpenApiSchema {
     pub openapi: Option<String>,
@@ -87,7 +128,7 @@ pub enum Schema {
     },
     Object {
         #[serde(rename = "type")]
-        schema_type: Option<String>,
+        schema_type: Option<SchemaType>,
         properties: Option<IndexMap<String, Schema>>,
         required: Option<Vec<String>>,
         #[serde(rename = "additionalProperties")]
@@ -116,10 +157,40 @@ pub enum Schema {
 }
 
 impl Schema {
+    /// Returns the primary (non-null) type string.
+    /// For OpenAPI 3.1 array types like `["string", "null"]`, returns `"string"`.
     pub fn get_type(&self) -> Option<&str> {
         match self {
-            Schema::Object { schema_type, .. } => schema_type.as_deref(),
+            Schema::Object { schema_type, .. } => match schema_type {
+                Some(SchemaType::Single(s)) => Some(s.as_str()),
+                Some(SchemaType::Multiple(types)) => types
+                    .iter()
+                    .find(|t| t.as_str() != "null")
+                    .map(|s| s.as_str()),
+                None => None,
+            },
             Schema::Reference { .. } => None,
+        }
+    }
+
+    /// Returns true if this schema is nullable, checking both the OpenAPI 3.0
+    /// `nullable` field and the OpenAPI 3.1 type array containing "null".
+    pub fn is_nullable(&self) -> bool {
+        match self {
+            Schema::Object {
+                schema_type,
+                nullable,
+                ..
+            } => {
+                if nullable == &Some(true) {
+                    return true;
+                }
+                if let Some(SchemaType::Multiple(types)) = schema_type {
+                    return types.iter().any(|t| t == "null");
+                }
+                false
+            }
+            Schema::Reference { .. } => false,
         }
     }
 
@@ -167,7 +238,7 @@ impl Schema {
 /// Builder for Schema::Object
 #[derive(Debug, Clone, Default)]
 pub struct SchemaObjectBuilder {
-    schema_type: Option<String>,
+    schema_type: Option<SchemaType>,
     properties: Option<IndexMap<String, Schema>>,
     required: Option<Vec<String>>,
     additional_properties: Option<AdditionalProperties>,
@@ -193,9 +264,9 @@ impl SchemaObjectBuilder {
         Self::default()
     }
 
-    /// Set the schema type
+    /// Set the schema type (accepts a single type string)
     pub fn schema_type(mut self, schema_type: impl Into<String>) -> Self {
-        self.schema_type = Some(schema_type.into());
+        self.schema_type = Some(SchemaType::Single(schema_type.into()));
         self
     }
 

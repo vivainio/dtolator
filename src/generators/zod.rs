@@ -2,7 +2,7 @@ use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
 use crate::generators::zod_schema::{NumberConstraints, StringConstraints, ZodValue};
-use crate::openapi::{OpenApiSchema, Schema};
+use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
 use anyhow::Result;
 
 pub struct ZodGenerator {
@@ -91,7 +91,7 @@ impl ZodGenerator {
                     ZodValue::Union(schemas?)
                 } else {
                     // Handle basic types
-                    match schema_type.as_deref() {
+                    match schema_type_str(schema_type) {
                         Some("string") => {
                             if let Some(enum_vals) = enum_values {
                                 let enum_strings: Vec<String> = enum_vals
@@ -113,7 +113,7 @@ impl ZodGenerator {
                             }
                         }
                         Some("number") | Some("integer") => ZodValue::Number(NumberConstraints {
-                            is_integer: schema_type.as_deref() == Some("integer"),
+                            is_integer: schema_type_str(schema_type) == Some("integer"),
                             minimum: *minimum,
                             maximum: *maximum,
                         }),
@@ -147,7 +147,7 @@ impl ZodGenerator {
                 };
 
                 // Apply nullable if needed
-                let result = if nullable.unwrap_or(false) {
+                let result = if is_schema_nullable(nullable, schema_type) {
                     ZodValue::Nullable(Box::new(value))
                 } else {
                     value

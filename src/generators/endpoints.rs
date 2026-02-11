@@ -1,5 +1,5 @@
 use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Operation, Parameter};
+use crate::openapi::{OpenApiSchema, Operation, Parameter, schema_type_str};
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -249,14 +249,16 @@ impl EndpointsGenerator {
                 .strip_prefix("#/components/schemas/")
                 .unwrap_or(reference)
                 .to_string(),
-            crate::openapi::Schema::Object { schema_type, .. } => match schema_type.as_deref() {
-                Some("string") => "string".to_string(),
-                Some("number") | Some("integer") => "number".to_string(),
-                Some("boolean") => "boolean".to_string(),
-                Some("array") => "unknown[]".to_string(),
-                Some("object") => "Record<string, unknown>".to_string(),
-                _ => "unknown".to_string(),
-            },
+            crate::openapi::Schema::Object { schema_type, .. } => {
+                match schema_type_str(schema_type) {
+                    Some("string") => "string".to_string(),
+                    Some("number") | Some("integer") => "number".to_string(),
+                    Some("boolean") => "boolean".to_string(),
+                    Some("array") => "unknown[]".to_string(),
+                    Some("object") => "Record<string, unknown>".to_string(),
+                    _ => "unknown".to_string(),
+                }
+            }
         }
     }
 

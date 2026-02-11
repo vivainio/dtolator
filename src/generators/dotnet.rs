@@ -1,5 +1,5 @@
 use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Schema};
+use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
 use anyhow::Result;
 
 pub struct DotNetGenerator {
@@ -76,7 +76,7 @@ impl DotNetGenerator {
                 }
 
                 // Handle object types - generate records instead of classes
-                if schema_type.as_deref() == Some("object") || properties.is_some() {
+                if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     if let Some(desc) = description {
                         output.push_str(&format!("{}/// <summary>\n", self.indent()));
                         output.push_str(&format!("{}/// {}\n", self.indent(), desc));
@@ -184,8 +184,8 @@ impl DotNetGenerator {
                     return Ok("string".to_string());
                 }
 
-                let base_type = if let Some(type_str) = schema_type {
-                    match type_str.as_str() {
+                let base_type = if let Some(type_str) = schema_type_str(schema_type) {
+                    match type_str {
                         "string" => match format.as_deref() {
                             Some("uuid") => "Guid",
                             Some("date") => "DateOnly",
@@ -220,7 +220,7 @@ impl DotNetGenerator {
                 .to_string();
 
                 Ok(
-                    if nullable.unwrap_or(false) && self.is_value_type(&base_type) {
+                    if is_schema_nullable(nullable, schema_type) && self.is_value_type(&base_type) {
                         format!("{base_type}?")
                     } else {
                         base_type

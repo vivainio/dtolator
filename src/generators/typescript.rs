@@ -1,7 +1,7 @@
 use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
-use crate::openapi::{OpenApiSchema, Schema};
+use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -152,7 +152,7 @@ impl TypeScriptGenerator {
                 }
 
                 // Handle object types
-                if schema_type.as_deref() == Some("object") || properties.is_some() {
+                if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     let sanitized_name = self.sanitize_type_name(name);
                     output.push_str(&format!("export interface {sanitized_name} {{\n"));
 
@@ -239,7 +239,7 @@ impl TypeScriptGenerator {
                     ts_type = types?.join(" | ");
                 } else {
                     // Handle basic types
-                    match schema_type.as_deref() {
+                    match schema_type_str(schema_type) {
                         Some("string") => {
                             if let Some(enum_vals) = enum_values {
                                 let enum_strings: Vec<String> = enum_vals
@@ -299,7 +299,7 @@ impl TypeScriptGenerator {
                 }
 
                 // Apply nullable if needed
-                if nullable.unwrap_or(false) {
+                if is_schema_nullable(nullable, schema_type) {
                     ts_type = format!("{ts_type} | null");
                 }
 

@@ -1,6 +1,6 @@
 use crate::generators::Generator;
 use crate::generators::common;
-use crate::openapi::{OpenApiSchema, Schema};
+use crate::openapi::{OpenApiSchema, Schema, schema_type_str};
 use anyhow::Result;
 
 pub struct RustSerdeGenerator;
@@ -67,7 +67,7 @@ impl RustSerdeGenerator {
                     return Ok("String".to_string());
                 }
 
-                match schema_type.as_deref() {
+                match schema_type_str(schema_type) {
                     Some("string") => match format.as_deref() {
                         Some("date") => Ok("String".to_string()),
                         Some("date-time") => Ok("String".to_string()),

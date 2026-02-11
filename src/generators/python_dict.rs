@@ -1,5 +1,5 @@
 use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Schema};
+use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
 use anyhow::Result;
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
@@ -210,7 +210,7 @@ impl PythonDictGenerator {
                 }
 
                 // Handle object types
-                if schema_type.as_deref() == Some("object") || properties.is_some() {
+                if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     let empty_required = vec![];
                     let required_fields: Vec<&String> = required
                         .as_ref()
@@ -348,7 +348,7 @@ impl PythonDictGenerator {
                         .map(|s| self.schema_to_python_type(s))
                         .collect();
                     let union_type = types?.join(" | ");
-                    return Ok(if nullable.unwrap_or(false) {
+                    return Ok(if is_schema_nullable(nullable, schema_type) {
                         format!("{union_type} | None")
                     } else {
                         union_type
@@ -359,7 +359,7 @@ impl PythonDictGenerator {
                         .map(|s| self.schema_to_python_type(s))
                         .collect();
                     let union_type = types?.join(" | ");
-                    return Ok(if nullable.unwrap_or(false) {
+                    return Ok(if is_schema_nullable(nullable, schema_type) {
                         format!("{union_type} | None")
                     } else {
                         union_type
@@ -376,15 +376,15 @@ impl PythonDictGenerator {
                         .map(|s| format!("\"{s}\""))
                         .collect();
                     let literal_type = format!("Literal[{}]", values.join(", "));
-                    return Ok(if nullable.unwrap_or(false) {
+                    return Ok(if is_schema_nullable(nullable, schema_type) {
                         format!("{literal_type} | None")
                     } else {
                         literal_type
                     });
                 }
 
-                let base_type = if let Some(type_str) = schema_type {
-                    match type_str.as_str() {
+                let base_type = if let Some(type_str) = schema_type_str(schema_type) {
+                    match type_str {
                         "string" => match format.as_deref() {
                             Some("email") => "str",
                             Some("uri") | Some("url") => "str",
@@ -399,7 +399,7 @@ impl PythonDictGenerator {
                         "array" => {
                             if let Some(item_schema) = items {
                                 let item_type = self.schema_to_python_type(item_schema)?;
-                                return Ok(if nullable.unwrap_or(false) {
+                                return Ok(if is_schema_nullable(nullable, schema_type) {
                                     format!("list[{item_type}] | None")
                                 } else {
                                     format!("list[{item_type}]")
@@ -416,7 +416,7 @@ impl PythonDictGenerator {
                 }
                 .to_string();
 
-                Ok(if nullable.unwrap_or(false) {
+                Ok(if is_schema_nullable(nullable, schema_type) {
                     format!("{base_type} | None")
                 } else {
                     base_type

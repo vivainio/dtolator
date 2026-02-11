@@ -1,5 +1,5 @@
 use crate::generators::Generator;
-use crate::openapi::{OpenApiSchema, Schema};
+use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
 use anyhow::Result;
 
 pub struct PydanticGenerator {
@@ -146,7 +146,7 @@ impl PydanticGenerator {
                 }
 
                 // Handle object types
-                if schema_type.as_deref() == Some("object") || properties.is_some() {
+                if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     output.push_str(&format!("{}class {}(BaseModel):\n", self.indent(), name));
 
                     if let Some(props) = properties {
@@ -322,7 +322,7 @@ impl PydanticGenerator {
                     py_type = format!("Union[{}]", types?.join(", "));
                 } else {
                     // Handle basic types
-                    match schema_type.as_deref() {
+                    match schema_type_str(schema_type) {
                         Some("string") => {
                             if let Some(enum_vals) = enum_values {
                                 let enum_strings: Vec<String> = enum_vals
@@ -370,7 +370,7 @@ impl PydanticGenerator {
                 }
 
                 // Handle nullable types
-                let final_type = if nullable.unwrap_or(false) {
+                let final_type = if is_schema_nullable(nullable, schema_type) {
                     format!("Optional[{py_type}]")
                 } else {
                     py_type

@@ -1,6 +1,6 @@
 use crate::generators::Generator;
 use crate::generators::common;
-use crate::openapi::{OpenApiSchema, Schema};
+use crate::openapi::{OpenApiSchema, Schema, is_schema_nullable, schema_type_str};
 use anyhow::Result;
 use serde_json::{Value, json};
 
@@ -98,8 +98,8 @@ impl JsonSchemaGenerator {
                 }
 
                 // Handle type
-                if let Some(type_str) = schema_type {
-                    json_schema.insert("type".to_string(), Value::String(type_str.clone()));
+                if let Some(type_str) = schema_type_str(schema_type) {
+                    json_schema.insert("type".to_string(), Value::String(type_str.to_string()));
                 }
 
                 // Handle object properties
@@ -142,8 +142,7 @@ impl JsonSchemaGenerator {
                 }
 
                 // Handle nullable
-                if let Some(nullable_val) = nullable
-                    && *nullable_val
+                if is_schema_nullable(nullable, schema_type)
                     && let Some(existing_type) = json_schema.get("type")
                 {
                     json_schema.insert("type".to_string(), json!([existing_type.clone(), "null"]));

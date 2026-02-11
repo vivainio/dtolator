@@ -2,7 +2,7 @@ use crate::BaseUrlMode;
 use crate::generators::Generator;
 use crate::generators::common::{extract_type_name, summary_to_camel_case};
 use crate::generators::import_generator::ImportGenerator;
-use crate::openapi::{OpenApiSchema, Operation, Parameter};
+use crate::openapi::{OpenApiSchema, Operation, Parameter, schema_type_str};
 use anyhow::Result;
 use std::collections::BTreeMap;
 
@@ -839,7 +839,7 @@ impl AngularGenerator {
                 .to_string(),
             crate::openapi::Schema::Object {
                 schema_type, items, ..
-            } => match schema_type.as_deref() {
+            } => match schema_type_str(schema_type) {
                 Some("string") => "string".to_string(),
                 Some("number") | Some("integer") => "number".to_string(),
                 Some("boolean") => "boolean".to_string(),
@@ -930,7 +930,7 @@ impl AngularGenerator {
                             crate::openapi::Schema::Object {
                                 schema_type: Some(t),
                                 ..
-                            } if t == "array"
+                            } if t.primary_type() == Some("array")
                         );
 
                         let is_string = matches!(
@@ -938,7 +938,7 @@ impl AngularGenerator {
                             crate::openapi::Schema::Object {
                                 schema_type: Some(t),
                                 ..
-                            } if t == "string"
+                            } if t.primary_type() == Some("string")
                         );
 
                         let is_object = matches!(
@@ -946,7 +946,7 @@ impl AngularGenerator {
                             crate::openapi::Schema::Object {
                                 schema_type: Some(t),
                                 ..
-                            } if t == "object"
+                            } if t.primary_type() == Some("object")
                         );
 
                         if is_optional {
