@@ -5,7 +5,7 @@ import { z } from "zod";
 export const RootSchema = z.object({
   basicString: z.string(),
   stringWithConstraints: z.string().min(3).max(50).regex(/^[a-zA-Z]+$/),
-  uuid: z.uuid(),
+  uuid: z.guid(),
   email: z.email(),
   uri: z.url(),
   date: z.iso.date(),
@@ -40,7 +40,7 @@ export const RootSchema = z.object({
   score: z.number().min(0).max(1).optional(),
 })),
   intersectionField: z.intersection(z.object({
-  id: z.uuid(),
+  id: z.guid(),
 }), z.object({
   email: z.email(),
 })),

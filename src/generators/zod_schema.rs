@@ -95,7 +95,7 @@ impl ZodValue {
 
     fn string_to_zod(constraints: &StringConstraints) -> String {
         let mut s = match constraints.format.as_deref() {
-            Some("uuid") => "z.uuid()".to_string(),
+            Some("uuid") => "z.guid()".to_string(),
             Some("email") => "z.email()".to_string(),
             Some("uri") => "z.url()".to_string(),
             Some("date") => "z.iso.date()".to_string(),

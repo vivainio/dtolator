@@ -15,7 +15,7 @@ export type FileInfo = z.infer<typeof FileInfoSchema>;
 
 export const ProfileResponseSchema = z.object({
   success: z.boolean(),
-  profileId: z.uuid(),
+  profileId: z.guid(),
   photoUrl: z.url().optional(),
   resumeUrl: z.url().nullable().optional(),
   message: z.string().optional(),
