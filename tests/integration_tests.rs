@@ -546,6 +546,19 @@ impl TestSuite {
             } else {
                 dtolator::BaseUrlMode::Global
             },
+            api_url_variable: if let Some(idx) = test_case
+                .command_args
+                .iter()
+                .position(|arg| arg == "--api-url-variable")
+            {
+                test_case
+                    .command_args
+                    .get(idx + 1)
+                    .cloned()
+                    .unwrap_or_else(|| "API_URL".to_string())
+            } else {
+                "API_URL".to_string()
+            },
         };
 
         if let Err(e) = generate(options) {

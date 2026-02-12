@@ -11,6 +11,7 @@ pub struct AngularGenerator {
     debug: bool,
     promises: bool,
     base_url_mode: BaseUrlMode,
+    api_url_variable: String,
 }
 
 impl Default for AngularGenerator {
@@ -26,6 +27,7 @@ impl AngularGenerator {
             debug: false,
             promises: false,
             base_url_mode: BaseUrlMode::Global,
+            api_url_variable: "API_URL".to_string(),
         }
     }
 
@@ -46,6 +48,11 @@ impl AngularGenerator {
 
     pub fn with_base_url_mode(mut self, mode: BaseUrlMode) -> Self {
         self.base_url_mode = mode;
+        self
+    }
+
+    pub fn with_api_url_variable(mut self, name: String) -> Self {
+        self.api_url_variable = name;
         self
     }
 }
@@ -758,9 +765,11 @@ impl AngularGenerator {
         if self.base_url_mode == BaseUrlMode::Global {
             service.push_str("  private baseUrl: string;\n\n");
             service.push_str("  constructor() {\n");
-            service.push_str("    this.baseUrl = (globalThis as any).API_URL || (typeof window !== 'undefined' && (window as any).API_URL);\n");
-            service
-                .push_str("    if (!this.baseUrl) throw new Error('API_URL is not configured');\n");
+            service.push_str(&format!("    this.baseUrl = (globalThis as any).{api_url_variable} || (typeof window !== 'undefined' && (window as any).{api_url_variable});\n", api_url_variable = self.api_url_variable));
+            service.push_str(&format!(
+                "    if (!this.baseUrl) throw new Error('{api_url_variable} is not configured');\n",
+                api_url_variable = self.api_url_variable
+            ));
             service.push_str("  }\n\n");
         } else {
             service.push('\n');
