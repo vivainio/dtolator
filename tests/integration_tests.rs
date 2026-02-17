@@ -559,6 +559,7 @@ impl TestSuite {
             } else {
                 "API_URL".to_string()
             },
+            delete_old: false,
         };
 
         if let Err(e) = generate(options) {

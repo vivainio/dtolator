@@ -76,6 +76,7 @@ pub struct GenerateOptions {
     pub skip_files: Vec<String>,
     pub base_url_mode: BaseUrlMode,
     pub api_url_variable: String,
+    pub delete_old: bool,
 }
 
 fn build_command_string_from_options(options: &GenerateOptions) -> String {
@@ -226,9 +227,11 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
         )
     })?;
 
+    let mut written_files: Vec<String> = Vec::new();
+
     match options.generator_type {
         GeneratorType::Angular => {
-            generate_angular_services(
+            written_files = generate_angular_services(
                 &schema,
                 &options.output_dir,
                 options.with_zod,
@@ -246,9 +249,8 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 pydantic_generator.generate_with_command(&schema, &command_string)?;
 
             let models_path = options.output_dir.join("models.py");
-            fs::write(&models_path, pydantic_output).with_context(|| {
-                format!("Failed to write models.py file: {}", models_path.display())
-            })?;
+            write_if_changed(&models_path, &pydantic_output)?;
+            written_files.push("models.py".to_string());
         }
         GeneratorType::PythonDict => {
             let python_dict_generator = PythonDictGenerator::new();
@@ -256,21 +258,16 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 python_dict_generator.generate_with_command(&schema, &command_string)?;
 
             let typed_dicts_path = options.output_dir.join("typed_dicts.py");
-            fs::write(&typed_dicts_path, python_dict_output).with_context(|| {
-                format!(
-                    "Failed to write typed_dicts.py file: {}",
-                    typed_dicts_path.display()
-                )
-            })?;
+            write_if_changed(&typed_dicts_path, &python_dict_output)?;
+            written_files.push("typed_dicts.py".to_string());
         }
         GeneratorType::DotNet => {
             let dotnet_generator = DotNetGenerator::new();
             let dotnet_output = dotnet_generator.generate_with_command(&schema, &command_string)?;
 
             let models_path = options.output_dir.join("Models.cs");
-            fs::write(&models_path, dotnet_output).with_context(|| {
-                format!("Failed to write Models.cs file: {}", models_path.display())
-            })?;
+            write_if_changed(&models_path, &dotnet_output)?;
+            written_files.push("Models.cs".to_string());
         }
         GeneratorType::JsonSchema => {
             let json_schema_generator = JsonSchemaGenerator::new();
@@ -278,12 +275,8 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 json_schema_generator.generate_with_command(&schema, &command_string)?;
 
             let schema_path = options.output_dir.join("schema.json");
-            fs::write(&schema_path, json_schema_output).with_context(|| {
-                format!(
-                    "Failed to write schema.json file: {}",
-                    schema_path.display()
-                )
-            })?;
+            write_if_changed(&schema_path, &json_schema_output)?;
+            written_files.push("schema.json".to_string());
         }
         GeneratorType::Zod => {
             // Generate both dto.ts (with imports) and schema.ts, like the CLI --zod path
@@ -291,54 +284,46 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
             let schema_path = options.output_dir.join("schema.ts");
-            fs::write(&schema_path, zod_output).with_context(|| {
-                format!("Failed to write schema.ts file: {}", schema_path.display())
-            })?;
+            write_if_changed(&schema_path, &zod_output)?;
+            written_files.push("schema.ts".to_string());
 
             let ts_generator = TypeScriptGenerator::new();
             let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
             let dto_path = options.output_dir.join("dto.ts");
-            fs::write(&dto_path, ts_output)
-                .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+            write_if_changed(&dto_path, &ts_output)?;
+            written_files.push("dto.ts".to_string());
         }
         GeneratorType::TypeScript | GeneratorType::Endpoints => {
             if matches!(options.generator_type, GeneratorType::Endpoints) {
                 let generator = EndpointsGenerator::new();
                 let output = generator.generate_with_command(&schema, &command_string)?;
                 let endpoints_path = options.output_dir.join("endpoints.ts");
-                fs::write(&endpoints_path, output).with_context(|| {
-                    format!(
-                        "Failed to write endpoints.ts file: {}",
-                        endpoints_path.display()
-                    )
-                })?;
+                write_if_changed(&endpoints_path, &output)?;
+                written_files.push("endpoints.ts".to_string());
             } else if options.with_zod {
                 // TypeScript + Zod (same behavior as CLI with --typescript --zod)
                 let zod_generator = ZodGenerator::new();
                 let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
                 let schema_path = options.output_dir.join("schema.ts");
-                fs::write(&schema_path, zod_output).with_context(|| {
-                    format!("Failed to write schema.ts file: {}", schema_path.display())
-                })?;
+                write_if_changed(&schema_path, &zod_output)?;
+                written_files.push("schema.ts".to_string());
 
                 let ts_generator = TypeScriptGenerator::new();
                 let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output).with_context(|| {
-                    format!("Failed to write dto.ts file: {}", dto_path.display())
-                })?;
+                write_if_changed(&dto_path, &ts_output)?;
+                written_files.push("dto.ts".to_string());
             } else {
                 // TypeScript only
                 let ts_generator = TypeScriptGenerator::new();
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output).with_context(|| {
-                    format!("Failed to write dto.ts file: {}", dto_path.display())
-                })?;
+                write_if_changed(&dto_path, &ts_output)?;
+                written_files.push("dto.ts".to_string());
             }
         }
         GeneratorType::RustSerde => {
@@ -346,10 +331,13 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             let rust_output = rust_generator.generate_with_command(&schema, &command_string)?;
 
             let models_path = options.output_dir.join("models.rs");
-            fs::write(&models_path, rust_output).with_context(|| {
-                format!("Failed to write models.rs file: {}", models_path.display())
-            })?;
+            write_if_changed(&models_path, &rust_output)?;
+            written_files.push("models.rs".to_string());
         }
+    }
+
+    if options.delete_old {
+        delete_obsolete_files(&options.output_dir, &written_files)?;
     }
 
     Ok(())
@@ -438,6 +426,10 @@ pub struct Cli {
     /// Name of the global variable used for the API base URL (only with --base-url-mode global)
     #[arg(long = "api-url-variable", default_value = "API_URL")]
     pub api_url_variable: String,
+
+    /// Delete obsolete files from the output directory after generation
+    #[arg(long)]
+    pub delete_old: bool,
 }
 
 impl Cli {
@@ -625,9 +617,11 @@ where
                 )
             })?;
 
+            let mut written_files: Vec<String> = Vec::new();
+
             if cli.angular {
                 // Generate Angular services with multiple files
-                generate_angular_services(
+                written_files = generate_angular_services(
                     &schema,
                     &output_dir,
                     cli.zod,
@@ -645,9 +639,8 @@ where
                     pydantic_generator.generate_with_command(&schema, &command_string)?;
 
                 let models_path = output_dir.join("models.py");
-                fs::write(&models_path, pydantic_output).with_context(|| {
-                    format!("Failed to write models.py file: {}", models_path.display())
-                })?;
+                write_if_changed(&models_path, &pydantic_output)?;
+                written_files.push("models.py".to_string());
 
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
@@ -658,12 +651,8 @@ where
                     python_dict_generator.generate_with_command(&schema, &command_string)?;
 
                 let typed_dicts_path = output_dir.join("typed_dicts.py");
-                fs::write(&typed_dicts_path, python_dict_output).with_context(|| {
-                    format!(
-                        "Failed to write typed_dicts.py file: {}",
-                        typed_dicts_path.display()
-                    )
-                })?;
+                write_if_changed(&typed_dicts_path, &python_dict_output)?;
+                written_files.push("typed_dicts.py".to_string());
 
                 println!("Generated files:");
                 println!("  - {}", typed_dicts_path.display());
@@ -674,9 +663,8 @@ where
                     dotnet_generator.generate_with_command(&schema, &command_string)?;
 
                 let models_path = output_dir.join("Models.cs");
-                fs::write(&models_path, dotnet_output).with_context(|| {
-                    format!("Failed to write Models.cs file: {}", models_path.display())
-                })?;
+                write_if_changed(&models_path, &dotnet_output)?;
+                written_files.push("Models.cs".to_string());
 
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
@@ -687,12 +675,8 @@ where
                     json_schema_generator.generate_with_command(&schema, &command_string)?;
 
                 let schema_path = output_dir.join("schema.json");
-                fs::write(&schema_path, json_schema_output).with_context(|| {
-                    format!(
-                        "Failed to write schema.json file: {}",
-                        schema_path.display()
-                    )
-                })?;
+                write_if_changed(&schema_path, &json_schema_output)?;
+                written_files.push("schema.json".to_string());
 
                 println!("Generated files:");
                 println!("  - {}", schema_path.display());
@@ -703,9 +687,8 @@ where
                     rust_serde_generator.generate_with_command(&schema, &command_string)?;
 
                 let models_path = output_dir.join("models.rs");
-                fs::write(&models_path, rust_serde_output).with_context(|| {
-                    format!("Failed to write models.rs file: {}", models_path.display())
-                })?;
+                write_if_changed(&models_path, &rust_serde_output)?;
+                written_files.push("models.rs".to_string());
 
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
@@ -717,18 +700,16 @@ where
                 let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
                 let schema_path = output_dir.join("schema.ts");
-                fs::write(&schema_path, zod_output).with_context(|| {
-                    format!("Failed to write schema.ts file: {}", schema_path.display())
-                })?;
+                write_if_changed(&schema_path, &zod_output)?;
+                written_files.push("schema.ts".to_string());
 
                 // Generate TypeScript interfaces that import from schema.ts
                 let ts_generator = TypeScriptGenerator::new();
                 let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
                 let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output).with_context(|| {
-                    format!("Failed to write dto.ts file: {}", dto_path.display())
-                })?;
+                write_if_changed(&dto_path, &ts_output)?;
+                written_files.push("dto.ts".to_string());
 
                 println!("Generated files:");
                 println!("  - {}", dto_path.display());
@@ -739,12 +720,15 @@ where
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
                 let dto_path = output_dir.join("dto.ts");
-                fs::write(&dto_path, ts_output).with_context(|| {
-                    format!("Failed to write dto.ts file: {}", dto_path.display())
-                })?;
+                write_if_changed(&dto_path, &ts_output)?;
+                written_files.push("dto.ts".to_string());
 
                 println!("Generated files:");
                 println!("  - {}", dto_path.display());
+            }
+
+            if cli.delete_old {
+                delete_obsolete_files(&output_dir, &written_files)?;
             }
         }
         None => {
@@ -805,7 +789,7 @@ fn generate_angular_services(
     skip_files: &[String],
     base_url_mode: BaseUrlMode,
     api_url_variable: &str,
-) -> Result<()> {
+) -> Result<Vec<String>> {
     let angular_generator = AngularGenerator::new()
         .with_zod_validation(with_zod)
         .with_debug(debug)
@@ -816,6 +800,7 @@ fn generate_angular_services(
 
     // Also generate DTOs and utility function
     let dto_path = output_dir.join("dto.ts");
+    let mut files_generated: Vec<String> = Vec::new();
 
     if with_zod {
         // Generate Zod schemas first
@@ -824,9 +809,8 @@ fn generate_angular_services(
 
         let schema_path = output_dir.join("schema.ts");
         if !skip_files.contains(&"schema.ts".to_string()) {
-            fs::write(&schema_path, zod_output).with_context(|| {
-                format!("Failed to write schema.ts file: {}", schema_path.display())
-            })?;
+            write_if_changed(&schema_path, &zod_output)?;
+            files_generated.push("schema.ts".to_string());
         }
 
         // Generate TypeScript interfaces that re-export from schema.ts
@@ -843,8 +827,8 @@ fn generate_angular_services(
         }
 
         if !skip_files.contains(&"dto.ts".to_string()) {
-            fs::write(&dto_path, ts_output)
-                .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+            write_if_changed(&dto_path, &ts_output)?;
+            files_generated.push("dto.ts".to_string());
         }
     } else {
         // Generate only TypeScript interfaces
@@ -867,16 +851,12 @@ fn generate_angular_services(
         }
 
         if !skip_files.contains(&"dto.ts".to_string()) {
-            fs::write(&dto_path, dto_output)
-                .with_context(|| format!("Failed to write dto.ts file: {}", dto_path.display()))?;
+            write_if_changed(&dto_path, &dto_output)?;
+            files_generated.push("dto.ts".to_string());
         }
     }
 
     // Parse and split the Angular generator output into individual service files
-    let mut files_generated = Vec::new();
-    if !skip_files.contains(&"dto.ts".to_string()) {
-        files_generated.push(dto_path.display().to_string());
-    }
 
     if debug {
         println!("🔍 [DEBUG] Raw Angular generator output:");
@@ -912,14 +892,8 @@ fn generate_angular_services(
 
                 if !skip_files.contains(&current_file) {
                     let service_path = output_dir.join(&current_file);
-                    fs::write(&service_path, &current_content).with_context(|| {
-                        format!(
-                            "Failed to write {} file: {}",
-                            current_file,
-                            service_path.display()
-                        )
-                    })?;
-                    files_generated.push(service_path.display().to_string());
+                    write_if_changed(&service_path, &current_content)?;
+                    files_generated.push(current_file.clone());
                 }
             }
 
@@ -950,14 +924,8 @@ fn generate_angular_services(
         && !skip_files.contains(&current_file)
     {
         let service_path = output_dir.join(&current_file);
-        fs::write(&service_path, &current_content).with_context(|| {
-            format!(
-                "Failed to write {} file: {}",
-                current_file,
-                service_path.display()
-            )
-        })?;
-        files_generated.push(service_path.display().to_string());
+        write_if_changed(&service_path, &current_content)?;
+        files_generated.push(current_file.clone());
     }
 
     // Special case: extract the service content before the first FILE marker
@@ -973,28 +941,56 @@ fn generate_angular_services(
             let first_file_name = &first_marker[..newline_pos];
             if !skip_files.contains(&first_file_name.to_string()) {
                 let service_path = output_dir.join(first_file_name);
-                fs::write(&service_path, first_service_content).with_context(|| {
-                    format!(
-                        "Failed to write {} file: {}",
-                        first_file_name,
-                        service_path.display()
-                    )
-                })?;
+                write_if_changed(&service_path, first_service_content)?;
 
                 // Add to files_generated if not already there
-                let file_path_str = service_path.display().to_string();
-                if !files_generated.contains(&file_path_str) {
-                    files_generated.push(file_path_str);
+                if !files_generated.contains(&first_file_name.to_string()) {
+                    files_generated.push(first_file_name.to_string());
                 }
             }
         }
     }
 
     println!("Generated Angular API files:");
-    for file in files_generated {
-        println!("  - {file}");
+    for file in &files_generated {
+        println!("  - {}", output_dir.join(file).display());
     }
 
+    Ok(files_generated)
+}
+
+/// Write `contents` to `path` only if the file doesn't already exist with identical content.
+fn write_if_changed(path: &Path, contents: &str) -> Result<bool> {
+    if let Ok(metadata) = fs::metadata(path)
+        && metadata.len() == contents.len() as u64
+        && let Ok(existing) = fs::read_to_string(path)
+        && existing == contents
+    {
+        return Ok(false);
+    }
+    fs::write(path, contents)
+        .with_context(|| format!("Failed to write file: {}", path.display()))?;
+    Ok(true)
+}
+
+/// Delete files in `dir` that are not in `keep` (filenames only, not paths).
+fn delete_obsolete_files(dir: &Path, keep: &[String]) -> Result<()> {
+    for entry in fs::read_dir(dir)
+        .with_context(|| format!("Failed to read output directory: {}", dir.display()))?
+    {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        if let Some(name) = entry.file_name().to_str() {
+            if !keep.contains(&name.to_string()) {
+                fs::remove_file(entry.path()).with_context(|| {
+                    format!("Failed to delete obsolete file: {}", entry.path().display())
+                })?;
+                println!("Deleted obsolete file: {}", entry.path().display());
+            }
+        }
+    }
     Ok(())
 }
 
