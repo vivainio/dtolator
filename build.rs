@@ -6,4 +6,17 @@ fn main() {
 
     println!("cargo:rustc-env=BUILD_VERSION={}", version);
     println!("cargo:rerun-if-env-changed=VERSION");
+
+    if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows" {
+        let mut res = winresource::WindowsResource::new();
+        res.set(
+            "FileDescription",
+            "Convert OpenAPI schemas to Zod/TypeScript",
+        );
+        res.set("ProductName", "dtolator");
+        res.set("ProductVersion", &version);
+        res.set("FileVersion", &version);
+        res.set("LegalCopyright", "MIT License");
+        res.compile().unwrap();
+    }
 }
