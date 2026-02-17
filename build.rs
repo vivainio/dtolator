@@ -16,7 +16,7 @@ fn main() {
         res.set("ProductName", "dtolator");
         res.set("ProductVersion", &version);
         res.set("FileVersion", &version);
-        res.set("LegalCopyright", "MIT License");
+        res.set("LegalCopyright", "Copyright (c) 2025-2026 Ville M. Vainio");
         res.compile().unwrap();
     }
 }
