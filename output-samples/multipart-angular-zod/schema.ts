@@ -5,7 +5,8 @@ import { z } from "zod";
 export const FileInfoSchema = z.object({
   id: z.string(),
   filename: z.string(),
-  size: z.number().int().describe("File size in bytes"),
+  /** File size in bytes */
+  size: z.number().int(),
   mimeType: z.string().optional(),
   uploadedAt: z.iso.datetime({ offset: true }),
   url: z.url().optional(),
@@ -27,46 +28,61 @@ export const ProfileUploadRequestSchema = z.object({
   email: z.email(),
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
-  photo: z.instanceof(File).describe("Profile photo"),
+  /** Profile photo */
+  photo: z.instanceof(File),
   dateOfBirth: z.iso.date().optional(),
   phoneNumber: z.string().regex(/^\\+?[1-9]\\d{1,14}$/).optional(),
   bio: z.string().max(500).optional(),
-  resume: z.instanceof(File).optional().describe("Optional resume file"),
+  /** Optional resume file */
+  resume: z.instanceof(File).optional(),
 });
 
 export type ProfileUploadRequest = z.infer<typeof ProfileUploadRequestSchema>;
 
 export const UpdateProjectFilesDtoSchema = z.object({
-  name: z.string().min(1).max(100).describe("Project name"),
-  thumbnail: z.instanceof(File).optional().describe("Project thumbnail image"),
-  attachments: z.array(z.instanceof(File)).optional().describe("Additional project files"),
-  metadata: z.object({}).optional().describe("Additional metadata as JSON"),
+  /** Project name */
+  name: z.string().min(1).max(100),
+  /** Project thumbnail image */
+  thumbnail: z.instanceof(File).optional(),
+  /** Additional project files */
+  attachments: z.array(z.instanceof(File)).optional(),
+  /** Additional metadata as JSON */
+  metadata: z.object({}).optional(),
 });
 
 export type UpdateProjectFilesDto = z.infer<typeof UpdateProjectFilesDtoSchema>;
 
 export const UploadMultipleDocumentsDtoSchema = z.object({
-  files: z.array(z.instanceof(File)).describe("Array of document files"),
-  category: z.enum(["invoice", "contract", "report", "other"]).describe("Document category"),
-  tags: z.array(z.string()).optional().describe("Tags for organizing documents"),
-  isPublic: z.boolean().optional().describe("Whether the documents are publicly accessible"),
+  /** Array of document files */
+  files: z.array(z.instanceof(File)),
+  /** Document category */
+  category: z.enum(["invoice", "contract", "report", "other"]),
+  /** Tags for organizing documents */
+  tags: z.array(z.string()).optional(),
+  /** Whether the documents are publicly accessible */
+  isPublic: z.boolean().optional(),
 });
 
 export type UploadMultipleDocumentsDto = z.infer<typeof UploadMultipleDocumentsDtoSchema>;
 
 export const UploadResponseSchema = z.object({
   success: z.boolean(),
-  fileId: z.string().describe("Unique identifier for the uploaded file"),
-  url: z.url().optional().describe("URL to access the uploaded file"),
+  /** Unique identifier for the uploaded file */
+  fileId: z.string(),
+  /** URL to access the uploaded file */
+  url: z.url().optional(),
   message: z.string().optional(),
 });
 
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;
 
 export const UploadUserAvatarDtoSchema = z.object({
-  file: z.instanceof(File).describe("Avatar image file"),
-  userId: z.number().int().describe("ID of the user"),
-  description: z.string().max(200).optional().describe("Optional description for the avatar"),
+  /** Avatar image file */
+  file: z.instanceof(File),
+  /** ID of the user */
+  userId: z.number().int(),
+  /** Optional description for the avatar */
+  description: z.string().max(200).optional(),
 });
 
 export type UploadUserAvatarDto = z.infer<typeof UploadUserAvatarDtoSchema>;

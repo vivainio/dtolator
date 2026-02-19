@@ -142,16 +142,16 @@ impl ZodValue {
             .iter()
             .map(|(name, zod_val, required, description)| {
                 let val_str = zod_val.render();
-                let mut constraint = if *required {
+                let constraint = if *required {
                     val_str
                 } else {
                     format!("{val_str}.optional()")
                 };
                 if let Some(desc) = description {
-                    let escaped = desc.replace('\\', "\\\\").replace('"', "\\\"");
-                    constraint = format!("{constraint}.describe(\"{escaped}\")");
+                    format!("  /** {desc} */\n  {name}: {constraint},")
+                } else {
+                    format!("  {name}: {constraint},")
                 }
-                format!("  {name}: {constraint},")
             })
             .collect();
 

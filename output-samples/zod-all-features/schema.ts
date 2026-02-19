@@ -3,29 +3,46 @@
 
 import { z } from "zod";
 export const RootSchema = z.object({
-  basicString: z.string().describe("Basic string field"),
-  stringWithConstraints: z.string().min(3).max(50).regex(/^[a-zA-Z]+$/).describe("String with min/max length and regex pattern"),
-  uuid: z.guid().describe("UUID format string"),
-  email: z.email().describe("Email format string"),
-  uri: z.url().describe("URI format string"),
-  date: z.iso.date().describe("ISO date string"),
-  dateTime: z.iso.datetime({ offset: true }).describe("ISO datetime string"),
-  basicNumber: z.number().describe("Basic floating-point number"),
-  numberWithConstraints: z.number().min(0).max(100).describe("Number with min/max constraints"),
-  integer: z.number().int().describe("Integer number"),
-  integerWithRange: z.number().min(1).max(10).int().describe("Integer with range constraints"),
-  booleanField: z.boolean().describe("Boolean field"),
-  stringArray: z.array(z.string()).describe("Array of strings"),
-  numberArray: z.array(z.number()).describe("Array of numbers"),
+  /** Basic string field */
+  basicString: z.string(),
+  /** String with min/max length and regex pattern */
+  stringWithConstraints: z.string().min(3).max(50).regex(/^[a-zA-Z]+$/),
+  /** UUID format string */
+  uuid: z.guid(),
+  /** Email format string */
+  email: z.email(),
+  /** URI format string */
+  uri: z.url(),
+  /** ISO date string */
+  date: z.iso.date(),
+  /** ISO datetime string */
+  dateTime: z.iso.datetime({ offset: true }),
+  /** Basic floating-point number */
+  basicNumber: z.number(),
+  /** Number with min/max constraints */
+  numberWithConstraints: z.number().min(0).max(100),
+  /** Integer number */
+  integer: z.number().int(),
+  /** Integer with range constraints */
+  integerWithRange: z.number().min(1).max(10).int(),
+  /** Boolean field */
+  booleanField: z.boolean(),
+  /** Array of strings */
+  stringArray: z.array(z.string()),
+  /** Array of numbers */
+  numberArray: z.array(z.number()),
+  /** Array of objects */
   objectArray: z.array(z.object({
   id: z.number().int(),
   name: z.string().optional(),
-})).describe("Array of objects"),
-  enumField: z.enum(["active", "inactive", "pending"]).describe("Enum string"),
+})),
+  /** Enum string */
+  enumField: z.enum(["active", "inactive", "pending"]),
+  /** Union of string or number */
   unionField: z.union([
   z.string(),
   z.number()
-]).describe("Union of string or number"),
+]),
   nestedObject: z.object({
   level1: z.object({
   level2: z.object({
@@ -33,17 +50,21 @@ export const RootSchema = z.object({
 }),
 }),
 }),
-  nullableString: z.string().nullable().describe("Nullable string"),
-  optionalField: z.string().optional().describe("Optional field (not in required array)"),
+  /** Nullable string */
+  nullableString: z.string().nullable(),
+  /** Optional field (not in required array) */
+  optionalField: z.string().optional(),
+  /** Complex nested array */
   complexArray: z.array(z.object({
   tags: z.array(z.string()).optional(),
   score: z.number().min(0).max(1).optional(),
-})).describe("Complex nested array"),
+})),
+  /** Intersection of two object schemas using allOf */
   intersectionField: z.intersection(z.object({
   id: z.guid(),
 }), z.object({
   email: z.email(),
-})).describe("Intersection of two object schemas using allOf"),
+})),
 });
 
 export type Root = z.infer<typeof RootSchema>;
