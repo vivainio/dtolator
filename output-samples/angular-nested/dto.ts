@@ -6,6 +6,7 @@ export interface Address {
   street2?: string | null;
   city: string;
   state?: string | null;
+  /** ISO 3166-1 alpha-2 country code */
   country: string;
   postalCode: string;
 }
@@ -40,7 +41,9 @@ export interface ErrorResponse {
 }
 
 export interface ImageUrl {
+  /** Image URL */
   url: string;
+  /** Alternative text for the image */
   alt?: string;
   width?: number;
   height?: number;
@@ -79,13 +82,16 @@ export interface PaginationInfo {
 
 export interface PaymentMethod {
   type: "credit_card" | "debit_card" | "paypal" | "bank_transfer" | "crypto";
+  /** Last 4 digits of card (for card payments) */
   last4?: string;
+  /** Card brand (for card payments) */
   brand?: "visa" | "mastercard" | "amex" | "discover";
 }
 
 export interface Price {
   amount: number;
   currency: "USD" | "EUR" | "GBP" | "JPY";
+  /** Original price before discount */
   originalAmount?: number | null;
 }
 
@@ -206,7 +212,9 @@ export interface CreateUserRequest {
 }
 
 export interface User {
+  /** Unique user identifier */
   id: string;
+  /** User's email address */
   email: string;
   profile: UserProfile;
   preferences?: UserPreferences;

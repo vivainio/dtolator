@@ -6,7 +6,7 @@ export const AddressSchema = z.object({
   street: z.string().min(1).max(100),
   city: z.string().min(1).max(50),
   state: z.string().max(50).nullable().optional(),
-  country: z.string().regex(/^[A-Z]{2}$/),
+  country: z.string().regex(/^[A-Z]{2}$/).describe("ISO 3166-1 alpha-2 country code"),
   postalCode: z.string().min(3).max(10).nullable().optional(),
 });
 

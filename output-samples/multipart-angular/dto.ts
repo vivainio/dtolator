@@ -4,6 +4,7 @@
 export interface FileInfo {
   id: string;
   filename: string;
+  /** File size in bytes */
   size: number;
   mimeType?: string;
   uploadedAt: string;
@@ -22,37 +23,52 @@ export interface ProfileUploadRequest {
   email: string;
   firstName: string;
   lastName: string;
+  /** Profile photo */
   photo: string;
   dateOfBirth?: string;
   phoneNumber?: string;
   bio?: string;
+  /** Optional resume file */
   resume?: string;
 }
 
 export interface UpdateProjectFilesDto {
+  /** Project name */
   name: string;
+  /** Project thumbnail image */
   thumbnail?: string;
+  /** Additional project files */
   attachments?: string[];
+  /** Additional metadata as JSON */
   metadata?: Record<string, unknown>;
 }
 
 export interface UploadMultipleDocumentsDto {
+  /** Array of document files */
   files: string[];
+  /** Document category */
   category: "invoice" | "contract" | "report" | "other";
+  /** Tags for organizing documents */
   tags?: string[];
+  /** Whether the documents are publicly accessible */
   isPublic?: boolean;
 }
 
 export interface UploadResponse {
   success: boolean;
+  /** Unique identifier for the uploaded file */
   fileId: string;
+  /** URL to access the uploaded file */
   url?: string;
   message?: string;
 }
 
 export interface UploadUserAvatarDto {
+  /** Avatar image file */
   file: string;
+  /** ID of the user */
   userId: number;
+  /** Optional description for the avatar */
   description?: string;
 }
 

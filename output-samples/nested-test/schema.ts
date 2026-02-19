@@ -7,7 +7,7 @@ export const AddressSchema = z.object({
   street2: z.string().max(100).nullable().optional(),
   city: z.string().min(1).max(50),
   state: z.string().max(50).nullable().optional(),
-  country: z.string().regex(/^[A-Z]{2}$/),
+  country: z.string().regex(/^[A-Z]{2}$/).describe("ISO 3166-1 alpha-2 country code"),
   postalCode: z.string().min(3).max(10),
 });
 
@@ -49,8 +49,8 @@ export const ErrorResponseSchema = z.object({
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
 export const ImageUrlSchema = z.object({
-  url: z.url(),
-  alt: z.string().optional(),
+  url: z.url().describe("Image URL"),
+  alt: z.string().optional().describe("Alternative text for the image"),
   width: z.number().min(1).int().optional(),
   height: z.number().min(1).int().optional(),
 });
@@ -99,8 +99,8 @@ export type PaginationInfo = z.infer<typeof PaginationInfoSchema>;
 
 export const PaymentMethodSchema = z.object({
   type: z.enum(["credit_card", "debit_card", "paypal", "bank_transfer", "crypto"]),
-  last4: z.string().regex(/^[0-9]{4}$/).optional(),
-  brand: z.enum(["visa", "mastercard", "amex", "discover"]).optional(),
+  last4: z.string().regex(/^[0-9]{4}$/).optional().describe("Last 4 digits of card (for card payments)"),
+  brand: z.enum(["visa", "mastercard", "amex", "discover"]).optional().describe("Card brand (for card payments)"),
 });
 
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
@@ -108,7 +108,7 @@ export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 export const PriceSchema = z.object({
   amount: z.number().min(0),
   currency: z.enum(["USD", "EUR", "GBP", "JPY"]),
-  originalAmount: z.number().min(0).nullable().optional(),
+  originalAmount: z.number().min(0).nullable().optional().describe("Original price before discount"),
 });
 
 export type Price = z.infer<typeof PriceSchema>;
@@ -257,8 +257,8 @@ export const CreateUserRequestSchema = z.object({
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
 export const UserSchema = z.object({
-  id: z.guid(),
-  email: z.email(),
+  id: z.guid().describe("Unique user identifier"),
+  email: z.email().describe("User's email address"),
   profile: UserProfileSchema,
   preferences: UserPreferencesSchema.optional(),
   createdAt: z.iso.datetime({ offset: true }).optional(),

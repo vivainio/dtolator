@@ -167,7 +167,14 @@ impl ZodGenerator {
                                         .as_ref()
                                         .map(|req| req.contains(prop_name))
                                         .unwrap_or(false);
-                                    object_props.push((prop_name.clone(), prop_zod, is_required));
+                                    let description =
+                                        prop_schema.get_description().map(|s| s.to_string());
+                                    object_props.push((
+                                        prop_name.clone(),
+                                        prop_zod,
+                                        is_required,
+                                        description,
+                                    ));
                                 }
                                 ZodValue::Object(object_props)
                             } else {

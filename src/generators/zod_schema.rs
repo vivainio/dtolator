@@ -9,7 +9,7 @@ pub enum ZodValue {
     Number(NumberConstraints),
     Boolean,
     Array(Box<ZodValue>),
-    Object(Vec<(String, ZodValue, bool)>), // (name, schema, required)
+    Object(Vec<(String, ZodValue, bool, Option<String>)>), // (name, schema, required, description)
     Reference(String),
     Union(Vec<ZodValue>),
     Intersection(Vec<ZodValue>),
@@ -133,20 +133,24 @@ impl ZodValue {
         s
     }
 
-    fn object_to_zod(props: &[(String, ZodValue, bool)]) -> String {
+    fn object_to_zod(props: &[(String, ZodValue, bool, Option<String>)]) -> String {
         if props.is_empty() {
             return "z.object({})".to_string();
         }
 
         let prop_strs: Vec<String> = props
             .iter()
-            .map(|(name, zod_val, required)| {
+            .map(|(name, zod_val, required, description)| {
                 let val_str = zod_val.render();
-                let constraint = if *required {
+                let mut constraint = if *required {
                     val_str
                 } else {
                     format!("{val_str}.optional()")
                 };
+                if let Some(desc) = description {
+                    let escaped = desc.replace('\\', "\\\\").replace('"', "\\\"");
+                    constraint = format!("{constraint}.describe(\"{escaped}\")");
+                }
                 format!("  {name}: {constraint},")
             })
             .collect();

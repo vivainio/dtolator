@@ -5,6 +5,7 @@ export interface Address {
   street: string;
   city: string;
   state?: string | null;
+  /** ISO 3166-1 alpha-2 country code */
   country: string;
   postalCode?: string | null;
 }

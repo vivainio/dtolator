@@ -206,6 +206,13 @@ impl Schema {
         }
     }
 
+    pub fn get_description(&self) -> Option<&str> {
+        match self {
+            Schema::Object { description, .. } => description.as_deref(),
+            Schema::Reference { .. } => None,
+        }
+    }
+
     // Convenience methods for common schema types
     pub fn string() -> Self {
         Schema::object().schema_type("string").build()

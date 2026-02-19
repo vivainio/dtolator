@@ -3,29 +3,29 @@
 
 import { z } from "zod";
 export const RootSchema = z.object({
-  basicString: z.string(),
-  stringWithConstraints: z.string().min(3).max(50).regex(/^[a-zA-Z]+$/),
-  uuid: z.guid(),
-  email: z.email(),
-  uri: z.url(),
-  date: z.iso.date(),
-  dateTime: z.iso.datetime({ offset: true }),
-  basicNumber: z.number(),
-  numberWithConstraints: z.number().min(0).max(100),
-  integer: z.number().int(),
-  integerWithRange: z.number().min(1).max(10).int(),
-  booleanField: z.boolean(),
-  stringArray: z.array(z.string()),
-  numberArray: z.array(z.number()),
+  basicString: z.string().describe("Basic string field"),
+  stringWithConstraints: z.string().min(3).max(50).regex(/^[a-zA-Z]+$/).describe("String with min/max length and regex pattern"),
+  uuid: z.guid().describe("UUID format string"),
+  email: z.email().describe("Email format string"),
+  uri: z.url().describe("URI format string"),
+  date: z.iso.date().describe("ISO date string"),
+  dateTime: z.iso.datetime({ offset: true }).describe("ISO datetime string"),
+  basicNumber: z.number().describe("Basic floating-point number"),
+  numberWithConstraints: z.number().min(0).max(100).describe("Number with min/max constraints"),
+  integer: z.number().int().describe("Integer number"),
+  integerWithRange: z.number().min(1).max(10).int().describe("Integer with range constraints"),
+  booleanField: z.boolean().describe("Boolean field"),
+  stringArray: z.array(z.string()).describe("Array of strings"),
+  numberArray: z.array(z.number()).describe("Array of numbers"),
   objectArray: z.array(z.object({
   id: z.number().int(),
   name: z.string().optional(),
-})),
-  enumField: z.enum(["active", "inactive", "pending"]),
+})).describe("Array of objects"),
+  enumField: z.enum(["active", "inactive", "pending"]).describe("Enum string"),
   unionField: z.union([
   z.string(),
   z.number()
-]),
+]).describe("Union of string or number"),
   nestedObject: z.object({
   level1: z.object({
   level2: z.object({
@@ -33,17 +33,17 @@ export const RootSchema = z.object({
 }),
 }),
 }),
-  nullableString: z.string().nullable(),
-  optionalField: z.string().optional(),
+  nullableString: z.string().nullable().describe("Nullable string"),
+  optionalField: z.string().optional().describe("Optional field (not in required array)"),
   complexArray: z.array(z.object({
   tags: z.array(z.string()).optional(),
   score: z.number().min(0).max(1).optional(),
-})),
+})).describe("Complex nested array"),
   intersectionField: z.intersection(z.object({
   id: z.guid(),
 }), z.object({
   email: z.email(),
-})),
+})).describe("Intersection of two object schemas using allOf"),
 });
 
 export type Root = z.infer<typeof RootSchema>;
