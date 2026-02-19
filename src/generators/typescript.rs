@@ -78,6 +78,10 @@ impl TypeScriptGenerator {
     fn generate_interface(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
 
+        if let Some(desc) = schema.get_description() {
+            output.push_str(&format!("/** {desc} */\n"));
+        }
+
         match schema {
             Schema::Object {
                 schema_type,

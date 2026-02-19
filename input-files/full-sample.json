@@ -545,6 +545,7 @@
     "schemas": {
       "User": {
         "type": "object",
+        "description": "Registered user account",
         "required": ["id", "email", "profile"],
         "properties": {
           "id": {
@@ -586,6 +587,7 @@
       },
       "UserProfile": {
         "type": "object",
+        "description": "Personal profile information for a user",
         "required": ["firstName", "lastName"],
         "properties": {
           "firstName": {
@@ -618,6 +620,7 @@
       },
       "UserPreferences": {
         "type": "object",
+        "description": "User-configurable application preferences",
         "properties": {
           "language": {
             "type": "string",
@@ -641,6 +644,7 @@
       },
       "NotificationSettings": {
         "type": "object",
+        "description": "Per-channel notification opt-in settings",
         "properties": {
           "email": {
             "type": "boolean",
@@ -662,10 +666,12 @@
       },
       "UserRole": {
         "type": "string",
+        "description": "Role assigned to a user account",
         "enum": ["customer", "admin", "moderator", "vendor"]
       },
       "Address": {
         "type": "object",
+        "description": "Physical mailing or shipping address",
         "required": ["street", "city", "country", "postalCode"],
         "properties": {
           "street": {
@@ -703,6 +709,7 @@
       },
       "ImageUrl": {
         "type": "object",
+        "description": "Image with URL and optional metadata",
         "required": ["url"],
         "properties": {
           "url": {
@@ -726,6 +733,7 @@
       },
       "Product": {
         "type": "object",
+        "description": "A product listed in the catalog",
         "required": ["id", "name", "price", "category"],
         "properties": {
           "id": {
@@ -787,6 +795,7 @@
       },
       "Price": {
         "type": "object",
+        "description": "Monetary amount with currency",
         "required": ["amount", "currency"],
         "properties": {
           "amount": {
@@ -809,6 +818,7 @@
       },
       "ProductCategory": {
         "type": "string",
+        "description": "Top-level product category",
         "enum": [
           "electronics",
           "clothing",
@@ -821,6 +831,7 @@
       },
       "Inventory": {
         "type": "object",
+        "description": "Stock level and availability for a product",
         "required": ["quantity", "status"],
         "properties": {
           "quantity": {
@@ -840,6 +851,7 @@
       },
       "Order": {
         "type": "object",
+        "description": "A customer purchase order",
         "required": ["id", "userId", "items", "total", "status"],
         "properties": {
           "id": {
@@ -889,6 +901,7 @@
       },
       "OrderItem": {
         "type": "object",
+        "description": "A single line item within an order",
         "required": ["productId", "quantity", "price"],
         "properties": {
           "productId": {
@@ -910,6 +923,7 @@
       },
       "OrderStatus": {
         "type": "string",
+        "description": "Current lifecycle status of an order",
         "enum": [
           "pending",
           "confirmed",
@@ -922,6 +936,7 @@
       },
       "PaymentMethod": {
         "type": "object",
+        "description": "Payment instrument used for an order",
         "required": ["type"],
         "properties": {
           "type": {
@@ -948,6 +963,7 @@
       },
       "CreateUserRequest": {
         "type": "object",
+        "description": "Request body for creating a new user account",
         "required": ["email", "password", "profile"],
         "properties": {
           "email": {
@@ -970,6 +986,7 @@
       },
       "CreateOrderRequest": {
         "type": "object",
+        "description": "Request body for placing a new order",
         "required": ["items", "shippingAddress"],
         "properties": {
           "items": {
@@ -1003,6 +1020,7 @@
       },
       "UserListResponse": {
         "type": "object",
+        "description": "Paginated list of users",
         "required": ["data", "pagination"],
         "properties": {
           "data": {
@@ -1018,6 +1036,7 @@
       },
       "ProductListResponse": {
         "type": "object",
+        "description": "Paginated list of products with optional filters",
         "required": ["data", "pagination"],
         "properties": {
           "data": {
@@ -1051,6 +1070,7 @@
       },
       "PaginationInfo": {
         "type": "object",
+        "description": "Pagination metadata for list responses",
         "required": ["page", "limit", "total", "totalPages"],
         "properties": {
           "page": {
@@ -1079,6 +1099,7 @@
       },
       "ErrorResponse": {
         "type": "object",
+        "description": "Standard error response envelope",
         "required": ["error"],
         "properties": {
           "error": {
@@ -1115,6 +1136,7 @@
       },
       "UpdateProductRequest": {
         "type": "object",
+        "description": "Request body for partially updating a product",
         "properties": {
           "name": {
             "type": "string",
@@ -1138,6 +1160,7 @@
       },
       "UpdateOrderStatusRequest": {
         "type": "object",
+        "description": "Request body for updating an order's status",
         "required": ["status"],
         "properties": {
           "status": {
@@ -1150,6 +1173,7 @@
       },
       "Category": {
         "type": "object",
+        "description": "Product category with optional hierarchy",
         "required": ["id", "name", "slug"],
         "properties": {
           "id": {
@@ -1182,6 +1206,7 @@
       },
       "CreateCategoryRequest": {
         "type": "object",
+        "description": "Request body for creating a new category",
         "required": ["name", "slug"],
         "properties": {
           "name": {
@@ -1205,6 +1230,7 @@
       },
       "InventoryResponse": {
         "type": "object",
+        "description": "Inventory levels for a list of products",
         "required": ["data"],
         "properties": {
           "data": {
@@ -1230,6 +1256,7 @@
       },
       "UpdateInventoryRequest": {
         "type": "object",
+        "description": "Request body for updating product inventory",
         "required": ["quantity"],
         "properties": {
           "quantity": {
@@ -1244,6 +1271,7 @@
       },
       "SalesAnalytics": {
         "type": "object",
+        "description": "Aggregated sales metrics for a given period",
         "required": ["totalRevenue", "totalOrders", "averageOrderValue"],
         "properties": {
           "totalRevenue": {
@@ -1290,6 +1318,7 @@
       },
       "ProductAnalytics": {
         "type": "object",
+        "description": "Catalog statistics and stock health metrics",
         "required": ["totalProducts", "activeProducts"],
         "properties": {
           "totalProducts": {

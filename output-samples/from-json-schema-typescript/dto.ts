@@ -18,6 +18,7 @@ export interface Profile {
   socialLinks: ProfileSocialLinks;
 }
 
+/** Schema generated from plain JSON input */
 export interface Root {
   address: RootAddress;
   age: number;

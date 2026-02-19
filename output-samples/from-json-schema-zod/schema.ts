@@ -83,6 +83,7 @@ export const OrganizationSchema = z.object({
 
 export type Organization = z.infer<typeof OrganizationSchema>;
 
+/** Schema generated from plain JSON input */
 export const RootSchema = z.object({
   organization: OrganizationSchema,
   statistics: RootStatisticsSchema,

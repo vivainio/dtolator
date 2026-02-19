@@ -53,6 +53,10 @@ impl ZodGenerator {
     fn generate_schema(&self, name: &str, schema: &Schema) -> Result<String> {
         let mut output = String::new();
 
+        if let Some(desc) = schema.get_description() {
+            output.push_str(&format!("{}/** {desc} */\n", self.indent()));
+        }
+
         let schema_name = format!("{name}Schema");
         output.push_str(&format!("{}export const {} = ", self.indent(), schema_name));
         let zod_value = self.schema_to_zod(schema)?;

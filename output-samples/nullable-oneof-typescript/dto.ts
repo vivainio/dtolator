@@ -6,16 +6,20 @@ export interface Address {
   city: string;
 }
 
+/** An opaque cursor for pagination */
 export type PaginationCursor = string;
 
+/** An anyOf with null */
 export type AnyOfNullable =
   unknown | null
   | Address;
 
+/** A oneOf without null should remain a plain union */
 export type NonNullableOneOf =
   PaginationCursor
   | Address;
 
+/** A oneOf with null and multiple non-null types */
 export type NullableMultiType =
   unknown | null
   | PaginationCursor
