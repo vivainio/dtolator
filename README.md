@@ -19,6 +19,10 @@ Code generator that converts OpenAPI schemas, plain JSON, and JSON Schema files 
 
 ## Installation
 
+Download the latest executable from the [GitHub Releases page](https://github.com/vivainio/dtolator/releases) and place it on your `PATH`.
+
+Or install via Cargo:
+
 ```bash
 cargo install --git https://github.com/vivainio/dtolator
 ```
