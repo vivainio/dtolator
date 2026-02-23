@@ -39,7 +39,7 @@ jobs:
       run: cargo fmt --check
 
     - name: Run clippy
-      run: cargo clippy -- -D warnings -A clippy::large_enum_variant -A clippy::type_complexity -A clippy::only_used_in_recursion -A clippy::uninlined_format_args
+      run: cargo clippy
 
     - name: Setup Node.js for TypeScript checking
       uses: actions/setup-node@v6

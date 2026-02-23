@@ -32,3 +32,12 @@ tempfile = "3.25"
 [[test]]
 name = "integration_tests"
 path = "tests/integration_tests.rs"
+
+[lints.rust]
+warnings = "deny"
+
+[lints.clippy]
+large_enum_variant = "allow"
+type_complexity = "allow"
+only_used_in_recursion = "allow"
+uninlined_format_args = "allow"

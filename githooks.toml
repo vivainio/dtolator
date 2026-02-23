@@ -1,1 +1,1 @@
-pre-commit = "cargo fmt --check && cargo clippy -- -D warnings -A clippy::large_enum_variant -A clippy::type_complexity -A clippy::only_used_in_recursion -A clippy::uninlined_format_args"
+pre-commit = "cargo fmt --check && cargo clippy"
