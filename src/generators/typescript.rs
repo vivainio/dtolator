@@ -452,12 +452,6 @@ impl TypeScriptGenerator {
             }
         }
 
-        // Ensure the file is a valid TypeScript module even when there are no exports
-        // (e.g. multipart-only APIs where all types live in schema.ts).
-        if !output.contains("export ") {
-            output.push_str("export {};\n");
-        }
-
         // Remove trailing blank lines
         Ok(output.trim_end().to_string() + "\n")
     }

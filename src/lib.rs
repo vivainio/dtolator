@@ -643,6 +643,7 @@ fn generate_angular_services(
     // Also generate DTOs and utility function
     let dto_path = output_dir.join("dto.ts");
     let mut files_generated: Vec<String> = Vec::new();
+    let mut wrote_dto = false;
 
     if with_zod {
         // Generate Zod schemas first
@@ -668,9 +669,10 @@ fn generate_angular_services(
             ts_output.push_str(&header_param_types);
         }
 
-        if !skip_files.contains(&"dto.ts".to_string()) {
+        if ts_output.contains("export ") && !skip_files.contains(&"dto.ts".to_string()) {
             write_if_changed(&dto_path, &ts_output)?;
             files_generated.push("dto.ts".to_string());
+            wrote_dto = true;
         }
     } else {
         // Generate only TypeScript interfaces
@@ -695,10 +697,17 @@ fn generate_angular_services(
         if !skip_files.contains(&"dto.ts".to_string()) {
             write_if_changed(&dto_path, &dto_output)?;
             files_generated.push("dto.ts".to_string());
+            wrote_dto = true;
         }
     }
 
     // Parse and split the Angular generator output into individual service files
+    // If dto.ts was not written (no exports), remove the re-export from index.ts
+    let output = if wrote_dto {
+        output
+    } else {
+        output.replace("export * from \"./dto\";\n", "")
+    };
 
     if debug {
         println!("🔍 [DEBUG] Raw Angular generator output:");
