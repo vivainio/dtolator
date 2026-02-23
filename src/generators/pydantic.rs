@@ -4,9 +4,11 @@ use crate::openapi::{
 };
 use anyhow::Result;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum PydanticVersion {
+    #[value(name = "1")]
     V1,
+    #[value(name = "2")]
     V2,
 }
 
@@ -17,22 +19,15 @@ pub struct PydanticGenerator {
 
 impl Default for PydanticGenerator {
     fn default() -> Self {
-        Self::new()
+        Self::new(PydanticVersion::V1)
     }
 }
 
 impl PydanticGenerator {
-    pub fn new() -> Self {
+    pub fn new(version: PydanticVersion) -> Self {
         Self {
             indent_level: 0,
-            version: PydanticVersion::V1,
-        }
-    }
-
-    pub fn new_v2() -> Self {
-        Self {
-            indent_level: 0,
-            version: PydanticVersion::V2,
+            version,
         }
     }
 

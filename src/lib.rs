@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 pub mod generators;
 pub mod openapi;
 
+pub use generators::pydantic::PydanticVersion;
 use generators::{
     Generator, angular::AngularGenerator, dotnet::DotNetGenerator, endpoints::EndpointsGenerator,
     json_schema::JsonSchemaGenerator, pydantic::PydanticGenerator,
@@ -36,7 +37,6 @@ pub enum GeneratorType {
     Angular,
     Zod,
     Pydantic,
-    PydanticV2,
     PythonDict,
     DotNet,
     JsonSchema,
@@ -69,6 +69,7 @@ pub struct GenerateOptions {
     pub input_path: PathBuf,
     pub output_dir: PathBuf,
     pub generator_type: GeneratorType,
+    pub pydantic_version: PydanticVersion,
     pub with_zod: bool,
     pub with_promises: bool,
     pub hide_version: bool,
@@ -117,9 +118,9 @@ fn build_command_string_from_options(options: &GenerateOptions) -> String {
         }
         GeneratorType::Pydantic => {
             parts.push("--pydantic".to_string());
-        }
-        GeneratorType::PydanticV2 => {
-            parts.push("--pydantic-v2".to_string());
+            if options.pydantic_version == PydanticVersion::V2 {
+                parts.push("--pydantic-version 2".to_string());
+            }
         }
         GeneratorType::PythonDict => {
             parts.push("--python-dict".to_string());
@@ -248,20 +249,11 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             )?;
         }
         GeneratorType::Pydantic => {
-            let pydantic_generator = PydanticGenerator::new();
+            let pydantic_generator = PydanticGenerator::new(options.pydantic_version);
             let pydantic_output =
                 pydantic_generator.generate_with_command(&schema, &command_string)?;
-
             let models_path = options.output_dir.join("models.py");
             write_if_changed(&models_path, &pydantic_output)?;
-            written_files.push("models.py".to_string());
-        }
-        GeneratorType::PydanticV2 => {
-            let pydantic_v2_generator = PydanticGenerator::new_v2();
-            let pydantic_v2_output =
-                pydantic_v2_generator.generate_with_command(&schema, &command_string)?;
-            let models_path = options.output_dir.join("models.py");
-            write_if_changed(&models_path, &pydantic_v2_output)?;
             written_files.push("models.py".to_string());
         }
         GeneratorType::PythonDict => {
@@ -395,9 +387,9 @@ pub struct Cli {
     #[arg(long)]
     pub pydantic: bool,
 
-    /// Generate Pydantic v2 BaseModel classes for Python (Python 3.10+)
-    #[arg(long)]
-    pub pydantic_v2: bool,
+    /// Pydantic version to target (1 or 2, default: 1). Implies --pydantic when specified.
+    #[arg(long = "pydantic-version", value_name = "VERSION")]
+    pub pydantic_version: Option<PydanticVersion>,
 
     /// Generate Python TypedDict definitions
     #[arg(long)]
@@ -497,12 +489,11 @@ impl Cli {
             parts.push("--angular".to_string());
         }
 
-        if self.pydantic {
+        if self.pydantic || self.pydantic_version.is_some() {
             parts.push("--pydantic".to_string());
-        }
-
-        if self.pydantic_v2 {
-            parts.push("--pydantic-v2".to_string());
+            if self.pydantic_version == Some(PydanticVersion::V2) {
+                parts.push("--pydantic-version 2".to_string());
+            }
         }
 
         if self.python_dict {
@@ -652,26 +643,14 @@ where
                     cli.base_url,
                     &cli.api_url_variable,
                 )?;
-            } else if cli.pydantic {
-                // Generate Pydantic models to a Python file
-                let pydantic_generator = PydanticGenerator::new();
+            } else if cli.pydantic || cli.pydantic_version.is_some() {
+                let version = cli.pydantic_version.unwrap_or(PydanticVersion::V1);
+                let pydantic_generator = PydanticGenerator::new(version);
                 let pydantic_output =
                     pydantic_generator.generate_with_command(&schema, &command_string)?;
 
                 let models_path = output_dir.join("models.py");
                 write_if_changed(&models_path, &pydantic_output)?;
-                written_files.push("models.py".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", models_path.display());
-            } else if cli.pydantic_v2 {
-                // Generate Pydantic v2 models to a Python file
-                let pydantic_v2_generator = PydanticGenerator::new_v2();
-                let pydantic_v2_output =
-                    pydantic_v2_generator.generate_with_command(&schema, &command_string)?;
-
-                let models_path = output_dir.join("models.py");
-                write_if_changed(&models_path, &pydantic_v2_output)?;
                 written_files.push("models.py".to_string());
 
                 println!("Generated files:");
@@ -778,12 +757,10 @@ where
                     .with_base_url_mode(cli.base_url)
                     .with_api_url_variable(cli.api_url_variable.clone());
                 generator.generate_with_command(&schema, &command_string)?
-            } else if cli.pydantic {
-                let generator = PydanticGenerator::new();
+            } else if cli.pydantic || cli.pydantic_version.is_some() {
+                let version = cli.pydantic_version.unwrap_or(PydanticVersion::V1);
+                let generator = PydanticGenerator::new(version);
                 generator.generate_with_command(&schema, &command_string)?
-            } else if cli.pydantic_v2 {
-                let pydantic_v2_generator = PydanticGenerator::new_v2();
-                pydantic_v2_generator.generate_with_command(&schema, &command_string)?
             } else if cli.python_dict {
                 let generator = PythonDictGenerator::new();
                 generator.generate_with_command(&schema, &command_string)?

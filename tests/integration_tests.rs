@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use colored::Colorize;
-use dtolator::{GenerateOptions, GeneratorType, InputType, generate};
+use dtolator::{GenerateOptions, GeneratorType, InputType, PydanticVersion, generate};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -81,19 +81,33 @@ impl TestSuite {
             TestCase {
                 name: "Pydantic V2 Test".to_string(),
                 input_file: "input-files/simple-sample.json".to_string(),
-                command_args: vec!["--pydantic-v2".to_string()],
+                command_args: vec![
+                    "--pydantic".to_string(),
+                    "--pydantic-version".to_string(),
+                    "2".to_string(),
+                ],
                 expected_dir: "output-samples/pydantic-v2".to_string(),
             },
             TestCase {
                 name: "JSON Simple Pydantic V2".to_string(),
                 input_file: "input-files/test-data-simple.json".to_string(),
-                command_args: vec!["--from-json".to_string(), "--pydantic-v2".to_string()],
+                command_args: vec![
+                    "--from-json".to_string(),
+                    "--pydantic".to_string(),
+                    "--pydantic-version".to_string(),
+                    "2".to_string(),
+                ],
                 expected_dir: "output-samples/json-simple-pydantic-v2".to_string(),
             },
             TestCase {
                 name: "JSON Complex Pydantic V2".to_string(),
                 input_file: "input-files/test-data-complex.json".to_string(),
-                command_args: vec!["--from-json".to_string(), "--pydantic-v2".to_string()],
+                command_args: vec![
+                    "--from-json".to_string(),
+                    "--pydantic".to_string(),
+                    "--pydantic-version".to_string(),
+                    "2".to_string(),
+                ],
                 expected_dir: "output-samples/json-complex-pydantic-v2".to_string(),
             },
             // Python TypedDict tests
@@ -489,11 +503,23 @@ impl TestSuite {
         }
     }
 
+    fn determine_pydantic_version(command_args: &[String]) -> PydanticVersion {
+        if let Some(idx) = command_args
+            .iter()
+            .position(|arg| arg == "--pydantic-version")
+        {
+            match command_args.get(idx + 1).map(|s| s.as_str()) {
+                Some("2") => PydanticVersion::V2,
+                _ => PydanticVersion::V1,
+            }
+        } else {
+            PydanticVersion::V1
+        }
+    }
+
     fn determine_generator_type(command_args: &[String]) -> GeneratorType {
         if command_args.iter().any(|arg| arg == "--angular") {
             GeneratorType::Angular
-        } else if command_args.iter().any(|arg| arg == "--pydantic-v2") {
-            GeneratorType::PydanticV2
         } else if command_args.iter().any(|arg| arg == "--pydantic") {
             GeneratorType::Pydantic
         } else if command_args.iter().any(|arg| arg == "--python-dict") {
@@ -527,6 +553,7 @@ impl TestSuite {
 
         let input_type = Self::determine_input_type(&test_case.command_args);
         let generator_type = Self::determine_generator_type(&test_case.command_args);
+        let pydantic_version = Self::determine_pydantic_version(&test_case.command_args);
         let with_zod = test_case.command_args.iter().any(|arg| arg == "--zod");
         let with_promises = test_case.command_args.iter().any(|arg| arg == "--promises");
 
@@ -549,6 +576,7 @@ impl TestSuite {
             input_path,
             output_dir: output_dir.clone(),
             generator_type,
+            pydantic_version,
             with_zod,
             with_promises,
             hide_version: true,
