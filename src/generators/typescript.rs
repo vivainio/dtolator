@@ -595,13 +595,23 @@ impl TypeScriptGenerator {
                 ];
 
                 for operation in operations.into_iter().flatten() {
-                    // Collect request body types
-                    if let Some(request_body) = &operation.request_body
-                        && let Some(media_type) = request_body.content.get("application/json")
-                        && let Some(schema_ref) = &media_type.schema
-                        && let Some(type_name) = self.extract_type_name_from_schema(schema_ref)
-                    {
-                        request_types.insert(type_name);
+                    // Collect request body types.
+                    // JSON bodies → inline TypeScript interfaces in dto.ts (request_types).
+                    // Other bodies (multipart, etc.) → imported from schema.ts (response_types).
+                    if let Some(request_body) = &operation.request_body {
+                        for (content_type, media_type) in &request_body.content {
+                            if let Some(schema_ref) = &media_type.schema {
+                                if content_type == "application/json" {
+                                    if let Some(type_name) =
+                                        self.extract_type_name_from_schema(schema_ref)
+                                    {
+                                        request_types.insert(type_name);
+                                    }
+                                } else {
+                                    self.collect_refs_from_schema(schema_ref, &mut response_types);
+                                }
+                            }
+                        }
                     }
 
                     // Collect response types (including array responses like Item[])
