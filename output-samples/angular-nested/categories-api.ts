@@ -5,7 +5,7 @@ import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 
-import type { Category, CreateCategoryRequest } from "./schema";
+import type { Category, CreateCategoryRequest } from "./dto";
 
 @Injectable({ providedIn: 'root' })
 export class CategoriesApi {

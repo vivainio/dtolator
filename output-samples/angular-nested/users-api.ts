@@ -8,8 +8,10 @@ import type { Observable } from "rxjs";
 import type {
   AllUsersWithPaginationHeaders,
   AllUsersWithPaginationQueryParams,
+  CreateUserRequest,
+  User,
+  UserListResponse,
 } from "./dto";
-import type { CreateUserRequest, User, UserListResponse } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {

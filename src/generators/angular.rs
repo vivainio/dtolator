@@ -617,9 +617,12 @@ impl AngularGenerator {
             }
         }
 
-        // Collect request body types (always import the TypeScript type, but don't import schema when using Zod)
+        // Collect request body types.
+        // JSON body types are inlined in dto.ts → request_types.
+        // Non-JSON body types (multipart etc.) live in schema.ts → not request_types.
         if let Some(request_body) = &operation.request_body {
             let content = &request_body.content;
+            let is_json = content.contains_key("application/json");
             let body_schema = content
                 .get("application/json")
                 .or_else(|| content.get("multipart/form-data"))
@@ -629,7 +632,7 @@ impl AngularGenerator {
                 common::collect_dependencies_recursive(schema, &mut deps);
                 for type_name in deps {
                     service_data.imports.insert(type_name.clone());
-                    if self.with_zod {
+                    if self.with_zod && is_json {
                         service_data.request_types.insert(type_name);
                     }
                 }
@@ -715,29 +718,29 @@ impl AngularGenerator {
             }
         }
 
-        // Local imports: types defined in dto.ts come from ./dto, everything else from ./schema
+        // Local imports: without zod everything lives in dto.ts; with zod, request/query/header
+        // types are in dto.ts and schema types (response types etc.) are in schema.ts.
         if !service_data.imports.is_empty() {
             let imports: Vec<String> = service_data.imports.iter().cloned().collect();
 
-            for import in &imports {
-                // Request types (JSON body), query param types, and header param types
-                // are defined inline in dto.ts; everything else lives in schema.ts.
-                let is_dto_type = service_data.request_types.contains(import)
-                    || service_data.query_param_types.contains(import);
-                let source = if is_dto_type { "./dto" } else { "./schema" };
-
-                import_gen.add_import(source, import, true);
-            }
-
             if self.with_zod {
+                for import in &imports {
+                    let is_dto_type = service_data.request_types.contains(import)
+                        || service_data.query_param_types.contains(import);
+                    let source = if is_dto_type { "./dto" } else { "./schema" };
+                    import_gen.add_import(source, import, true);
+                }
+
                 // Import Zod schemas (runtime values) for response types from schema.ts
-                let response_types_to_import: Vec<_> = imports
+                for import in imports
                     .iter()
                     .filter(|name| service_data.response_types.contains(*name))
-                    .collect();
-
-                for import in &response_types_to_import {
+                {
                     import_gen.add_import("./schema", &format!("{import}Schema"), false);
+                }
+            } else {
+                for import in &imports {
+                    import_gen.add_import("./dto", import, true);
                 }
             }
         }

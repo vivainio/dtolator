@@ -5,12 +5,12 @@ import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 
-import type { SearchProductsWithFiltersQueryParams } from "./dto";
 import type {
   Product,
   ProductListResponse,
+  SearchProductsWithFiltersQueryParams,
   UpdateProductRequest,
-} from "./schema";
+} from "./dto";
 
 @Injectable({ providedIn: 'root' })
 export class ProductsApi {
