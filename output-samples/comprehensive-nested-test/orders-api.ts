@@ -6,12 +6,9 @@ import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
-import { OrderSchema } from "./dto";
-import type {
-  CreateOrderRequest,
-  Order,
-  UpdateOrderStatusRequest,
-} from "./dto";
+import type { CreateOrderRequest, UpdateOrderStatusRequest } from "./dto";
+import { OrderSchema } from "./schema";
+import type { Order } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class OrdersApi {

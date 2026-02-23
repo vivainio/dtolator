@@ -6,20 +6,22 @@ import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
+import type {
+  ProfileUploadRequest,
+  UpdateProjectFilesDto,
+  UploadMultipleDocumentsDto,
+  UploadUserAvatarDto,
+} from "./dto";
 import {
   MultiUploadResponseSchema,
   ProfileResponseSchema,
   UploadResponseSchema,
-} from "./dto";
+} from "./schema";
 import type {
   MultiUploadResponse,
   ProfileResponse,
-  ProfileUploadRequest,
-  UpdateProjectFilesDto,
-  UploadMultipleDocumentsDto,
   UploadResponse,
-  UploadUserAvatarDto,
-} from "./dto";
+} from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class UploadApi {

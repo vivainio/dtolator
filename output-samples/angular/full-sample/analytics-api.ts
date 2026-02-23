@@ -6,12 +6,9 @@ import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
-import { ProductAnalyticsSchema, SalesAnalyticsSchema } from "./dto";
-import type {
-  ProductAnalytics,
-  SalesAnalytics,
-  SalesAnalyticsQueryParams,
-} from "./dto";
+import type { SalesAnalyticsQueryParams } from "./dto";
+import { ProductAnalyticsSchema, SalesAnalyticsSchema } from "./schema";
+import type { ProductAnalytics, SalesAnalytics } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApi {

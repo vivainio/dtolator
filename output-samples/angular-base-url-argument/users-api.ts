@@ -7,8 +7,9 @@ import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
 
-import { ApiResponseSchema, UserSchema } from "./dto";
-import type { ApiResponse, CreateUserRequest, User } from "./dto";
+import type { CreateUserRequest } from "./dto";
+import { ApiResponseSchema, UserSchema } from "./schema";
+import type { ApiResponse, User } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {

@@ -31,4 +31,3 @@ class Root(BaseModel):
     profile: Profile
     tags: list[str]
 
-

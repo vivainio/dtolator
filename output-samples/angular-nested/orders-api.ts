@@ -9,7 +9,7 @@ import type {
   CreateOrderRequest,
   Order,
   UpdateOrderStatusRequest,
-} from "./dto";
+} from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class OrdersApi {

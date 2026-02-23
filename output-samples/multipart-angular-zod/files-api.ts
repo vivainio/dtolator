@@ -6,8 +6,8 @@ import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
-import { FileInfoSchema } from "./dto";
-import type { FileInfo } from "./dto";
+import { FileInfoSchema } from "./schema";
+import type { FileInfo } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class FilesApi {

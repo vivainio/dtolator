@@ -5,11 +5,8 @@ import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 
-import type {
-  ProductAnalytics,
-  SalesAnalytics,
-  SalesAnalyticsQueryParams,
-} from "./dto";
+import type { SalesAnalyticsQueryParams } from "./dto";
+import type { ProductAnalytics, SalesAnalytics } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApi {

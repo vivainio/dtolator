@@ -6,14 +6,13 @@ import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
-import { UserListResponseSchema, UserSchema } from "./dto";
 import type {
   AllUsersWithPaginationHeaders,
   AllUsersWithPaginationQueryParams,
   CreateUserRequest,
-  User,
-  UserListResponse,
 } from "./dto";
+import { UserListResponseSchema, UserSchema } from "./schema";
+import type { User, UserListResponse } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {

@@ -7,8 +7,8 @@ import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
 
-import { ItemSchema } from "./dto";
-import type { Item } from "./dto";
+import { ItemSchema } from "./schema";
+import type { Item } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class ItemsApi {

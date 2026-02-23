@@ -44,4 +44,3 @@ class ApiResponse(BaseModel):
     message: str | None = None
     data: User | None = None
 
-

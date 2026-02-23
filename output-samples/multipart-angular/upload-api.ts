@@ -13,7 +13,7 @@ import type {
   UploadMultipleDocumentsDto,
   UploadResponse,
   UploadUserAvatarDto,
-} from "./dto";
+} from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class UploadApi {

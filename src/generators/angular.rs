@@ -715,30 +715,29 @@ impl AngularGenerator {
             }
         }
 
-        // Local imports
-
+        // Local imports: types defined in dto.ts come from ./dto, everything else from ./schema
         if !service_data.imports.is_empty() {
             let imports: Vec<String> = service_data.imports.iter().cloned().collect();
 
-            if self.with_zod {
-                // Import types from dto.ts
-                for import in &imports {
-                    import_gen.add_import("./dto", import, true);
-                }
+            for import in &imports {
+                // Request types (JSON body), query param types, and header param types
+                // are defined inline in dto.ts; everything else lives in schema.ts.
+                let is_dto_type = service_data.request_types.contains(import)
+                    || service_data.query_param_types.contains(import);
+                let source = if is_dto_type { "./dto" } else { "./schema" };
 
-                // Import schemas separately (these are runtime values)
+                import_gen.add_import(source, import, true);
+            }
+
+            if self.with_zod {
+                // Import Zod schemas (runtime values) for response types from schema.ts
                 let response_types_to_import: Vec<_> = imports
                     .iter()
                     .filter(|name| service_data.response_types.contains(*name))
                     .collect();
 
                 for import in &response_types_to_import {
-                    import_gen.add_import("./dto", &format!("{import}Schema"), false);
-                }
-            } else {
-                // Import only types
-                for import in &imports {
-                    import_gen.add_import("./dto", import, true);
+                    import_gen.add_import("./schema", &format!("{import}Schema"), false);
                 }
             }
         }

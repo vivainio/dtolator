@@ -5,12 +5,12 @@ import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 
+import type { InventoryLevelsQueryParams } from "./dto";
 import type {
   Inventory,
-  InventoryLevelsQueryParams,
   InventoryResponse,
   UpdateInventoryRequest,
-} from "./dto";
+} from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class InventoryApi {

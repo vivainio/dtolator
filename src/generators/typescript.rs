@@ -357,7 +357,7 @@ impl TypeScriptGenerator {
             let type_names: Vec<String> = schemas.keys().cloned().collect();
 
             // Collect actual request and response types from OpenAPI paths
-            let (request_types_set, response_types_set) =
+            let (request_types_set, _response_types_set) =
                 self.collect_request_and_response_types(schema);
 
             let request_types: Vec<String> = type_names
@@ -366,51 +366,22 @@ impl TypeScriptGenerator {
                 .cloned()
                 .collect();
 
-            // When there are no paths at all we cannot determine what's "used", so fall back
-            // to importing every non-request-type schema (preserves the all-schemas behaviour
-            // for JSON-schema-only inputs and schemas with no API paths).
-            let no_paths = schema.paths.as_ref().is_none_or(|p| p.is_empty());
-
-            let response_types: Vec<String> = if no_paths {
-                type_names
-                    .iter()
-                    .filter(|name| !request_types_set.contains(*name))
-                    .cloned()
-                    .collect()
+            // Import only the types referenced by inline request interfaces.
+            // These types live in schema.ts but are used as property types in dto.ts.
+            let types_needed_by_requests = if request_types.is_empty() {
+                HashSet::new()
             } else {
-                // Also import types referenced inside request interfaces (they appear inline in dto.ts)
-                let needed_for_requests =
-                    self.collect_types_needed_for_requests(&request_types_set, schemas);
-
-                // Only import types actually used in dto.ts: direct response types + types
-                // referenced by request interfaces, minus any that are themselves request types.
-                let used_types: HashSet<String> = response_types_set
-                    .union(&needed_for_requests)
-                    .cloned()
-                    .collect();
-                type_names
-                    .iter()
-                    .filter(|name| used_types.contains(*name) && !request_types_set.contains(*name))
-                    .cloned()
-                    .collect()
+                self.collect_types_needed_for_requests(&request_types_set, schemas)
             };
 
-            // Import response types from schema.ts using 'import type'
-            if !response_types.is_empty() {
-                // Sort response types alphabetically
-                let mut sorted_types = response_types.clone();
+            if !types_needed_by_requests.is_empty() {
+                let mut sorted_types: Vec<String> =
+                    types_needed_by_requests.iter().cloned().collect();
                 sorted_types.sort();
 
                 let mut import_gen = ImportGenerator::new();
-
-                // Add type imports
                 for name in &sorted_types {
                     import_gen.add_import("./schema", name, true);
-                }
-
-                // Add schema imports (runtime values)
-                for name in &sorted_types {
-                    import_gen.add_import("./schema", &format!("{name}Schema"), false);
                 }
 
                 output.push_str(&import_gen.generate());
@@ -478,27 +449,6 @@ impl TypeScriptGenerator {
             let query_param_types = angular_generator.generate_query_param_types(schema)?;
             if !query_param_types.trim().is_empty() {
                 output.push_str(&query_param_types);
-            }
-
-            // Re-export types and schemas from schema.ts using export from syntax
-            if !response_types.is_empty() {
-                let mut export_gen = ImportGenerator::new();
-
-                // Add type exports
-                let response_types_vec: Vec<&str> =
-                    response_types.iter().map(|s| s.as_str()).collect();
-                export_gen.add_exports("./schema", response_types_vec.clone(), true);
-
-                // Add schema exports (runtime values)
-                let schema_names: Vec<String> = response_types
-                    .iter()
-                    .map(|name| format!("{name}Schema"))
-                    .collect();
-                let schema_names_refs: Vec<&str> =
-                    schema_names.iter().map(|s| s.as_str()).collect();
-                export_gen.add_exports("./schema", schema_names_refs, false);
-
-                output.push_str(&export_gen.generate());
             }
         }
 
