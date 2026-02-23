@@ -307,11 +307,7 @@ impl AngularGenerator {
 
         // Check for multipart/form-data and generate FormData conversion
         let is_multipart = if let Some(request_body) = &operation.request_body {
-            if let Some(content) = &request_body.content {
-                content.contains_key("multipart/form-data")
-            } else {
-                false
-            }
+            request_body.content.contains_key("multipart/form-data")
         } else {
             false
         };
@@ -321,8 +317,7 @@ impl AngularGenerator {
             method.push_str("    const formData = new FormData();\n");
 
             if let Some(request_body) = &operation.request_body
-                && let Some(content) = &request_body.content
-                && let Some(media_type) = content.get("multipart/form-data")
+                && let Some(media_type) = request_body.content.get("multipart/form-data")
                 && let Some(schema) = &media_type.schema
             {
                 self.generate_formdata_conversion(&mut method, schema, full_schema)?;
@@ -524,9 +519,8 @@ impl AngularGenerator {
         }
 
         // Request body
-        if let Some(request_body) = &operation.request_body
-            && let Some(content) = &request_body.content
-        {
+        if let Some(request_body) = &operation.request_body {
+            let content = &request_body.content;
             if let Some(media_type) = content.get("application/json")
                 && let Some(schema) = &media_type.schema
             {
@@ -595,12 +589,8 @@ impl AngularGenerator {
 
     fn get_request_body(&self, operation: &Operation) -> Result<String> {
         if let Some(request_body) = &operation.request_body {
-            if let Some(content) = &request_body.content {
-                if content.contains_key("multipart/form-data") {
-                    Ok(", formData".to_string())
-                } else {
-                    Ok(", dto".to_string())
-                }
+            if request_body.content.contains_key("multipart/form-data") {
+                Ok(", formData".to_string())
             } else {
                 Ok(", dto".to_string())
             }
@@ -628,9 +618,8 @@ impl AngularGenerator {
         }
 
         // Collect request body types (always import the TypeScript type, but don't import schema when using Zod)
-        if let Some(request_body) = &operation.request_body
-            && let Some(content) = &request_body.content
-        {
+        if let Some(request_body) = &operation.request_body {
+            let content = &request_body.content;
             let body_schema = content
                 .get("application/json")
                 .or_else(|| content.get("multipart/form-data"))
@@ -1294,8 +1283,7 @@ impl AngularGenerator {
 
         // Document request body
         if let Some(request_body) = &operation.request_body
-            && let Some(content) = &request_body.content
-            && let Some(media_type) = content.get("application/json")
+            && let Some(media_type) = request_body.content.get("application/json")
             && let Some(schema) = &media_type.schema
         {
             let type_name = self.get_schema_type_name(schema);

@@ -35,8 +35,7 @@ impl EndpointsGenerator {
                 for operation in operations.into_iter().flatten() {
                     // Collect request body types
                     if let Some(request_body) = &operation.request_body
-                        && let Some(content) = &request_body.content
-                        && let Some(media_type) = content.get("application/json")
+                        && let Some(media_type) = request_body.content.get("application/json")
                         && let Some(schema) = &media_type.schema
                         && let Some(type_name) = self.extract_schema_type_name(schema)
                     {
@@ -183,8 +182,7 @@ impl EndpointsGenerator {
         // Generate request body for POST/PUT/PATCH
         if matches!(method, "POST" | "PUT" | "PATCH")
             && let Some(request_body) = &operation.request_body
-            && let Some(content) = &request_body.content
-            && let Some(media_type) = content.get("application/json")
+            && let Some(media_type) = request_body.content.get("application/json")
             && let Some(schema) = &media_type.schema
         {
             let type_name = self.get_schema_type_name(schema);

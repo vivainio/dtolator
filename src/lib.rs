@@ -1218,12 +1218,12 @@ fn json_to_openapi_schema_with_root(
         resolve_placeholders(schema, &json_to_final_name);
     }
     Ok(OpenApiSchema {
-        openapi: Some("3.0.0".to_string()),
-        info: Some(Info {
+        openapi: "3.0.0".to_string(),
+        info: Info {
             title: "Generated from JSON".to_string(),
             version: "1.0.0".to_string(),
             description: Some("Schema generated from plain JSON input".to_string()),
-        }),
+        },
         components: Some(Components {
             schemas: Some(schemas),
         }),
@@ -1329,12 +1329,12 @@ fn json_schema_to_openapi_schema(
         .unwrap_or_else(|| "Schema generated from JSON Schema input".to_string());
 
     Ok(OpenApiSchema {
-        openapi: Some("3.0.0".to_string()),
-        info: Some(Info {
+        openapi: "3.0.0".to_string(),
+        info: Info {
             title,
             version: "1.0.0".to_string(),
             description: Some(description),
-        }),
+        },
         components: Some(Components {
             schemas: Some(schemas),
         }),
@@ -1621,10 +1621,9 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
             for operation_opt in operations {
                 if let Some(operation) = operation_opt
                     && let Some(request_body) = &mut operation.request_body
-                    && let Some(content) = &mut request_body.content
                 {
                     // Check for multipart/form-data or any other content type with inline schema
-                    for (_content_type, media_type) in content.iter_mut() {
+                    for (_content_type, media_type) in request_body.content.iter_mut() {
                         // Only extract if it's an inline schema (not a reference)
                         if let Some(inline_schema) = &media_type.schema
                             && matches!(inline_schema, Schema::Object { .. })

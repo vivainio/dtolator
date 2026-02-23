@@ -195,11 +195,10 @@ impl JsonSchemaGenerator {
         );
 
         // Add title and description from OpenAPI info
-        if let Some(info) = &schema.info {
-            json_schema.insert("title".to_string(), Value::String(info.title.clone()));
-            if let Some(desc) = &info.description {
-                json_schema.insert("description".to_string(), Value::String(desc.clone()));
-            }
+        let info = &schema.info;
+        json_schema.insert("title".to_string(), Value::String(info.title.clone()));
+        if let Some(desc) = &info.description {
+            json_schema.insert("description".to_string(), Value::String(desc.clone()));
         }
 
         // Process schemas

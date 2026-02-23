@@ -44,8 +44,8 @@ pub fn is_schema_nullable(nullable: &Option<bool>, schema_type: &Option<SchemaTy
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OpenApiSchema {
-    pub openapi: Option<String>,
-    pub info: Option<Info>,
+    pub openapi: String,
+    pub info: Info,
     pub components: Option<Components>,
     pub paths: Option<IndexMap<String, PathItem>>,
 }
@@ -96,7 +96,7 @@ pub struct Parameter {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RequestBody {
     pub description: Option<String>,
-    pub content: Option<IndexMap<String, MediaType>>,
+    pub content: IndexMap<String, MediaType>,
     pub required: Option<bool>,
 }
 

@@ -504,8 +504,7 @@ impl TypeScriptGenerator {
                 for operation in operations.into_iter().flatten() {
                     // Collect request body types
                     if let Some(request_body) = &operation.request_body
-                        && let Some(content) = &request_body.content
-                        && let Some(media_type) = content.get("application/json")
+                        && let Some(media_type) = request_body.content.get("application/json")
                         && let Some(schema_ref) = &media_type.schema
                         && let Some(type_name) = self.extract_type_name_from_schema(schema_ref)
                     {
