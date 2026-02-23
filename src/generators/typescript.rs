@@ -5,6 +5,7 @@ use crate::openapi::{
     AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
 };
 use anyhow::Result;
+use indexmap::IndexMap;
 use std::collections::HashSet;
 
 pub struct TypeScriptGenerator {
@@ -356,7 +357,7 @@ impl TypeScriptGenerator {
             let type_names: Vec<String> = schemas.keys().cloned().collect();
 
             // Collect actual request and response types from OpenAPI paths
-            let (request_types_set, _response_types_set) =
+            let (request_types_set, response_types_set) =
                 self.collect_request_and_response_types(schema);
 
             let request_types: Vec<String> = type_names
@@ -365,11 +366,34 @@ impl TypeScriptGenerator {
                 .cloned()
                 .collect();
 
-            let response_types: Vec<String> = type_names
-                .iter()
-                .filter(|name| !request_types_set.contains(*name))
-                .cloned()
-                .collect();
+            // When there are no paths at all we cannot determine what's "used", so fall back
+            // to importing every non-request-type schema (preserves the all-schemas behaviour
+            // for JSON-schema-only inputs and schemas with no API paths).
+            let no_paths = schema.paths.as_ref().is_none_or(|p| p.is_empty());
+
+            let response_types: Vec<String> = if no_paths {
+                type_names
+                    .iter()
+                    .filter(|name| !request_types_set.contains(*name))
+                    .cloned()
+                    .collect()
+            } else {
+                // Also import types referenced inside request interfaces (they appear inline in dto.ts)
+                let needed_for_requests =
+                    self.collect_types_needed_for_requests(&request_types_set, schemas);
+
+                // Only import types actually used in dto.ts: direct response types + types
+                // referenced by request interfaces, minus any that are themselves request types.
+                let used_types: HashSet<String> = response_types_set
+                    .union(&needed_for_requests)
+                    .cloned()
+                    .collect();
+                type_names
+                    .iter()
+                    .filter(|name| used_types.contains(*name) && !request_types_set.contains(*name))
+                    .cloned()
+                    .collect()
+            };
 
             // Import response types from schema.ts using 'import type'
             if !response_types.is_empty() {
@@ -482,6 +506,75 @@ impl TypeScriptGenerator {
         Ok(output.trim_end().to_string() + "\n")
     }
 
+    /// Collect all schema `$ref` names reachable from any request type (through other request
+    /// types) that are NOT themselves request types. These need to be imported from schema.ts
+    /// because they appear as property types in the inline request interfaces in dto.ts.
+    fn collect_types_needed_for_requests(
+        &self,
+        request_types: &HashSet<String>,
+        all_schemas: &IndexMap<String, Schema>,
+    ) -> HashSet<String> {
+        let mut needed: HashSet<String> = HashSet::new();
+        let mut to_visit: Vec<String> = request_types.iter().cloned().collect();
+        let mut visited: HashSet<String> = HashSet::new();
+
+        while let Some(type_name) = to_visit.pop() {
+            if !visited.insert(type_name.clone()) {
+                continue;
+            }
+            if let Some(schema_def) = all_schemas.get(&type_name) {
+                let mut refs = HashSet::new();
+                self.collect_refs_from_schema(schema_def, &mut refs);
+                for ref_name in refs {
+                    if request_types.contains(&ref_name) {
+                        // Another request type — recurse to find its non-request dependencies
+                        to_visit.push(ref_name);
+                    } else {
+                        needed.insert(ref_name);
+                    }
+                }
+            }
+        }
+        needed
+    }
+
+    /// Recursively collect all `$ref` schema names from a schema.
+    fn collect_refs_from_schema(&self, schema: &Schema, refs: &mut HashSet<String>) {
+        match schema {
+            Schema::Reference { reference } => {
+                if let Some(name) = reference.strip_prefix("#/components/schemas/") {
+                    refs.insert(name.to_string());
+                }
+            }
+            Schema::Object {
+                properties,
+                items,
+                all_of,
+                one_of,
+                any_of,
+                additional_properties,
+                ..
+            } => {
+                if let Some(props) = properties {
+                    for prop in props.values() {
+                        self.collect_refs_from_schema(prop, refs);
+                    }
+                }
+                if let Some(item) = items {
+                    self.collect_refs_from_schema(item, refs);
+                }
+                for vec in [all_of, one_of, any_of].into_iter().flatten() {
+                    for s in vec {
+                        self.collect_refs_from_schema(s, refs);
+                    }
+                }
+                if let Some(AdditionalProperties::Schema(s)) = additional_properties {
+                    self.collect_refs_from_schema(s, refs);
+                }
+            }
+        }
+    }
+
     /// Collect request and response types from OpenAPI paths
     pub fn collect_request_and_response_types(
         &self,
@@ -511,16 +604,14 @@ impl TypeScriptGenerator {
                         request_types.insert(type_name);
                     }
 
-                    // Collect response types
+                    // Collect response types (including array responses like Item[])
                     if let Some(responses) = &operation.responses {
                         for (_status, response) in responses {
                             if let Some(content) = &response.content
                                 && let Some(media_type) = content.get("application/json")
                                 && let Some(schema_ref) = &media_type.schema
-                                && let Some(type_name) =
-                                    self.extract_type_name_from_schema(schema_ref)
                             {
-                                response_types.insert(type_name);
+                                self.collect_refs_from_schema(schema_ref, &mut response_types);
                             }
                         }
                     }

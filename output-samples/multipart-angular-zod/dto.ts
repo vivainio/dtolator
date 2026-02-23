@@ -5,40 +5,24 @@ import {
   FileInfoSchema,
   MultiUploadResponseSchema,
   ProfileResponseSchema,
-  ProfileUploadRequestSchema,
-  UpdateProjectFilesDtoSchema,
-  UploadMultipleDocumentsDtoSchema,
   UploadResponseSchema,
-  UploadUserAvatarDtoSchema,
 } from "./schema";
 import type {
   FileInfo,
   MultiUploadResponse,
   ProfileResponse,
-  ProfileUploadRequest,
-  UpdateProjectFilesDto,
-  UploadMultipleDocumentsDto,
   UploadResponse,
-  UploadUserAvatarDto,
 } from "./schema";
 
 export {
   FileInfoSchema,
   MultiUploadResponseSchema,
   ProfileResponseSchema,
-  ProfileUploadRequestSchema,
-  UpdateProjectFilesDtoSchema,
-  UploadMultipleDocumentsDtoSchema,
   UploadResponseSchema,
-  UploadUserAvatarDtoSchema,
 } from "./schema";
 export type {
   FileInfo,
   MultiUploadResponse,
   ProfileResponse,
-  ProfileUploadRequest,
-  UpdateProjectFilesDto,
-  UploadMultipleDocumentsDto,
   UploadResponse,
-  UploadUserAvatarDto,
 } from "./schema";

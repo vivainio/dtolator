@@ -41,38 +41,23 @@ impl PydanticGenerator {
     }
 
     fn is_optional_type(&self, ty: &str) -> bool {
-        match self.version {
-            PydanticVersion::V1 => ty.starts_with("Optional["),
-            PydanticVersion::V2 => ty.ends_with("| None"),
-        }
+        ty.ends_with("| None")
     }
 
     fn wrap_optional(&self, ty: &str) -> String {
-        match self.version {
-            PydanticVersion::V1 => format!("Optional[{ty}]"),
-            PydanticVersion::V2 => format!("{ty} | None"),
-        }
+        format!("{ty} | None")
     }
 
     fn format_union(&self, types: &[String]) -> String {
-        match self.version {
-            PydanticVersion::V1 => format!("Union[{}]", types.join(", ")),
-            PydanticVersion::V2 => types.join(" | "),
-        }
+        types.join(" | ")
     }
 
     fn format_list(&self, item_type: &str) -> String {
-        match self.version {
-            PydanticVersion::V1 => format!("List[{item_type}]"),
-            PydanticVersion::V2 => format!("list[{item_type}]"),
-        }
+        format!("list[{item_type}]")
     }
 
     fn format_dict(&self, key_type: &str, value_type: &str) -> String {
-        match self.version {
-            PydanticVersion::V1 => format!("Dict[{key_type}, {value_type}]"),
-            PydanticVersion::V2 => format!("dict[{key_type}, {value_type}]"),
-        }
+        format!("dict[{key_type}, {value_type}]")
     }
 
     fn generate_model(&self, name: &str, schema: &Schema) -> Result<String> {
@@ -474,7 +459,7 @@ impl Generator for PydanticGenerator {
         match self.version {
             PydanticVersion::V1 => {
                 output.push_str("from pydantic import BaseModel, Field, EmailStr, HttpUrl\n");
-                output.push_str("from typing import Optional, Union, List, Dict, Any, Literal\n");
+                output.push_str("from typing import Any, Literal\n");
                 output.push_str("from enum import Enum\n");
                 output.push_str("from datetime import date, datetime\n");
                 output.push_str("from uuid import UUID\n\n");

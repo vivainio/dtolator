@@ -2,7 +2,7 @@
 # Do not modify manually
 
 from pydantic import BaseModel, Field, EmailStr, HttpUrl
-from typing import Optional, Union, List, Dict, Any, Literal
+from typing import Any, Literal
 from enum import Enum
 from datetime import date, datetime
 from uuid import UUID
@@ -23,7 +23,7 @@ class Profile(BaseModel):
     displayName: str
     firstName: str
     lastName: str
-    middleName: Optional[Any]
+    middleName: Any | None
     rating: float
     reviewCount: int
     verified: bool
@@ -38,15 +38,14 @@ class User(BaseModel):
     phonePattern: str
     profile: Profile
     registeredAt: str
-    roles: List[str]
+    roles: list[str]
     score: float
     status: str
-    tags: List[str]
+    tags: list[str]
     userId: str
     username: str
     website: str
 
 class Root(BaseModel):
     user: User
-
 
