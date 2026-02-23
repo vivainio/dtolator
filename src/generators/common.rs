@@ -13,7 +13,7 @@ fn strip_punctuation(word: &str) -> String {
 pub fn summary_to_camel_case(summary: &str) -> String {
     summary
         .split_whitespace()
-        .map(|word| strip_punctuation(word))
+        .map(strip_punctuation)
         .filter(|word| !word.is_empty())
         .enumerate()
         .map(|(i, word)| {
@@ -35,7 +35,7 @@ pub fn summary_to_camel_case(summary: &str) -> String {
 pub fn summary_to_pascal_case(summary: &str) -> String {
     summary
         .split_whitespace()
-        .map(|word| strip_punctuation(word))
+        .map(strip_punctuation)
         .filter(|word| !word.is_empty())
         .map(|word| {
             let mut chars = word.chars();

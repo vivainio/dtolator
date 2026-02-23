@@ -982,13 +982,13 @@ fn delete_obsolete_files(dir: &Path, keep: &[String]) -> Result<()> {
         if !entry.file_type()?.is_file() {
             continue;
         }
-        if let Some(name) = entry.file_name().to_str() {
-            if !keep.contains(&name.to_string()) {
-                fs::remove_file(entry.path()).with_context(|| {
-                    format!("Failed to delete obsolete file: {}", entry.path().display())
-                })?;
-                println!("Deleted obsolete file: {}", entry.path().display());
-            }
+        if let Some(name) = entry.file_name().to_str()
+            && !keep.contains(&name.to_string())
+        {
+            fs::remove_file(entry.path()).with_context(|| {
+                format!("Failed to delete obsolete file: {}", entry.path().display())
+            })?;
+            println!("Deleted obsolete file: {}", entry.path().display());
         }
     }
     Ok(())

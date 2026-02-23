@@ -423,17 +423,16 @@ impl PythonDictGenerator {
                             }
                         }
                         "object" => {
-                            if properties.is_none() {
-                                if let Some(AdditionalProperties::Schema(ap_schema)) =
+                            if properties.is_none()
+                                && let Some(AdditionalProperties::Schema(ap_schema)) =
                                     additional_properties
-                                {
-                                    let value_type = self.schema_to_python_type(ap_schema)?;
-                                    return Ok(if is_schema_nullable(nullable, schema_type) {
-                                        format!("dict[str, {value_type}] | None")
-                                    } else {
-                                        format!("dict[str, {value_type}]")
-                                    });
-                                }
+                            {
+                                let value_type = self.schema_to_python_type(ap_schema)?;
+                                return Ok(if is_schema_nullable(nullable, schema_type) {
+                                    format!("dict[str, {value_type}] | None")
+                                } else {
+                                    format!("dict[str, {value_type}]")
+                                });
                             }
                             "dict[str, Any]"
                         }

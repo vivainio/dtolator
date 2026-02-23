@@ -127,13 +127,13 @@ impl JsonSchemaGenerator {
                 }
 
                 // Handle additionalProperties schema (map types)
-                if properties.is_none() {
-                    if let Some(AdditionalProperties::Schema(ap_schema)) = additional_properties {
-                        json_schema.insert(
-                            "additionalProperties".to_string(),
-                            self.schema_to_json_schema(ap_schema)?,
-                        );
-                    }
+                if properties.is_none()
+                    && let Some(AdditionalProperties::Schema(ap_schema)) = additional_properties
+                {
+                    json_schema.insert(
+                        "additionalProperties".to_string(),
+                        self.schema_to_json_schema(ap_schema)?,
+                    );
                 }
 
                 // Handle array items

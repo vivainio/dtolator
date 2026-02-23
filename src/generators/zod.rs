@@ -156,10 +156,6 @@ impl ZodGenerator {
                                 {
                                     let value_zod = self.schema_to_zod(ap_schema)?;
                                     ZodValue::Record(Box::new(value_zod))
-                                } else if properties.is_none()
-                                    && schema_type_str(schema_type) == Some("object")
-                                {
-                                    ZodValue::Object(Vec::new())
                                 } else {
                                     ZodValue::Object(Vec::new())
                                 }

@@ -98,15 +98,12 @@ impl RustSerdeGenerator {
                         }
                     }
                     Some("object") => {
-                        if properties.is_none() {
-                            if let Some(AdditionalProperties::Schema(ap_schema)) =
+                        if properties.is_none()
+                            && let Some(AdditionalProperties::Schema(ap_schema)) =
                                 additional_properties
-                            {
-                                let value_type = self.to_rust_type(ap_schema)?;
-                                return Ok(format!(
-                                    "std::collections::HashMap<String, {value_type}>"
-                                ));
-                            }
+                        {
+                            let value_type = self.to_rust_type(ap_schema)?;
+                            return Ok(format!("std::collections::HashMap<String, {value_type}>"));
                         }
                         Ok("serde_json::Value".to_string())
                     }
