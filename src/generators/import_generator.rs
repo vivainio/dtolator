@@ -33,93 +33,37 @@ impl ImportStatement {
         }
     }
 
-    fn format_single_line(&self) -> String {
-        let (keyword, from_keyword) = match self.statement_type {
-            StatementType::Import => {
-                let import_keyword = if self.is_type_only {
-                    "import type "
-                } else {
-                    "import "
-                };
-                (import_keyword, "from")
-            }
-            StatementType::Export => {
-                let export_keyword = if self.is_type_only {
-                    "export type "
-                } else {
-                    "export "
-                };
-                (export_keyword, "from")
-            }
-        };
+    fn keyword(&self) -> &str {
+        match (self.statement_type, self.is_type_only) {
+            (StatementType::Import, false) => "import ",
+            (StatementType::Import, true) => "import type ",
+            (StatementType::Export, false) => "export ",
+            (StatementType::Export, true) => "export type ",
+        }
+    }
 
+    fn format_single_line(&self) -> String {
+        let keyword = self.keyword();
         let imports_str = self.imports.join(", ");
-        format!(
-            "{keyword}{{ {imports_str} }} {from_keyword} \"{}\";",
-            self.source
-        )
+        format!("{keyword}{{ {imports_str} }} from \"{}\";", self.source)
     }
 
     fn format_multi_line(&self) -> String {
-        let (keyword, from_keyword) = match self.statement_type {
-            StatementType::Import => {
-                let import_keyword = if self.is_type_only {
-                    "import type "
-                } else {
-                    "import "
-                };
-                (import_keyword, "from")
-            }
-            StatementType::Export => {
-                let export_keyword = if self.is_type_only {
-                    "export type "
-                } else {
-                    "export "
-                };
-                (export_keyword, "from")
-            }
-        };
-
+        let keyword = self.keyword();
         let mut result = format!("{keyword}{{\n");
         for import in &self.imports {
             result.push_str(&format!("  {import},\n"));
         }
-        result.push_str(&format!("}} {from_keyword} \"{}\";\n", self.source));
+        result.push_str(&format!("}} from \"{}\";\n", self.source));
         result
     }
 
-    fn should_split(&self) -> bool {
-        // Calculate line length for both import and export statements
-        let prefix = match self.statement_type {
-            StatementType::Import => {
-                if self.is_type_only {
-                    "import type { "
-                } else {
-                    "import { "
-                }
-            }
-            StatementType::Export => {
-                if self.is_type_only {
-                    "export type { "
-                } else {
-                    "export { "
-                }
-            }
-        };
-        let line_length = prefix.len()
-            + self.imports.join(", ").len()
-            + " } from \"".len()
-            + self.source.len()
-            + "\";".len();
-
-        line_length > 80
-    }
-
     pub fn format(&self) -> String {
-        if self.should_split() {
+        let single_line = self.format_single_line();
+        if single_line.len() > 80 {
             self.format_multi_line()
         } else {
-            format!("{}\n", self.format_single_line())
+            format!("{single_line}\n")
         }
     }
 }
@@ -189,8 +133,8 @@ impl ImportGenerator {
 
         // Sort by statement type (imports first, then exports), category, then source
         statements.sort_by(|a, b| {
-            (a.statement_type as i32)
-                .cmp(&(b.statement_type as i32))
+            a.statement_type
+                .cmp(&b.statement_type)
                 .then_with(|| a.category.cmp(&b.category))
                 .then_with(|| a.source.cmp(&b.source))
         });
