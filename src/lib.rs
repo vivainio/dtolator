@@ -81,97 +81,92 @@ pub struct GenerateOptions {
     pub delete_old: bool,
 }
 
-fn build_command_string_from_options(options: &GenerateOptions) -> String {
-    let version = env!("BUILD_VERSION");
-    let command_name = if options.hide_version {
-        "dtolator".to_string()
-    } else {
-        format!("dtolator=={version}")
-    };
+impl GenerateOptions {
+    pub fn build_command_string(&self) -> String {
+        let version = env!("BUILD_VERSION");
+        let command_name = if self.hide_version {
+            "dtolator".to_string()
+        } else {
+            format!("dtolator=={version}")
+        };
 
-    let mut parts = vec![command_name];
+        let mut parts = vec![command_name];
 
-    if let Some(filename) = options
-        .input_path
-        .file_name()
-        .and_then(|name| name.to_str())
-    {
-        match options.input_type {
-            InputType::OpenApi => parts.push(format!("--from-openapi {filename}")),
-            InputType::Json => parts.push(format!("--from-json {filename}")),
-            InputType::JsonSchema => parts.push(format!("--from-json-schema {filename}")),
-        }
-    }
-
-    // For Angular, put --zod before --angular; for others, main generator first
-    if options.with_zod && matches!(options.generator_type, GeneratorType::Angular) {
-        parts.push("--zod".to_string());
-    }
-
-    // Main generator types
-    match options.generator_type {
-        GeneratorType::TypeScript => {
-            parts.push("--typescript".to_string());
-        }
-        GeneratorType::Angular => {
-            parts.push("--angular".to_string());
-        }
-        GeneratorType::Pydantic => {
-            parts.push("--pydantic".to_string());
-            if options.pydantic_version == PydanticVersion::V2 {
-                parts.push("--pydantic-version 2".to_string());
+        if let Some(filename) = self.input_path.file_name().and_then(|name| name.to_str()) {
+            match self.input_type {
+                InputType::OpenApi => parts.push(format!("--from-openapi {filename}")),
+                InputType::Json => parts.push(format!("--from-json {filename}")),
+                InputType::JsonSchema => parts.push(format!("--from-json-schema {filename}")),
             }
         }
-        GeneratorType::PythonDict => {
-            parts.push("--python-dict".to_string());
-        }
-        GeneratorType::DotNet => {
-            parts.push("--dotnet".to_string());
-        }
-        GeneratorType::JsonSchema => {
-            parts.push("--json-schema".to_string());
-        }
-        GeneratorType::Endpoints => {
-            parts.push("--endpoints".to_string());
-        }
-        GeneratorType::Zod => {
+
+        // For Angular, put --zod before --angular; for others, main generator first
+        if self.with_zod && matches!(self.generator_type, GeneratorType::Angular) {
             parts.push("--zod".to_string());
         }
-        GeneratorType::RustSerde => {
-            parts.push("--rust-serde".to_string());
+
+        // Main generator types
+        match self.generator_type {
+            GeneratorType::TypeScript => {
+                parts.push("--typescript".to_string());
+            }
+            GeneratorType::Angular => {
+                parts.push("--angular".to_string());
+            }
+            GeneratorType::Pydantic => {
+                parts.push("--pydantic".to_string());
+                if self.pydantic_version == PydanticVersion::V2 {
+                    parts.push("--pydantic-version 2".to_string());
+                }
+            }
+            GeneratorType::PythonDict => {
+                parts.push("--python-dict".to_string());
+            }
+            GeneratorType::DotNet => {
+                parts.push("--dotnet".to_string());
+            }
+            GeneratorType::JsonSchema => {
+                parts.push("--json-schema".to_string());
+            }
+            GeneratorType::Endpoints => {
+                parts.push("--endpoints".to_string());
+            }
+            GeneratorType::Zod => {
+                parts.push("--zod".to_string());
+            }
+            GeneratorType::RustSerde => {
+                parts.push("--rust-serde".to_string());
+            }
         }
-    }
 
-    // For non-Angular, put --zod after main generator
-    if options.with_zod
-        && !matches!(
-            options.generator_type,
-            GeneratorType::Angular | GeneratorType::Zod
-        )
-    {
-        parts.push("--zod".to_string());
-    }
+        // For non-Angular, put --zod after main generator
+        if self.with_zod
+            && !matches!(
+                self.generator_type,
+                GeneratorType::Angular | GeneratorType::Zod
+            )
+        {
+            parts.push("--zod".to_string());
+        }
 
-    if options.with_promises {
-        parts.push("--promises".to_string());
-    }
+        if self.with_promises {
+            parts.push("--promises".to_string());
+        }
 
-    if options.debug {
-        parts.push("--debug".to_string());
-    }
+        if self.debug {
+            parts.push("--debug".to_string());
+        }
 
-    if options.base_url_mode != BaseUrlMode::Global {
-        parts.push(format!(
-            "--base-url-mode {}",
-            options.base_url_mode.as_str()
-        ));
-    }
+        if self.base_url_mode != BaseUrlMode::Global {
+            parts.push(format!("--base-url-mode {}", self.base_url_mode.as_str()));
+        }
 
-    if options.api_url_variable != "API_URL" {
-        parts.push(format!("--api-url-variable {}", options.api_url_variable));
-    }
+        if self.api_url_variable != "API_URL" {
+            parts.push(format!("--api-url-variable {}", self.api_url_variable));
+        }
 
-    parts.join(" ")
+        parts.join(" ")
+    }
 }
 
 /// Library entry point for generation. This mirrors the directory-output behavior of the CLI.
@@ -222,7 +217,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
     let schema = extract_inline_request_schemas(schema)?;
 
     // Build the command string used in generated file headers
-    let command_string = build_command_string_from_options(&options);
+    let command_string = options.build_command_string();
 
     // Ensure output directory exists
     fs::create_dir_all(&options.output_dir).with_context(|| {
@@ -344,6 +339,14 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
         delete_obsolete_files(&options.output_dir, &written_files)?;
     }
 
+    // Angular already prints its own message via generate_angular_services
+    if !matches!(options.generator_type, GeneratorType::Angular) {
+        println!("Generated files:");
+        for file in &written_files {
+            println!("  - {}", options.output_dir.join(file).display());
+        }
+    }
+
     Ok(())
 }
 
@@ -441,98 +444,53 @@ pub struct Cli {
 }
 
 impl Cli {
-    fn build_command_string(&self) -> String {
-        let version = env!("BUILD_VERSION");
-        let command_name = if self.hide_version {
-            "dtolator".to_string()
+    fn to_generate_options(&self, output_dir: PathBuf) -> GenerateOptions {
+        let (input_type, input_path) = if let Some(path) = &self.from_openapi {
+            (InputType::OpenApi, path.clone())
+        } else if let Some(path) = &self.from_json {
+            (InputType::Json, path.clone())
+        } else if let Some(path) = &self.from_json_schema {
+            (InputType::JsonSchema, path.clone())
         } else {
-            format!("dtolator=={version}")
+            unreachable!("validated that exactly one input is provided")
         };
-        let mut parts = vec![command_name];
 
-        if let Some(openapi_path) = &self.from_openapi {
-            let filename = openapi_path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("unknown");
-            parts.push(format!("--from-openapi {filename}"));
+        let generator_type = if self.angular {
+            GeneratorType::Angular
+        } else if self.pydantic || self.pydantic_version.is_some() {
+            GeneratorType::Pydantic
+        } else if self.python_dict {
+            GeneratorType::PythonDict
+        } else if self.dotnet {
+            GeneratorType::DotNet
+        } else if self.json_schema {
+            GeneratorType::JsonSchema
+        } else if self.endpoints {
+            GeneratorType::Endpoints
+        } else if self.rust_serde {
+            GeneratorType::RustSerde
+        } else if self.zod && !self.typescript {
+            GeneratorType::Zod
+        } else {
+            GeneratorType::TypeScript
+        };
+
+        GenerateOptions {
+            input_type,
+            input_path,
+            output_dir,
+            generator_type,
+            pydantic_version: self.pydantic_version.unwrap_or(PydanticVersion::V1),
+            with_zod: self.zod,
+            with_promises: self.promises,
+            hide_version: self.hide_version,
+            root_name: self.root.clone(),
+            debug: self.debug,
+            skip_files: self.skip_file.clone(),
+            base_url_mode: self.base_url,
+            api_url_variable: self.api_url_variable.clone(),
+            delete_old: self.delete_old,
         }
-
-        if let Some(json_path) = &self.from_json {
-            let filename = json_path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("unknown");
-            parts.push(format!("--from-json {filename}"));
-        }
-
-        if let Some(json_schema_path) = &self.from_json_schema {
-            let filename = json_schema_path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("unknown");
-            parts.push(format!("--from-json-schema {filename}"));
-        }
-
-        // Skip output directory in command string as it's usually a temp directory
-        // and makes tests non-deterministic
-
-        if self.typescript {
-            parts.push("--typescript".to_string());
-        }
-
-        if self.zod {
-            parts.push("--zod".to_string());
-        }
-
-        if self.angular {
-            parts.push("--angular".to_string());
-        }
-
-        if self.pydantic || self.pydantic_version.is_some() {
-            parts.push("--pydantic".to_string());
-            if self.pydantic_version == Some(PydanticVersion::V2) {
-                parts.push("--pydantic-version 2".to_string());
-            }
-        }
-
-        if self.python_dict {
-            parts.push("--python-dict".to_string());
-        }
-
-        if self.dotnet {
-            parts.push("--dotnet".to_string());
-        }
-
-        if self.json_schema {
-            parts.push("--json-schema".to_string());
-        }
-
-        if self.endpoints {
-            parts.push("--endpoints".to_string());
-        }
-
-        if self.rust_serde {
-            parts.push("--rust-serde".to_string());
-        }
-
-        if self.promises {
-            parts.push("--promises".to_string());
-        }
-
-        if self.debug {
-            parts.push("--debug".to_string());
-        }
-
-        if self.base_url != BaseUrlMode::Global {
-            parts.push(format!("--base-url-mode {}", self.base_url.as_str()));
-        }
-
-        if self.api_url_variable != "API_URL" {
-            parts.push(format!("--api-url-variable {}", self.api_url_variable));
-        }
-
-        parts.join(" ")
     }
 }
 
@@ -543,7 +501,6 @@ where
     S: Into<std::ffi::OsString> + Clone,
 {
     let cli = Cli::parse_from(args);
-    let command_string = cli.build_command_string();
 
     // Validate that exactly one input type is provided
     let input_count = [&cli.from_openapi, &cli.from_json, &cli.from_json_schema]
@@ -584,199 +541,72 @@ where
         ));
     }
 
-    // Read and parse the input file
-    let schema = if let Some(openapi_path) = &cli.from_openapi {
-        // Read and parse OpenAPI schema
-        let input_content = std::fs::read_to_string(openapi_path)
-            .with_context(|| format!("Failed to read OpenAPI file: {}", openapi_path.display()))?;
-
-        serde_json::from_str::<OpenApiSchema>(&input_content)
-            .with_context(|| "Failed to parse OpenAPI schema JSON")?
-    } else if let Some(json_path) = &cli.from_json {
-        // Read and parse plain JSON, then convert to OpenAPI schema
-        let input_content = std::fs::read_to_string(json_path)
-            .with_context(|| format!("Failed to read JSON file: {}", json_path.display()))?;
-
-        json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
-    } else if let Some(json_schema_path) = &cli.from_json_schema {
-        // Read and parse JSON Schema, then convert to OpenAPI schema
-        let input_content = std::fs::read_to_string(json_schema_path).with_context(|| {
-            format!(
-                "Failed to read JSON Schema file: {}",
-                json_schema_path.display()
-            )
-        })?;
-
-        // Strip JavaScript-style comments that might be in generated JSON Schema files
-        let cleaned_content = strip_json_comments(&input_content);
-
-        json_schema_to_openapi_schema(serde_json::from_str(&cleaned_content)?, &cli.root)?
-    } else {
-        unreachable!() // We validated above that exactly one of them is Some
-    };
-
-    // Extract inline request body schemas and add them to components
-    let schema = extract_inline_request_schemas(schema)?;
-
-    match cli.output {
+    match &cli.output {
         Some(output_dir) => {
-            // Output directory specified - generate files
-            fs::create_dir_all(&output_dir).with_context(|| {
-                format!(
-                    "Failed to create output directory: {}",
-                    output_dir.display()
-                )
-            })?;
-
-            let mut written_files: Vec<String> = Vec::new();
-
-            if cli.angular {
-                // Generate Angular services with multiple files
-                written_files = generate_angular_services(
-                    &schema,
-                    &output_dir,
-                    cli.zod,
-                    cli.debug,
-                    cli.promises,
-                    &command_string,
-                    &cli.skip_file,
-                    cli.base_url,
-                    &cli.api_url_variable,
-                )?;
-            } else if cli.pydantic || cli.pydantic_version.is_some() {
-                let version = cli.pydantic_version.unwrap_or(PydanticVersion::V1);
-                let pydantic_generator = PydanticGenerator::new(version);
-                let pydantic_output =
-                    pydantic_generator.generate_with_command(&schema, &command_string)?;
-
-                let models_path = output_dir.join("models.py");
-                write_if_changed(&models_path, &pydantic_output)?;
-                written_files.push("models.py".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", models_path.display());
-            } else if cli.python_dict {
-                // Generate Python TypedDict definitions to a Python file
-                let python_dict_generator = PythonDictGenerator::new();
-                let python_dict_output =
-                    python_dict_generator.generate_with_command(&schema, &command_string)?;
-
-                let typed_dicts_path = output_dir.join("typed_dicts.py");
-                write_if_changed(&typed_dicts_path, &python_dict_output)?;
-                written_files.push("typed_dicts.py".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", typed_dicts_path.display());
-            } else if cli.dotnet {
-                // Generate C# classes to a C# file
-                let dotnet_generator = DotNetGenerator::new();
-                let dotnet_output =
-                    dotnet_generator.generate_with_command(&schema, &command_string)?;
-
-                let models_path = output_dir.join("Models.cs");
-                write_if_changed(&models_path, &dotnet_output)?;
-                written_files.push("Models.cs".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", models_path.display());
-            } else if cli.json_schema {
-                // Generate JSON Schema to a JSON file
-                let json_schema_generator = JsonSchemaGenerator::new();
-                let json_schema_output =
-                    json_schema_generator.generate_with_command(&schema, &command_string)?;
-
-                let schema_path = output_dir.join("schema.json");
-                write_if_changed(&schema_path, &json_schema_output)?;
-                written_files.push("schema.json".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", schema_path.display());
-            } else if cli.rust_serde {
-                // Generate Rust structs with Serde to a Rust file
-                let rust_serde_generator = RustSerdeGenerator::new();
-                let rust_serde_output =
-                    rust_serde_generator.generate_with_command(&schema, &command_string)?;
-
-                let models_path = output_dir.join("models.rs");
-                write_if_changed(&models_path, &rust_serde_output)?;
-                written_files.push("models.rs".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", models_path.display());
-            } else if cli.zod {
-                // Generate both dto.ts (with imports) and schema.ts
-
-                // Generate Zod schemas first
-                let zod_generator = ZodGenerator::new();
-                let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
-
-                let schema_path = output_dir.join("schema.ts");
-                write_if_changed(&schema_path, &zod_output)?;
-                written_files.push("schema.ts".to_string());
-
-                // Generate TypeScript interfaces that import from schema.ts
-                let ts_generator = TypeScriptGenerator::new();
-                let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
-
-                let dto_path = output_dir.join("dto.ts");
-                write_if_changed(&dto_path, &ts_output)?;
-                written_files.push("dto.ts".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", dto_path.display());
-                println!("  - {}", schema_path.display());
-            } else {
-                // Generate only dto.ts with TypeScript interfaces
-                let ts_generator = TypeScriptGenerator::new();
-                let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
-
-                let dto_path = output_dir.join("dto.ts");
-                write_if_changed(&dto_path, &ts_output)?;
-                written_files.push("dto.ts".to_string());
-
-                println!("Generated files:");
-                println!("  - {}", dto_path.display());
-            }
-
-            if cli.delete_old {
-                delete_obsolete_files(&output_dir, &written_files)?;
-            }
+            // Output directory specified — delegate to generate()
+            let options = cli.to_generate_options(output_dir.clone());
+            generate(options)?;
         }
         None => {
-            // No output directory - use original single-output behavior with stdout
-            let output = if cli.endpoints {
-                let generator = EndpointsGenerator::new();
-                generator.generate_with_command(&schema, &command_string)?
-            } else if cli.typescript {
-                let generator = TypeScriptGenerator::new();
-                generator.generate_with_command(&schema, &command_string)?
-            } else if cli.angular {
-                let generator = AngularGenerator::new()
-                    .with_zod_validation(cli.zod)
-                    .with_promises(cli.promises)
-                    .with_base_url_mode(cli.base_url)
-                    .with_api_url_variable(cli.api_url_variable.clone());
-                generator.generate_with_command(&schema, &command_string)?
-            } else if cli.pydantic || cli.pydantic_version.is_some() {
-                let version = cli.pydantic_version.unwrap_or(PydanticVersion::V1);
-                let generator = PydanticGenerator::new(version);
-                generator.generate_with_command(&schema, &command_string)?
-            } else if cli.python_dict {
-                let generator = PythonDictGenerator::new();
-                generator.generate_with_command(&schema, &command_string)?
-            } else if cli.dotnet {
-                let generator = DotNetGenerator::new();
-                generator.generate_with_command(&schema, &command_string)?
-            } else if cli.json_schema {
-                let generator = JsonSchemaGenerator::new();
-                generator.generate_with_command(&schema, &command_string)?
-            } else if cli.rust_serde {
-                let generator = RustSerdeGenerator::new();
-                generator.generate_with_command(&schema, &command_string)?
+            // No output directory — parse schema and print single output to stdout
+            let schema = if let Some(openapi_path) = &cli.from_openapi {
+                let input_content = std::fs::read_to_string(openapi_path).with_context(|| {
+                    format!("Failed to read OpenAPI file: {}", openapi_path.display())
+                })?;
+                serde_json::from_str::<OpenApiSchema>(&input_content)
+                    .with_context(|| "Failed to parse OpenAPI schema JSON")?
+            } else if let Some(json_path) = &cli.from_json {
+                let input_content = std::fs::read_to_string(json_path).with_context(|| {
+                    format!("Failed to read JSON file: {}", json_path.display())
+                })?;
+                json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
+            } else if let Some(json_schema_path) = &cli.from_json_schema {
+                let input_content =
+                    std::fs::read_to_string(json_schema_path).with_context(|| {
+                        format!(
+                            "Failed to read JSON Schema file: {}",
+                            json_schema_path.display()
+                        )
+                    })?;
+                let cleaned_content = strip_json_comments(&input_content);
+                json_schema_to_openapi_schema(serde_json::from_str(&cleaned_content)?, &cli.root)?
             } else {
-                let generator = ZodGenerator::new();
-                generator.generate_with_command(&schema, &command_string)?
+                unreachable!()
             };
+
+            let schema = extract_inline_request_schemas(schema)?;
+            let options = cli.to_generate_options(PathBuf::new());
+            let command_string = options.build_command_string();
+
+            let output =
+                match options.generator_type {
+                    GeneratorType::Endpoints => {
+                        EndpointsGenerator::new().generate_with_command(&schema, &command_string)?
+                    }
+                    GeneratorType::Angular => AngularGenerator::new()
+                        .with_zod_validation(options.with_zod)
+                        .with_promises(options.with_promises)
+                        .with_base_url_mode(options.base_url_mode)
+                        .with_api_url_variable(options.api_url_variable.clone())
+                        .generate_with_command(&schema, &command_string)?,
+                    GeneratorType::Pydantic => PydanticGenerator::new(options.pydantic_version)
+                        .generate_with_command(&schema, &command_string)?,
+                    GeneratorType::PythonDict => PythonDictGenerator::new()
+                        .generate_with_command(&schema, &command_string)?,
+                    GeneratorType::DotNet => {
+                        DotNetGenerator::new().generate_with_command(&schema, &command_string)?
+                    }
+                    GeneratorType::JsonSchema => JsonSchemaGenerator::new()
+                        .generate_with_command(&schema, &command_string)?,
+                    GeneratorType::RustSerde => {
+                        RustSerdeGenerator::new().generate_with_command(&schema, &command_string)?
+                    }
+                    GeneratorType::TypeScript => TypeScriptGenerator::new()
+                        .generate_with_command(&schema, &command_string)?,
+                    GeneratorType::Zod => {
+                        ZodGenerator::new().generate_with_command(&schema, &command_string)?
+                    }
+                };
 
             println!("{output}");
         }
