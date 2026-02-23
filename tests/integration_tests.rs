@@ -77,6 +77,25 @@ impl TestSuite {
                 command_args: vec!["--pydantic".to_string()],
                 expected_dir: "output-samples/pydantic".to_string(),
             },
+            // Pydantic v2 tests
+            TestCase {
+                name: "Pydantic V2 Test".to_string(),
+                input_file: "input-files/simple-sample.json".to_string(),
+                command_args: vec!["--pydantic-v2".to_string()],
+                expected_dir: "output-samples/pydantic-v2".to_string(),
+            },
+            TestCase {
+                name: "JSON Simple Pydantic V2".to_string(),
+                input_file: "input-files/test-data-simple.json".to_string(),
+                command_args: vec!["--from-json".to_string(), "--pydantic-v2".to_string()],
+                expected_dir: "output-samples/json-simple-pydantic-v2".to_string(),
+            },
+            TestCase {
+                name: "JSON Complex Pydantic V2".to_string(),
+                input_file: "input-files/test-data-complex.json".to_string(),
+                command_args: vec!["--from-json".to_string(), "--pydantic-v2".to_string()],
+                expected_dir: "output-samples/json-complex-pydantic-v2".to_string(),
+            },
             // Python TypedDict tests
             TestCase {
                 name: "Python TypedDict Test".to_string(),
@@ -473,6 +492,8 @@ impl TestSuite {
     fn determine_generator_type(command_args: &[String]) -> GeneratorType {
         if command_args.iter().any(|arg| arg == "--angular") {
             GeneratorType::Angular
+        } else if command_args.iter().any(|arg| arg == "--pydantic-v2") {
+            GeneratorType::PydanticV2
         } else if command_args.iter().any(|arg| arg == "--pydantic") {
             GeneratorType::Pydantic
         } else if command_args.iter().any(|arg| arg == "--python-dict") {

@@ -36,6 +36,7 @@ pub enum GeneratorType {
     Angular,
     Zod,
     Pydantic,
+    PydanticV2,
     PythonDict,
     DotNet,
     JsonSchema,
@@ -116,6 +117,9 @@ fn build_command_string_from_options(options: &GenerateOptions) -> String {
         }
         GeneratorType::Pydantic => {
             parts.push("--pydantic".to_string());
+        }
+        GeneratorType::PydanticV2 => {
+            parts.push("--pydantic-v2".to_string());
         }
         GeneratorType::PythonDict => {
             parts.push("--python-dict".to_string());
@@ -252,6 +256,14 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             write_if_changed(&models_path, &pydantic_output)?;
             written_files.push("models.py".to_string());
         }
+        GeneratorType::PydanticV2 => {
+            let pydantic_v2_generator = PydanticGenerator::new_v2();
+            let pydantic_v2_output =
+                pydantic_v2_generator.generate_with_command(&schema, &command_string)?;
+            let models_path = options.output_dir.join("models.py");
+            write_if_changed(&models_path, &pydantic_v2_output)?;
+            written_files.push("models.py".to_string());
+        }
         GeneratorType::PythonDict => {
             let python_dict_generator = PythonDictGenerator::new();
             let python_dict_output =
@@ -383,6 +395,10 @@ pub struct Cli {
     #[arg(long)]
     pub pydantic: bool,
 
+    /// Generate Pydantic v2 BaseModel classes for Python (Python 3.10+)
+    #[arg(long)]
+    pub pydantic_v2: bool,
+
     /// Generate Python TypedDict definitions
     #[arg(long)]
     pub python_dict: bool,
@@ -483,6 +499,10 @@ impl Cli {
 
         if self.pydantic {
             parts.push("--pydantic".to_string());
+        }
+
+        if self.pydantic_v2 {
+            parts.push("--pydantic-v2".to_string());
         }
 
         if self.python_dict {
@@ -644,6 +664,18 @@ where
 
                 println!("Generated files:");
                 println!("  - {}", models_path.display());
+            } else if cli.pydantic_v2 {
+                // Generate Pydantic v2 models to a Python file
+                let pydantic_v2_generator = PydanticGenerator::new_v2();
+                let pydantic_v2_output =
+                    pydantic_v2_generator.generate_with_command(&schema, &command_string)?;
+
+                let models_path = output_dir.join("models.py");
+                write_if_changed(&models_path, &pydantic_v2_output)?;
+                written_files.push("models.py".to_string());
+
+                println!("Generated files:");
+                println!("  - {}", models_path.display());
             } else if cli.python_dict {
                 // Generate Python TypedDict definitions to a Python file
                 let python_dict_generator = PythonDictGenerator::new();
@@ -749,6 +781,9 @@ where
             } else if cli.pydantic {
                 let generator = PydanticGenerator::new();
                 generator.generate_with_command(&schema, &command_string)?
+            } else if cli.pydantic_v2 {
+                let pydantic_v2_generator = PydanticGenerator::new_v2();
+                pydantic_v2_generator.generate_with_command(&schema, &command_string)?
             } else if cli.python_dict {
                 let generator = PythonDictGenerator::new();
                 generator.generate_with_command(&schema, &command_string)?
