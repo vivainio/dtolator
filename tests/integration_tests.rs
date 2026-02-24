@@ -309,6 +309,12 @@ impl TestSuite {
                 command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/nullable-oneof-typescript".to_string(),
             },
+            TestCase {
+                name: "Nullable oneOf Pydantic".to_string(),
+                input_file: "input-files/test-nullable-oneof.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
+                expected_dir: "output-samples/nullable-oneof-pydantic".to_string(),
+            },
             // Ref description tests
             TestCase {
                 name: "Ref Description TypeScript".to_string(),
