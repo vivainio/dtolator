@@ -54,7 +54,10 @@ impl ZodGenerator {
         let mut output = String::new();
 
         if let Some(desc) = schema.get_description() {
-            output.push_str(&format!("{}/** {desc} */\n", self.indent()));
+            output.push_str(&crate::generators::common::format_jsdoc(
+                desc,
+                &self.indent(),
+            ));
         }
 
         let schema_name = format!("{name}Schema");

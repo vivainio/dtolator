@@ -148,7 +148,10 @@ impl ZodValue {
                     format!("{val_str}.optional()")
                 };
                 if let Some(desc) = description {
-                    format!("  /** {desc} */\n  {name}: {constraint},")
+                    format!(
+                        "{}  {name}: {constraint},",
+                        crate::generators::common::format_jsdoc(desc, "  ")
+                    )
                 } else {
                     format!("  {name}: {constraint},")
                 }

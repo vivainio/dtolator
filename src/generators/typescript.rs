@@ -80,7 +80,7 @@ impl TypeScriptGenerator {
         let mut output = String::new();
 
         if let Some(desc) = schema.get_description() {
-            output.push_str(&format!("/** {desc} */\n"));
+            output.push_str(&crate::generators::common::format_jsdoc(desc, ""));
         }
 
         match schema {
@@ -176,7 +176,8 @@ impl TypeScriptGenerator {
                     if let Some(props) = properties {
                         for (prop_name, prop_schema) in props {
                             if let Some(desc) = prop_schema.get_description() {
-                                output.push_str(&format!("  /** {desc} */\n"));
+                                output
+                                    .push_str(&crate::generators::common::format_jsdoc(desc, "  "));
                             }
                             let prop_type = self.schema_to_typescript(prop_schema)?;
                             let is_required = required

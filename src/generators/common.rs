@@ -62,6 +62,32 @@ pub fn to_pascal_case(input: &str) -> String {
         .collect()
 }
 
+/// Format a description as a JSDoc comment with proper multiline formatting.
+/// Single-line descriptions produce `/** desc */`, multiline descriptions produce:
+/// ```text
+/// /**
+///  * line 1
+///  * line 2
+///  */
+/// ```
+/// The `indent` parameter is prepended to each line.
+pub fn format_jsdoc(description: &str, indent: &str) -> String {
+    if description.contains('\n') {
+        let mut result = format!("{indent}/**\n");
+        for line in description.lines() {
+            if line.is_empty() {
+                result.push_str(&format!("{indent} *\n"));
+            } else {
+                result.push_str(&format!("{indent} * {line}\n"));
+            }
+        }
+        result.push_str(&format!("{indent} */\n"));
+        result
+    } else {
+        format!("{indent}/** {description} */\n")
+    }
+}
+
 /// Extract type name from a schema reference.
 /// Returns the type name without the "#/components/schemas/" prefix.
 pub fn extract_type_name(schema: &Schema) -> Option<String> {
