@@ -19,4 +19,6 @@ export interface Person {
   workAddress?: Address;
   /** Contact information if available */
   contact?: unknown | null | ContactInfo;
+  /** Address used for billing */
+  billingAddress?: unknown | null | Address;
 }

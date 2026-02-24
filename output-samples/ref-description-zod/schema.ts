@@ -24,6 +24,8 @@ export const PersonSchema = z.object({
   workAddress: AddressSchema.optional(),
   /** Contact information if available */
   contact: ContactInfoSchema.nullable().optional(),
+  /** Address used for billing */
+  billingAddress: AddressSchema.nullable().optional(),
 });
 
 export type Person = z.infer<typeof PersonSchema>;

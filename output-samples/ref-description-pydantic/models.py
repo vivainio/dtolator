@@ -20,4 +20,5 @@ class Person(BaseModel):
     homeAddress: Address = Field(description="Primary residential address")
     workAddress: Address | None = None
     contact: ContactInfo | None = Field(None, description="Contact information if available")
+    billingAddress: Address | None = Field(None, description="Address used for billing")
 

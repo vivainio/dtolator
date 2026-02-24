@@ -210,7 +210,30 @@ impl Schema {
 
     pub fn get_description(&self) -> Option<&str> {
         match self {
-            Schema::Object { description, .. } => description.as_deref(),
+            Schema::Object {
+                description,
+                one_of,
+                any_of,
+                ..
+            } => {
+                if description.is_some() {
+                    return description.as_deref();
+                }
+                // Fall back: if this is a oneOf/anyOf with a single non-null variant
+                // that has a description, use it (common pattern for nullable $ref).
+                for variants in [one_of, any_of].into_iter().flatten() {
+                    let non_null: Vec<&Schema> = variants
+                        .iter()
+                        .filter(|s| s.get_type() != Some("null"))
+                        .collect();
+                    if non_null.len() == 1
+                        && let Some(desc) = non_null[0].get_description()
+                    {
+                        return Some(desc);
+                    }
+                }
+                None
+            }
             Schema::Reference { description, .. } => description.as_deref(),
         }
     }

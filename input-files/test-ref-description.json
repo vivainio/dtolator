@@ -54,6 +54,15 @@
               }
             ],
             "description": "Contact information if available"
+          },
+          "billingAddress": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "$ref": "#/components/schemas/Address",
+                "description": "Address used for billing"
+              }
+            ]
           }
         },
         "required": ["name", "homeAddress"]

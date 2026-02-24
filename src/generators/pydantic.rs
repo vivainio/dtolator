@@ -263,7 +263,6 @@ impl PydanticGenerator {
             minimum,
             maximum,
             pattern,
-            description,
             ..
         } = schema
         {
@@ -289,7 +288,7 @@ impl PydanticGenerator {
                 };
                 constraints.push(format!("{pattern_key}=r\"{regex}\""));
             }
-            if let Some(desc) = description {
+            if let Some(desc) = schema.get_description() {
                 constraints.push(format!("description=\"{}\"", desc.replace("\"", "\\\"")));
             }
 
@@ -329,11 +328,7 @@ impl PydanticGenerator {
                     constraints.join(", ")
                 ))
             }
-        } else if let Schema::Reference {
-            description: Some(desc),
-            ..
-        } = schema
-        {
+        } else if let Some(desc) = schema.get_description() {
             let escaped_desc = desc.replace("\"", "\\\"");
             if is_required {
                 Ok(format!(
