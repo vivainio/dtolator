@@ -19,5 +19,5 @@ class Person(BaseModel):
     name: str = Field(description="Full name of the person")
     homeAddress: Address = Field(description="Primary residential address")
     workAddress: Address | None = None
-    contact: Any | None | ContactInfo | None = Field(None, description="Contact information if available")
+    contact: ContactInfo | None = Field(None, description="Contact information if available")
 

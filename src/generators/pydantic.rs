@@ -156,26 +156,38 @@ impl PydanticGenerator {
                     // For oneOf, we'll create a Union type
                     let types: Result<Vec<String>, _> = one_of_schemas
                         .iter()
+                        .filter(|s| s.get_type() != Some("null"))
                         .map(|s| self.schema_to_pydantic_type(s))
                         .collect();
+                    let has_null = one_of_schemas.iter().any(|s| s.get_type() == Some("null"));
+                    let mut types = types?;
+                    if has_null && !types.iter().any(|t| t == "None") {
+                        types.push("None".to_string());
+                    }
                     output.push_str(&format!(
                         "{}{} = {}\n\n",
                         self.indent(),
                         name,
-                        self.format_union(&types?)
+                        self.format_union(&types)
                     ));
                     return Ok(output);
                 } else if let Some(any_of_schemas) = any_of {
                     // For anyOf, we'll also create a Union type
                     let types: Result<Vec<String>, _> = any_of_schemas
                         .iter()
+                        .filter(|s| s.get_type() != Some("null"))
                         .map(|s| self.schema_to_pydantic_type(s))
                         .collect();
+                    let has_null = any_of_schemas.iter().any(|s| s.get_type() == Some("null"));
+                    let mut types = types?;
+                    if has_null && !types.iter().any(|t| t == "None") {
+                        types.push("None".to_string());
+                    }
                     output.push_str(&format!(
                         "{}{} = {}\n\n",
                         self.indent(),
                         name,
-                        self.format_union(&types?)
+                        self.format_union(&types)
                     ));
                     return Ok(output);
                 }
@@ -385,15 +397,27 @@ impl PydanticGenerator {
                 } else if let Some(one_of_schemas) = one_of {
                     let types: Result<Vec<String>, _> = one_of_schemas
                         .iter()
+                        .filter(|s| s.get_type() != Some("null"))
                         .map(|s| self.schema_to_pydantic_type(s))
                         .collect();
-                    py_type = self.format_union(&types?);
+                    let has_null = one_of_schemas.iter().any(|s| s.get_type() == Some("null"));
+                    let mut types = types?;
+                    if has_null && !types.iter().any(|t| t == "None") {
+                        types.push("None".to_string());
+                    }
+                    py_type = self.format_union(&types);
                 } else if let Some(any_of_schemas) = any_of {
                     let types: Result<Vec<String>, _> = any_of_schemas
                         .iter()
+                        .filter(|s| s.get_type() != Some("null"))
                         .map(|s| self.schema_to_pydantic_type(s))
                         .collect();
-                    py_type = self.format_union(&types?);
+                    let has_null = any_of_schemas.iter().any(|s| s.get_type() == Some("null"));
+                    let mut types = types?;
+                    if has_null && !types.iter().any(|t| t == "None") {
+                        types.push("None".to_string());
+                    }
+                    py_type = self.format_union(&types);
                 } else {
                     // Handle basic types
                     match schema_type_str(schema_type) {
