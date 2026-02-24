@@ -54,7 +54,9 @@ impl DotNetGenerator {
                 if let Some(enum_vals) = enum_values {
                     if let Some(desc) = description {
                         output.push_str(&format!("{}/// <summary>\n", self.indent()));
-                        output.push_str(&format!("{}/// {}\n", self.indent(), desc));
+                        for line in desc.lines() {
+                            output.push_str(&format!("{}/// {}\n", self.indent(), line));
+                        }
                         output.push_str(&format!("{}/// </summary>\n", self.indent()));
                     }
                     output.push_str(&format!("{}public enum {}\n", self.indent(), name));
@@ -96,7 +98,9 @@ impl DotNetGenerator {
                 if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     if let Some(desc) = description {
                         output.push_str(&format!("{}/// <summary>\n", self.indent()));
-                        output.push_str(&format!("{}/// {}\n", self.indent(), desc));
+                        for line in desc.lines() {
+                            output.push_str(&format!("{}/// {}\n", self.indent(), line));
+                        }
                         output.push_str(&format!("{}/// </summary>\n", self.indent()));
                     }
                     output.push_str(&format!("{}public record {}\n", self.indent(), name));

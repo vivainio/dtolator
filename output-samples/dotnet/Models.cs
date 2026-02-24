@@ -6,13 +6,13 @@ using System.Text.Json.Serialization;
 
 /// <summary>
 /// Represents a user in the system.
-
-A user can be in one of the following states:
-- **active**: The user can log in and use the system.
-- **inactive**: The user account is disabled.
-- **pending**: The user has registered but not yet confirmed their email.
-
-See also: `UserProfile` for extended profile information.
+/// 
+/// A user can be in one of the following states:
+/// - **active**: The user can log in and use the system.
+/// - **inactive**: The user account is disabled.
+/// - **pending**: The user has registered but not yet confirmed their email.
+/// 
+/// See also: `UserProfile` for extended profile information.
 /// </summary>
 public record User
 {
@@ -52,9 +52,9 @@ public record UserProfile
 
 /// <summary>
 /// A physical mailing address.
-
-All addresses must include at least `street`, `city`, and `country`.
-The `country` field uses ISO 3166-1 alpha-2 codes (e.g. `US`, `FI`, `DE`).
+/// 
+/// All addresses must include at least `street`, `city`, and `country`.
+/// The `country` field uses ISO 3166-1 alpha-2 codes (e.g. `US`, `FI`, `DE`).
 /// </summary>
 public record Address
 {

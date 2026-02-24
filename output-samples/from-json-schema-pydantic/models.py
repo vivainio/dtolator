@@ -8,6 +8,12 @@ from datetime import date, datetime
 from uuid import UUID
 
 class Address(BaseModel):
+    """
+    A physical mailing address.
+
+    All addresses must include at least `street`, `city`, and `country`.
+    The `country` field uses ISO 3166-1 alpha-2 codes (e.g. `US`, `FI`, `DE`).
+    """
     city: str = Field(min_length=1, max_length=50)
     country: str = Field(regex=r"^[A-Z]{2}$", description="ISO 3166-1 alpha-2 country code")
     postalCode: str | None = Field(None, min_length=3, max_length=10)
@@ -27,11 +33,19 @@ class CreateUserRequest(BaseModel):
     profile: UserProfile
 
 class User(BaseModel):
+    """
+    Represents a user in the system.
+
+    A user can be in one of the following states:
+    - **active**: The user can log in and use the system.
+    - **inactive**: The user account is disabled.
+    - **pending**: The user has registered but not yet confirmed their email.
+
+    See also: `UserProfile` for extended profile information.
+    """
     address: Address | None = None
     age: int | None = Field(None, ge=0, le=150)
-    email: EmailStr = Field(description="The user's primary email address.
-Must be unique across the system.
-Used for login and notifications.")
+    email: EmailStr = Field(description="The user's primary email address.\nMust be unique across the system.\nUsed for login and notifications.")
     id: int
     isActive: bool | None = None
     name: str = Field(min_length=1, max_length=100)

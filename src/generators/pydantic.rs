@@ -205,6 +205,26 @@ impl PydanticGenerator {
                 if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     output.push_str(&format!("{}class {}(BaseModel):\n", self.indent(), name));
 
+                    if let Some(desc) = schema.get_description() {
+                        if desc.contains('\n') {
+                            output.push_str(&format!("{}    \"\"\"\n", self.indent()));
+                            for line in desc.lines() {
+                                if line.is_empty() {
+                                    output.push_str(&format!("{}\n", self.indent()));
+                                } else {
+                                    output.push_str(&format!("{}    {}\n", self.indent(), line));
+                                }
+                            }
+                            output.push_str(&format!("{}    \"\"\"\n", self.indent()));
+                        } else {
+                            output.push_str(&format!(
+                                "{}    \"\"\"{}\"\"\"\n",
+                                self.indent(),
+                                desc
+                            ));
+                        }
+                    }
+
                     if let Some(props) = properties {
                         if props.is_empty() {
                             output.push_str(&format!("{}    pass\n", self.indent()));
@@ -289,7 +309,12 @@ impl PydanticGenerator {
                 constraints.push(format!("{pattern_key}=r\"{regex}\""));
             }
             if let Some(desc) = schema.get_description() {
-                constraints.push(format!("description=\"{}\"", desc.replace("\"", "\\\"")));
+                constraints.push(format!(
+                    "description=\"{}\"",
+                    desc.replace("\\", "\\\\")
+                        .replace("\"", "\\\"")
+                        .replace("\n", "\\n")
+                ));
             }
 
             if is_required {
@@ -329,7 +354,10 @@ impl PydanticGenerator {
                 ))
             }
         } else if let Some(desc) = schema.get_description() {
-            let escaped_desc = desc.replace("\"", "\\\"");
+            let escaped_desc = desc
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n");
             if is_required {
                 Ok(format!(
                     "{}: {} = Field(description=\"{}\")",

@@ -8,10 +8,18 @@ from datetime import date, datetime
 from uuid import UUID
 
 class User(BaseModel):
+    """
+    Represents a user in the system.
+
+    A user can be in one of the following states:
+    - **active**: The user can log in and use the system.
+    - **inactive**: The user account is disabled.
+    - **pending**: The user has registered but not yet confirmed their email.
+
+    See also: `UserProfile` for extended profile information.
+    """
     id: int
-    email: EmailStr = Field(description="The user's primary email address.
-Must be unique across the system.
-Used for login and notifications.")
+    email: EmailStr = Field(description="The user's primary email address.\nMust be unique across the system.\nUsed for login and notifications.")
     name: str = Field(min_length=1, max_length=100)
     age: int | None = Field(None, ge=0, le=150)
     isActive: bool | None = None
@@ -28,6 +36,12 @@ class UserProfile(BaseModel):
     bio: str | None = Field(None, max_length=500)
 
 class Address(BaseModel):
+    """
+    A physical mailing address.
+
+    All addresses must include at least `street`, `city`, and `country`.
+    The `country` field uses ISO 3166-1 alpha-2 codes (e.g. `US`, `FI`, `DE`).
+    """
     street: str = Field(min_length=1, max_length=100)
     city: str = Field(min_length=1, max_length=50)
     state: str | None = Field(None, max_length=50)
