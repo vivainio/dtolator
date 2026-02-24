@@ -9,7 +9,9 @@ from uuid import UUID
 
 class User(BaseModel):
     id: int
-    email: EmailStr
+    email: EmailStr = Field(description="The user's primary email address.
+Must be unique across the system.
+Used for login and notifications.")
     name: str = Field(min_length=1, max_length=100)
     age: int | None = Field(None, ge=0, le=150)
     isActive: bool | None = None

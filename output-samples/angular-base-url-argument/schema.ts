@@ -2,6 +2,12 @@
 // Do not modify manually
 
 import { z } from "zod";
+/**
+ * A physical mailing address.
+ *
+ * All addresses must include at least `street`, `city`, and `country`.
+ * The `country` field uses ISO 3166-1 alpha-2 codes (e.g. `US`, `FI`, `DE`).
+ */
 export const AddressSchema = z.object({
   street: z.string().min(1).max(100),
   city: z.string().min(1).max(50),
@@ -33,8 +39,23 @@ export const CreateUserRequestSchema = z.object({
 
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
+/**
+ * Represents a user in the system.
+ *
+ * A user can be in one of the following states:
+ * - **active**: The user can log in and use the system.
+ * - **inactive**: The user account is disabled.
+ * - **pending**: The user has registered but not yet confirmed their email.
+ *
+ * See also: `UserProfile` for extended profile information.
+ */
 export const UserSchema = z.object({
   id: z.number().int(),
+  /**
+   * The user's primary email address.
+   * Must be unique across the system.
+   * Used for login and notifications.
+   */
   email: z.email(),
   name: z.string().min(1).max(100),
   age: z.number().min(0).max(150).int().optional(),

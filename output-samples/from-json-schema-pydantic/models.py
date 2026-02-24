@@ -29,7 +29,9 @@ class CreateUserRequest(BaseModel):
 class User(BaseModel):
     address: Address | None = None
     age: int | None = Field(None, ge=0, le=150)
-    email: EmailStr
+    email: EmailStr = Field(description="The user's primary email address.
+Must be unique across the system.
+Used for login and notifications.")
     id: int
     isActive: bool | None = None
     name: str = Field(min_length=1, max_length=100)

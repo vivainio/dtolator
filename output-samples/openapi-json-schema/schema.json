@@ -2,6 +2,7 @@
   "$defs": {
     "Address": {
       "additionalProperties": false,
+      "description": "A physical mailing address.\n\nAll addresses must include at least `street`, `city`, and `country`.\nThe `country` field uses ISO 3166-1 alpha-2 codes (e.g. `US`, `FI`, `DE`).",
       "properties": {
         "city": {
           "maxLength": 50,
@@ -95,6 +96,7 @@
     },
     "User": {
       "additionalProperties": false,
+      "description": "Represents a user in the system.\n\nA user can be in one of the following states:\n- **active**: The user can log in and use the system.\n- **inactive**: The user account is disabled.\n- **pending**: The user has registered but not yet confirmed their email.\n\nSee also: `UserProfile` for extended profile information.",
       "properties": {
         "address": {
           "$ref": "#/$defs/Address"
@@ -105,6 +107,7 @@
           "type": "integer"
         },
         "email": {
+          "description": "The user's primary email address.\nMust be unique across the system.\nUsed for login and notifications.",
           "format": "email",
           "type": "string"
         },
