@@ -671,7 +671,7 @@
       },
       "Address": {
         "type": "object",
-        "description": "Physical mailing or shipping address",
+        "description": "Physical mailing or shipping address.\r\nUsed for both billing and delivery purposes.",
         "required": ["street", "city", "country", "postalCode"],
         "properties": {
           "street": {

@@ -1,5 +1,21 @@
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+fn deserialize_normalized_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    Ok(opt.map(|s| s.replace("\r\n", "\n").replace('\r', "\n")))
+}
+
+fn deserialize_normalized_required_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    Ok(s.replace("\r\n", "\n").replace('\r', "\n"))
+}
 
 /// Schema type that supports both OpenAPI 3.0 (single string) and 3.1 (array of strings).
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -54,6 +70,7 @@ pub struct OpenApiSchema {
 pub struct Info {
     pub title: String,
     pub version: String,
+    #[serde(default, deserialize_with = "deserialize_normalized_string")]
     pub description: Option<String>,
 }
 
@@ -76,6 +93,7 @@ pub struct Operation {
     #[serde(rename = "operationId")]
     pub operation_id: Option<String>,
     pub summary: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_normalized_string")]
     pub description: Option<String>,
     pub tags: Option<Vec<String>>,
     pub parameters: Option<Vec<Parameter>>,
@@ -95,6 +113,7 @@ pub struct Parameter {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RequestBody {
+    #[serde(default, deserialize_with = "deserialize_normalized_string")]
     pub description: Option<String>,
     pub content: IndexMap<String, MediaType>,
     pub required: Option<bool>,
@@ -102,6 +121,7 @@ pub struct RequestBody {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Response {
+    #[serde(deserialize_with = "deserialize_normalized_required_string")]
     pub description: String,
     pub content: Option<IndexMap<String, MediaType>>,
 }
@@ -125,6 +145,7 @@ pub enum Schema {
     Reference {
         #[serde(rename = "$ref")]
         reference: String,
+        #[serde(default, deserialize_with = "deserialize_normalized_string")]
         description: Option<String>,
     },
     Object {
@@ -138,6 +159,7 @@ pub enum Schema {
         #[serde(rename = "enum")]
         enum_values: Option<Vec<serde_json::Value>>,
         format: Option<String>,
+        #[serde(default, deserialize_with = "deserialize_normalized_string")]
         description: Option<String>,
         example: Option<serde_json::Value>,
         #[serde(rename = "allOf")]

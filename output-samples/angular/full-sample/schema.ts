@@ -2,7 +2,10 @@
 // Do not modify manually
 
 import { z } from "zod";
-/** Physical mailing or shipping address */
+/**
+ * Physical mailing or shipping address.
+ * Used for both billing and delivery purposes.
+ */
 export const AddressSchema = z.object({
   street: z.string().min(1).max(100),
   street2: z.string().max(100).nullable().optional(),
