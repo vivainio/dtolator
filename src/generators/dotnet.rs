@@ -255,7 +255,7 @@ impl DotNetGenerator {
                     },
                 )
             }
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 let type_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);

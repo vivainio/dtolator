@@ -63,7 +63,7 @@ impl EndpointsGenerator {
 
     fn extract_schema_type_name(&self, schema: &crate::openapi::Schema) -> Option<String> {
         match schema {
-            crate::openapi::Schema::Reference { reference } => Some(
+            crate::openapi::Schema::Reference { reference, .. } => Some(
                 reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference)
@@ -243,7 +243,7 @@ impl EndpointsGenerator {
 
     fn get_schema_type_name(&self, schema: &crate::openapi::Schema) -> String {
         match schema {
-            crate::openapi::Schema::Reference { reference } => reference
+            crate::openapi::Schema::Reference { reference, .. } => reference
                 .strip_prefix("#/components/schemas/")
                 .unwrap_or(reference)
                 .to_string(),

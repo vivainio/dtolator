@@ -47,7 +47,7 @@ impl RustSerdeGenerator {
 
     fn to_rust_type(&self, schema: &Schema) -> Result<String> {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 let type_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference)

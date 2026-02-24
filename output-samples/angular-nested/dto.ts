@@ -254,6 +254,7 @@ export interface OrderItem {
   productId: string;
   quantity: number;
   price: Price;
+  /** Snapshot of product at time of order */
   productSnapshot?: Product;
 }
 

@@ -139,7 +139,7 @@ impl PydanticGenerator {
                                     }
                                 }
                             }
-                        } else if let Schema::Reference { reference } = schema {
+                        } else if let Schema::Reference { reference, .. } = schema {
                             let ref_name = reference
                                 .strip_prefix("#/components/schemas/")
                                 .unwrap_or(reference);
@@ -317,6 +317,30 @@ impl PydanticGenerator {
                     constraints.join(", ")
                 ))
             }
+        } else if let Schema::Reference {
+            description: Some(desc),
+            ..
+        } = schema
+        {
+            let escaped_desc = desc.replace("\"", "\\\"");
+            if is_required {
+                Ok(format!(
+                    "{}: {} = Field(description=\"{}\")",
+                    name, field_type, escaped_desc
+                ))
+            } else if self.is_optional_type(&field_type) {
+                Ok(format!(
+                    "{}: {} = Field(None, description=\"{}\")",
+                    name, field_type, escaped_desc
+                ))
+            } else {
+                Ok(format!(
+                    "{}: {} = Field(None, description=\"{}\")",
+                    name,
+                    self.wrap_optional(&field_type),
+                    escaped_desc
+                ))
+            }
         } else if is_required {
             Ok(format!("{name}: {field_type}"))
         } else if self.is_optional_type(&field_type) {
@@ -333,7 +357,7 @@ impl PydanticGenerator {
     #[allow(clippy::only_used_in_recursion)]
     fn schema_to_pydantic_type(&self, schema: &Schema) -> Result<String> {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 let ref_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);

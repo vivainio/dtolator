@@ -1,0 +1,63 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Test Ref Description API",
+    "version": "1.0.0",
+    "description": "Test that $ref + description is preserved"
+  },
+  "components": {
+    "schemas": {
+      "Address": {
+        "type": "object",
+        "properties": {
+          "street": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          }
+        },
+        "required": ["street", "city"]
+      },
+      "ContactInfo": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": ["email"]
+      },
+      "Person": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Full name of the person"
+          },
+          "homeAddress": {
+            "$ref": "#/components/schemas/Address",
+            "description": "Primary residential address"
+          },
+          "workAddress": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "contact": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "$ref": "#/components/schemas/ContactInfo",
+                "description": "Contact details"
+              }
+            ],
+            "description": "Contact information if available"
+          }
+        },
+        "required": ["name", "homeAddress"]
+      }
+    }
+  }
+}

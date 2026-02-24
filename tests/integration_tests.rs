@@ -309,6 +309,25 @@ impl TestSuite {
                 command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/nullable-oneof-typescript".to_string(),
             },
+            // Ref description tests
+            TestCase {
+                name: "Ref Description TypeScript".to_string(),
+                input_file: "input-files/test-ref-description.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
+                expected_dir: "output-samples/ref-description-typescript".to_string(),
+            },
+            TestCase {
+                name: "Ref Description Zod".to_string(),
+                input_file: "input-files/test-ref-description.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--zod".to_string()],
+                expected_dir: "output-samples/ref-description-zod".to_string(),
+            },
+            TestCase {
+                name: "Ref Description Pydantic".to_string(),
+                input_file: "input-files/test-ref-description.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
+                expected_dir: "output-samples/ref-description-pydantic".to_string(),
+            },
         ];
 
         Self {

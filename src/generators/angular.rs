@@ -800,7 +800,7 @@ impl AngularGenerator {
     #[allow(clippy::only_used_in_recursion)]
     fn get_schema_type_name(&self, schema: &crate::openapi::Schema) -> String {
         match schema {
-            crate::openapi::Schema::Reference { reference } => reference
+            crate::openapi::Schema::Reference { reference, .. } => reference
                 .strip_prefix("#/components/schemas/")
                 .unwrap_or(reference)
                 .to_string(),
@@ -1141,7 +1141,7 @@ impl AngularGenerator {
         full_schema: &'a OpenApiSchema,
     ) -> &'a crate::openapi::Schema {
         match schema {
-            crate::openapi::Schema::Reference { reference } => {
+            crate::openapi::Schema::Reference { reference, .. } => {
                 // Extract the schema name from the reference and look it up in components.schemas
                 if let Some(schema_name) = reference.strip_prefix("#/components/schemas/")
                     && let Some(components) = &full_schema.components

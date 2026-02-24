@@ -125,6 +125,7 @@ pub enum Schema {
     Reference {
         #[serde(rename = "$ref")]
         reference: String,
+        description: Option<String>,
     },
     Object {
         #[serde(rename = "type")]
@@ -203,13 +204,14 @@ impl Schema {
     pub fn reference(reference: impl Into<String>) -> Self {
         Schema::Reference {
             reference: reference.into(),
+            description: None,
         }
     }
 
     pub fn get_description(&self) -> Option<&str> {
         match self {
             Schema::Object { description, .. } => description.as_deref(),
-            Schema::Reference { .. } => None,
+            Schema::Reference { description, .. } => description.as_deref(),
         }
     }
 

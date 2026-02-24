@@ -43,7 +43,7 @@ impl PythonDictGenerator {
         deps: &mut HashSet<String>,
     ) {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 if let Some(type_name) = reference.strip_prefix("#/components/schemas/")
                     && known_schemas.contains(type_name)
                 {
@@ -449,7 +449,7 @@ impl PythonDictGenerator {
                     base_type
                 })
             }
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 let type_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);

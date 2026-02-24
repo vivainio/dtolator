@@ -24,7 +24,7 @@ impl JsonSchemaGenerator {
     #[allow(clippy::only_used_in_recursion)]
     fn schema_to_json_schema(&self, schema: &Schema) -> Result<Value> {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 let type_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);

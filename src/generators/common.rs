@@ -66,7 +66,7 @@ pub fn to_pascal_case(input: &str) -> String {
 /// Returns the type name without the "#/components/schemas/" prefix.
 pub fn extract_type_name(schema: &Schema) -> Option<String> {
     match schema {
-        Schema::Reference { reference } => Some(
+        Schema::Reference { reference, .. } => Some(
             reference
                 .strip_prefix("#/components/schemas/")
                 .unwrap_or(reference)
@@ -79,7 +79,7 @@ pub fn extract_type_name(schema: &Schema) -> Option<String> {
 /// Recursively collect all type dependencies from a schema.
 pub fn collect_dependencies_recursive(schema: &Schema, deps: &mut HashSet<String>) {
     match schema {
-        Schema::Reference { reference: _ } => {
+        Schema::Reference { .. } => {
             if let Some(type_name) = extract_type_name(schema) {
                 deps.insert(type_name);
             }

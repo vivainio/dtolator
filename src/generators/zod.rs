@@ -76,7 +76,7 @@ impl ZodGenerator {
     #[allow(clippy::only_used_in_recursion)]
     fn schema_to_zod(&self, schema: &Schema) -> Result<ZodValue> {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 let ref_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);

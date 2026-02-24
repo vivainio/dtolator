@@ -307,6 +307,7 @@ export const OrderItemSchema = z.object({
   productId: z.guid(),
   quantity: z.number().min(1).int(),
   price: PriceSchema,
+  /** Snapshot of product at time of order */
   productSnapshot: ProductSchema.optional(),
 });
 

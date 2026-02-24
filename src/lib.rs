@@ -981,7 +981,7 @@ fn resolve_placeholders(
     hash_to_final_name: &std::collections::HashMap<String, String>,
 ) {
     match schema {
-        Schema::Reference { reference } => {
+        Schema::Reference { reference, .. } => {
             for (placeholder, final_name) in hash_to_final_name {
                 let placeholder_ref = format!("#/components/schemas/{placeholder}");
                 if reference == &placeholder_ref {
@@ -1135,6 +1135,7 @@ fn json_schema_to_openapi_schema(
         // Root is a reference to a def
         Schema::Reference {
             reference: convert_json_schema_ref(ref_path)?,
+            description: None,
         }
     } else {
         // Root is an inline schema
@@ -1471,6 +1472,7 @@ fn extract_inline_request_schemas(mut schema: OpenApiSchema) -> Result<OpenApiSc
                             // Replace the inline schema with a reference
                             media_type.schema = Some(Schema::Reference {
                                 reference: format!("#/components/schemas/{}", dto_name),
+                                description: None,
                             });
                         }
                     }

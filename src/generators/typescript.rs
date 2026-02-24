@@ -216,7 +216,7 @@ impl TypeScriptGenerator {
     #[allow(clippy::only_used_in_recursion)]
     fn schema_to_typescript(&self, schema: &Schema) -> Result<String> {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 let ref_name = reference
                     .strip_prefix("#/components/schemas/")
                     .unwrap_or(reference);
@@ -548,7 +548,7 @@ impl TypeScriptGenerator {
     /// Recursively collect `$ref` schema names from a schema.
     fn collect_refs(&self, schema: &Schema, refs: &mut HashSet<String>) {
         match schema {
-            Schema::Reference { reference } => {
+            Schema::Reference { reference, .. } => {
                 if let Some(name) = reference.strip_prefix("#/components/schemas/") {
                     refs.insert(name.to_string());
                 }
