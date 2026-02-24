@@ -7,9 +7,8 @@ import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { z } from "zod";
 
-import type { CreateCategoryRequest } from "./dto";
 import { CategorySchema } from "./schema";
-import type { Category } from "./schema";
+import type { Category, CreateCategoryRequest } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class CategoriesApi {

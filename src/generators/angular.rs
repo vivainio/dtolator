@@ -217,7 +217,6 @@ impl AngularGenerator {
                     imports: std::collections::HashSet::new(),
                     methods: Vec::new(),
                     response_types: std::collections::HashSet::new(),
-                    request_types: std::collections::HashSet::new(),
                     query_param_types: std::collections::HashSet::new(),
                     has_void_methods: false,
                     has_header_params: false,
@@ -612,11 +611,9 @@ impl AngularGenerator {
         }
 
         // Collect request body types.
-        // JSON body types are inlined in dto.ts → request_types.
-        // Non-JSON body types (multipart etc.) live in schema.ts → not request_types.
+        // All body types (JSON and multipart) live in schema.ts when using zod.
         if let Some(request_body) = &operation.request_body {
             let content = &request_body.content;
-            let is_json = content.contains_key("application/json");
             let body_schema = content
                 .get("application/json")
                 .or_else(|| content.get("multipart/form-data"))
@@ -626,9 +623,6 @@ impl AngularGenerator {
                 common::collect_dependencies_recursive(schema, &mut deps);
                 for type_name in deps {
                     service_data.imports.insert(type_name.clone());
-                    if self.with_zod && is_json {
-                        service_data.request_types.insert(type_name);
-                    }
                 }
             }
         }
@@ -719,8 +713,7 @@ impl AngularGenerator {
 
             if self.with_zod {
                 for import in &imports {
-                    let is_dto_type = service_data.request_types.contains(import)
-                        || service_data.query_param_types.contains(import);
+                    let is_dto_type = service_data.query_param_types.contains(import);
                     let source = if is_dto_type { "./dto" } else { "./schema" };
                     import_gen.add_import(source, import, true);
                 }
@@ -1351,7 +1344,6 @@ struct ServiceData {
     imports: std::collections::HashSet<String>,
     methods: Vec<String>,
     response_types: std::collections::HashSet<String>,
-    request_types: std::collections::HashSet<String>,
     query_param_types: std::collections::HashSet<String>,
     has_void_methods: bool,
     has_header_params: bool,

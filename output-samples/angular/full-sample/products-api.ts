@@ -6,12 +6,13 @@ import { Injectable, inject } from "@angular/core";
 import type { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
-import type {
-  SearchProductsWithFiltersQueryParams,
-  UpdateProductRequest,
-} from "./dto";
+import type { SearchProductsWithFiltersQueryParams } from "./dto";
 import { ProductListResponseSchema, ProductSchema } from "./schema";
-import type { Product, ProductListResponse } from "./schema";
+import type {
+  Product,
+  ProductListResponse,
+  UpdateProductRequest,
+} from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class ProductsApi {

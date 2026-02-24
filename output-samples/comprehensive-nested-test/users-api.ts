@@ -9,10 +9,9 @@ import { map } from "rxjs/operators";
 import type {
   AllUsersWithPaginationHeaders,
   AllUsersWithPaginationQueryParams,
-  CreateUserRequest,
 } from "./dto";
 import { UserListResponseSchema, UserSchema } from "./schema";
-import type { User, UserListResponse } from "./schema";
+import type { CreateUserRequest, User, UserListResponse } from "./schema";
 
 @Injectable({ providedIn: 'root' })
 export class UsersApi {

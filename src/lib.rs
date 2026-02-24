@@ -278,7 +278,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             written_files.push("schema.json".to_string());
         }
         GeneratorType::Zod => {
-            // Generate both dto.ts (with imports) and schema.ts, like the CLI --zod path
+            // Generate schema.ts (Zod schemas + inferred types) and dto.ts (query/header param types)
             let zod_generator = ZodGenerator::new();
             let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
@@ -654,7 +654,7 @@ fn generate_angular_services(
             files_generated.push("schema.ts".to_string());
         }
 
-        // Generate TypeScript interfaces that re-export from schema.ts
+        // Generate dto.ts with query/header param types (request body types live in schema.ts)
         let ts_generator = TypeScriptGenerator::new();
         let mut ts_output = ts_generator.generate_with_imports(schema, command_string)?;
 
