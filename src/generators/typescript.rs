@@ -1,9 +1,11 @@
 use crate::generators::Generator;
 use crate::generators::common;
+use crate::generators::import_generator::ImportGenerator;
 use crate::openapi::{
     AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
 };
 use anyhow::Result;
+use std::collections::HashSet;
 
 pub struct TypeScriptGenerator {
     indent_level: usize,
@@ -352,12 +354,91 @@ impl TypeScriptGenerator {
         use crate::generators::angular::AngularGenerator;
         let angular_generator = AngularGenerator::new();
         let query_param_types = angular_generator.generate_query_param_types(schema)?;
+
+        // Collect schema types referenced by query/header parameters and import them
+        let ref_types = self.collect_parameter_ref_types(schema);
+        if !ref_types.is_empty() {
+            let mut sorted: Vec<&String> = ref_types.iter().collect();
+            sorted.sort();
+            let mut import_gen = ImportGenerator::new();
+            for name in sorted {
+                import_gen.add_import("./schema", name, true);
+            }
+            output.push_str(&import_gen.generate());
+            output.push('\n');
+        }
+
         if !query_param_types.trim().is_empty() {
             output.push_str(&query_param_types);
         }
 
         // Remove trailing blank lines
         Ok(output.trim_end().to_string() + "\n")
+    }
+
+    /// Collect schema `$ref` type names used by query and header parameters.
+    fn collect_parameter_ref_types(&self, schema: &OpenApiSchema) -> HashSet<String> {
+        let mut refs = HashSet::new();
+        if let Some(paths) = &schema.paths {
+            for (_path, path_item) in paths {
+                let operations = [
+                    &path_item.get,
+                    &path_item.post,
+                    &path_item.put,
+                    &path_item.patch,
+                    &path_item.delete,
+                ];
+                for operation in operations.into_iter().flatten() {
+                    if let Some(parameters) = &operation.parameters {
+                        for param in parameters {
+                            if (param.location == "query" || param.location == "header")
+                                && let Some(param_schema) = &param.schema
+                            {
+                                self.collect_refs(param_schema, &mut refs);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        refs
+    }
+
+    /// Recursively collect `$ref` schema names from a schema.
+    fn collect_refs(&self, schema: &Schema, refs: &mut HashSet<String>) {
+        match schema {
+            Schema::Reference { reference } => {
+                if let Some(name) = reference.strip_prefix("#/components/schemas/") {
+                    refs.insert(name.to_string());
+                }
+            }
+            Schema::Object {
+                properties,
+                items,
+                all_of,
+                one_of,
+                any_of,
+                additional_properties,
+                ..
+            } => {
+                if let Some(props) = properties {
+                    for prop in props.values() {
+                        self.collect_refs(prop, refs);
+                    }
+                }
+                if let Some(item) = items {
+                    self.collect_refs(item, refs);
+                }
+                for vec in [all_of, one_of, any_of].into_iter().flatten() {
+                    for s in vec {
+                        self.collect_refs(s, refs);
+                    }
+                }
+                if let Some(AdditionalProperties::Schema(s)) = additional_properties {
+                    self.collect_refs(s, refs);
+                }
+            }
+        }
     }
 }
 
