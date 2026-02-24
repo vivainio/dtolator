@@ -2,6 +2,7 @@ use crate::BaseUrlMode;
 use crate::generators::Generator;
 use crate::generators::common::{self, summary_to_camel_case};
 use crate::generators::import_generator::ImportGenerator;
+use crate::generators::typescript::TypeScriptGenerator;
 use crate::openapi::{OpenApiSchema, Operation, Parameter, schema_type_str};
 use anyhow::Result;
 use std::collections::BTreeMap;
@@ -488,7 +489,7 @@ impl AngularGenerator {
                 let has_mandatory = query_params.iter().any(|p| p.required.unwrap_or(false));
                 let optional_marker = if has_mandatory { "" } else { "?" };
 
-                if let Some(type_name) = self.get_query_param_type_name(operation) {
+                if let Some(type_name) = TypeScriptGenerator::query_param_type_name(operation) {
                     params.push(format!("queryParams{optional_marker}: {type_name}"));
                 } else {
                     // Fallback to inline type if no good name can be generated
@@ -535,7 +536,7 @@ impl AngularGenerator {
                 .collect();
 
             if !header_params.is_empty() {
-                if let Some(type_name) = self.get_header_param_type_name(operation) {
+                if let Some(type_name) = TypeScriptGenerator::header_param_type_name(operation) {
                     params.push(format!("headers?: {type_name} & Record<string, string>"));
                 } else {
                     // Fallback to inline type if no good name can be generated
@@ -636,7 +637,7 @@ impl AngularGenerator {
 
             // If there are query parameters and we can generate a good type name, add it to imports
             if !query_params.is_empty()
-                && let Some(type_name) = self.get_query_param_type_name(operation)
+                && let Some(type_name) = TypeScriptGenerator::query_param_type_name(operation)
             {
                 service_data.imports.insert(type_name.clone());
                 service_data.query_param_types.insert(type_name);
@@ -649,7 +650,7 @@ impl AngularGenerator {
                 .collect();
 
             if !header_params.is_empty()
-                && let Some(type_name) = self.get_header_param_type_name(operation)
+                && let Some(type_name) = TypeScriptGenerator::header_param_type_name(operation)
             {
                 service_data.imports.insert(type_name.clone());
                 service_data.query_param_types.insert(type_name);
@@ -845,19 +846,6 @@ impl AngularGenerator {
         input.replace("_", "-").to_lowercase()
     }
 
-    fn to_pascal_case(&self, input: &str) -> String {
-        input
-            .split_whitespace()
-            .map(|word| {
-                let mut chars = word.chars();
-                match chars.next() {
-                    None => String::new(),
-                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                }
-            })
-            .collect()
-    }
-
     fn generate_formdata_conversion(
         &self,
         method: &mut String,
@@ -990,39 +978,6 @@ impl AngularGenerator {
         Ok(())
     }
 
-    fn get_query_param_type_name(&self, operation: &Operation) -> Option<String> {
-        if let Some(summary) = &operation.summary {
-            // Convert "Get Sales Analytics" -> "GetSalesAnalyticsQueryParams"
-            let clean_summary = summary
-                .replace("Get ", "")
-                .replace("Create ", "")
-                .replace("Update ", "")
-                .replace("Delete ", "")
-                .replace("Retrieve ", "")
-                .replace("Fetch ", "");
-            let pascal_name = self.to_pascal_case(&clean_summary);
-            Some(format!("{pascal_name}QueryParams"))
-        } else {
-            None
-        }
-    }
-
-    fn get_header_param_type_name(&self, operation: &Operation) -> Option<String> {
-        if let Some(summary) = &operation.summary {
-            let clean_summary = summary
-                .replace("Get ", "")
-                .replace("Create ", "")
-                .replace("Update ", "")
-                .replace("Delete ", "")
-                .replace("Retrieve ", "")
-                .replace("Fetch ", "");
-            let pascal_name = self.to_pascal_case(&clean_summary);
-            Some(format!("{pascal_name}Headers"))
-        } else {
-            None
-        }
-    }
-
     /// Generate the fill-url utility function
     fn format_path_template(&self, path: &str) -> String {
         let mut template = path.to_string();
@@ -1038,142 +993,6 @@ impl AngularGenerator {
         }
 
         template
-    }
-
-    pub fn generate_query_param_types(&self, schema: &OpenApiSchema) -> Result<String> {
-        let mut types = String::new();
-        let mut generated_types = std::collections::HashSet::new();
-
-        if let Some(paths) = &schema.paths {
-            for (_path, path_item) in paths {
-                let operations = [
-                    &path_item.get,
-                    &path_item.post,
-                    &path_item.put,
-                    &path_item.delete,
-                    &path_item.patch,
-                ];
-
-                for operation in operations.into_iter().flatten() {
-                    if let Some(parameters) = &operation.parameters {
-                        let query_params: Vec<&Parameter> = parameters
-                            .iter()
-                            .filter(|p| p.location == "query")
-                            .collect();
-
-                        if !query_params.is_empty()
-                            && let Some(type_name) = self.get_query_param_type_name(operation)
-                            && !generated_types.contains(&type_name)
-                        {
-                            generated_types.insert(type_name.clone());
-
-                            // Add JSDoc comment for the interface
-                            if let Some(summary) = &operation.summary {
-                                types.push_str(&format!(
-                                    "/**\n * Query parameters for {summary}\n */\n"
-                                ));
-                            }
-
-                            let mandatory_params: Vec<&Parameter> = query_params
-                                .iter()
-                                .filter(|p| p.required.unwrap_or(false))
-                                .cloned()
-                                .collect();
-
-                            let optional_params: Vec<&Parameter> = query_params
-                                .iter()
-                                .filter(|p| !p.required.unwrap_or(false))
-                                .cloned()
-                                .collect();
-
-                            types.push_str(&format!("export type {type_name} = "));
-
-                            if !mandatory_params.is_empty() {
-                                types.push_str("{\n");
-                                for param in &mandatory_params {
-                                    let param_type = self.get_parameter_type(param);
-                                    types.push_str(&format!("  {}: {};\n", param.name, param_type));
-                                }
-                                types.push('}');
-                            }
-
-                            if !optional_params.is_empty() {
-                                if !mandatory_params.is_empty() {
-                                    types.push_str(" & ");
-                                }
-                                types.push_str("Partial<{\n");
-                                for param in &optional_params {
-                                    let param_type = self.get_parameter_type(param);
-                                    types.push_str(&format!("  {}: {};\n", param.name, param_type));
-                                }
-                                types.push_str("}>");
-                            }
-
-                            types.push_str(";\n\n");
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(types)
-    }
-
-    pub fn generate_header_param_types(&self, schema: &OpenApiSchema) -> Result<String> {
-        let mut types = String::new();
-        let mut generated_types = std::collections::HashSet::new();
-
-        if let Some(paths) = &schema.paths {
-            for (_path, path_item) in paths {
-                let operations = [
-                    &path_item.get,
-                    &path_item.post,
-                    &path_item.put,
-                    &path_item.delete,
-                    &path_item.patch,
-                ];
-
-                for operation in operations.into_iter().flatten() {
-                    if let Some(parameters) = &operation.parameters {
-                        let header_params: Vec<&Parameter> = parameters
-                            .iter()
-                            .filter(|p| p.location == "header")
-                            .collect();
-
-                        if !header_params.is_empty()
-                            && let Some(type_name) = self.get_header_param_type_name(operation)
-                            && !generated_types.contains(&type_name)
-                        {
-                            generated_types.insert(type_name.clone());
-
-                            if let Some(summary) = &operation.summary {
-                                types.push_str(&format!(
-                                    "/**\n * Header parameters for {summary}\n */\n"
-                                ));
-                            }
-
-                            types.push_str(&format!("export interface {type_name} {{\n"));
-                            for param in &header_params {
-                                let param_type = self.get_parameter_type(param);
-                                let optional = if param.required.unwrap_or(false) {
-                                    ""
-                                } else {
-                                    "?"
-                                };
-
-                                types.push_str(&format!(
-                                    "  \"{}\"{}: {};\n",
-                                    param.name, optional, param_type
-                                ));
-                            }
-                            types.push_str("}\n\n");
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(types)
     }
 
     fn generate_tsdoc_comment(

@@ -658,10 +658,7 @@ fn generate_angular_services(
         let ts_generator = TypeScriptGenerator::new();
         let mut ts_output = ts_generator.generate_with_imports(schema, command_string)?;
 
-        // Add header parameter types for Angular services
-        // (query parameter types are already included in generate_with_imports)
-        let angular_generator = AngularGenerator::new();
-        let header_param_types = angular_generator.generate_header_param_types(schema)?;
+        let header_param_types = ts_generator.generate_header_param_types(schema)?;
         if !header_param_types.trim().is_empty() {
             ts_output.push('\n');
             ts_output.push_str(&header_param_types);
@@ -676,16 +673,13 @@ fn generate_angular_services(
         let ts_generator = TypeScriptGenerator::new();
         let mut dto_output = ts_generator.generate_with_command(schema, command_string)?;
 
-        // Add query parameter types for Angular services
-        let angular_generator = AngularGenerator::new();
-        let query_param_types = angular_generator.generate_query_param_types(schema)?;
+        let query_param_types = ts_generator.generate_query_param_types(schema)?;
         if !query_param_types.trim().is_empty() {
             dto_output.push('\n');
             dto_output.push_str(&query_param_types);
         }
 
-        // Add header parameter types for Angular services
-        let header_param_types = angular_generator.generate_header_param_types(schema)?;
+        let header_param_types = ts_generator.generate_header_param_types(schema)?;
         if !header_param_types.trim().is_empty() {
             dto_output.push('\n');
             dto_output.push_str(&header_param_types);

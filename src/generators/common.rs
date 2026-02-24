@@ -47,6 +47,21 @@ pub fn summary_to_pascal_case(summary: &str) -> String {
         .collect()
 }
 
+/// Convert a string to PascalCase by capitalizing the first letter of each word.
+/// e.g. "All Users With Pagination" -> "AllUsersWithPagination"
+pub fn to_pascal_case(input: &str) -> String {
+    input
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        })
+        .collect()
+}
+
 /// Extract type name from a schema reference.
 /// Returns the type name without the "#/components/schemas/" prefix.
 pub fn extract_type_name(schema: &Schema) -> Option<String> {
