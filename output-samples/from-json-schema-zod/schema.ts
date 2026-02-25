@@ -90,4 +90,5 @@ export const RootSchema = z.object({
   users: z.array(UserSchema),
 });
 
+/** Schema generated from plain JSON input */
 export type Root = z.infer<typeof RootSchema>;

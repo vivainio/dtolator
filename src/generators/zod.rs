@@ -66,6 +66,12 @@ impl ZodGenerator {
         output.push_str(&format!("{zod_value}"));
         output.push_str(";\n\n");
 
+        if let Some(desc) = schema.get_description() {
+            output.push_str(&crate::generators::common::format_jsdoc(
+                desc,
+                &self.indent(),
+            ));
+        }
         output.push_str(&format!(
             "{}export type {} = z.infer<typeof {}>;\n\n",
             self.indent(),

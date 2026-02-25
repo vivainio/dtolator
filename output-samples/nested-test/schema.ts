@@ -16,6 +16,10 @@ export const AddressSchema = z.object({
   postalCode: z.string().min(3).max(10),
 });
 
+/**
+ * Physical mailing or shipping address.
+ * Used for both billing and delivery purposes.
+ */
 export type Address = z.infer<typeof AddressSchema>;
 
 /** Product category with optional hierarchy */
@@ -28,6 +32,7 @@ export const CategorySchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+/** Product category with optional hierarchy */
 export type Category = z.infer<typeof CategorySchema>;
 
 /** Request body for creating a new category */
@@ -38,6 +43,7 @@ export const CreateCategoryRequestSchema = z.object({
   parentId: z.guid().optional(),
 });
 
+/** Request body for creating a new category */
 export type CreateCategoryRequest = z.infer<typeof CreateCategoryRequestSchema>;
 
 /** Standard error response envelope */
@@ -54,6 +60,7 @@ export const ErrorResponseSchema = z.object({
 }),
 });
 
+/** Standard error response envelope */
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
 /** Image with URL and optional metadata */
@@ -66,6 +73,7 @@ export const ImageUrlSchema = z.object({
   height: z.number().min(1).int().optional(),
 });
 
+/** Image with URL and optional metadata */
 export type ImageUrl = z.infer<typeof ImageUrlSchema>;
 
 /** Stock level and availability for a product */
@@ -75,6 +83,7 @@ export const InventorySchema = z.object({
   lowStockThreshold: z.number().min(0).int().optional(),
 });
 
+/** Stock level and availability for a product */
 export type Inventory = z.infer<typeof InventorySchema>;
 
 /** Per-channel notification opt-in settings */
@@ -85,6 +94,7 @@ export const NotificationSettingsSchema = z.object({
   marketing: z.boolean().optional(),
 });
 
+/** Per-channel notification opt-in settings */
 export type NotificationSettings = z.infer<typeof NotificationSettingsSchema>;
 
 /** Current lifecycle status of an order */
@@ -98,6 +108,7 @@ export const OrderStatusSchema = z.enum([
   "refunded"
 ]);
 
+/** Current lifecycle status of an order */
 export type OrderStatus = z.infer<typeof OrderStatusSchema>;
 
 /** Pagination metadata for list responses */
@@ -110,6 +121,7 @@ export const PaginationInfoSchema = z.object({
   hasPrev: z.boolean().optional(),
 });
 
+/** Pagination metadata for list responses */
 export type PaginationInfo = z.infer<typeof PaginationInfoSchema>;
 
 /** Payment instrument used for an order */
@@ -121,6 +133,7 @@ export const PaymentMethodSchema = z.object({
   brand: z.enum(["visa", "mastercard", "amex", "discover"]).optional(),
 });
 
+/** Payment instrument used for an order */
 export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 
 /** Monetary amount with currency */
@@ -131,6 +144,7 @@ export const PriceSchema = z.object({
   originalAmount: z.number().min(0).nullable().optional(),
 });
 
+/** Monetary amount with currency */
 export type Price = z.infer<typeof PriceSchema>;
 
 /** Catalog statistics and stock health metrics */
@@ -146,6 +160,7 @@ export const ProductAnalyticsSchema = z.object({
 })).optional(),
 });
 
+/** Catalog statistics and stock health metrics */
 export type ProductAnalytics = z.infer<typeof ProductAnalyticsSchema>;
 
 /** Top-level product category */
@@ -159,6 +174,7 @@ export const ProductCategorySchema = z.enum([
   "automotive"
 ]);
 
+/** Top-level product category */
 export type ProductCategory = z.infer<typeof ProductCategorySchema>;
 
 /** Aggregated sales metrics for a given period */
@@ -178,6 +194,7 @@ export const SalesAnalyticsSchema = z.object({
 }).optional(),
 });
 
+/** Aggregated sales metrics for a given period */
 export type SalesAnalytics = z.infer<typeof SalesAnalyticsSchema>;
 
 /** Request body for updating product inventory */
@@ -186,11 +203,13 @@ export const UpdateInventoryRequestSchema = z.object({
   lowStockThreshold: z.number().min(0).int().optional(),
 });
 
+/** Request body for updating product inventory */
 export type UpdateInventoryRequest = z.infer<typeof UpdateInventoryRequestSchema>;
 
 /** Role assigned to a user account */
 export const UserRoleSchema = z.enum(["customer", "admin", "moderator", "vendor"]);
 
+/** Role assigned to a user account */
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
 /** Personal profile information for a user */
@@ -203,6 +222,7 @@ export const UserProfileSchema = z.object({
   address: AddressSchema.optional(),
 });
 
+/** Personal profile information for a user */
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
 /** Inventory levels for a list of products */
@@ -214,6 +234,7 @@ export const InventoryResponseSchema = z.object({
 })),
 });
 
+/** Inventory levels for a list of products */
 export type InventoryResponse = z.infer<typeof InventoryResponseSchema>;
 
 /** User-configurable application preferences */
@@ -224,6 +245,7 @@ export const UserPreferencesSchema = z.object({
   theme: z.enum(["light", "dark", "auto"]).optional(),
 });
 
+/** User-configurable application preferences */
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 
 /** Request body for updating an order's status */
@@ -232,6 +254,7 @@ export const UpdateOrderStatusRequestSchema = z.object({
   trackingNumber: z.string().optional(),
 });
 
+/** Request body for updating an order's status */
 export type UpdateOrderStatusRequest = z.infer<typeof UpdateOrderStatusRequestSchema>;
 
 /** Request body for placing a new order */
@@ -245,6 +268,7 @@ export const CreateOrderRequestSchema = z.object({
   paymentMethod: PaymentMethodSchema.optional(),
 });
 
+/** Request body for placing a new order */
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
 /** A product listed in the catalog */
@@ -266,6 +290,7 @@ export const ProductSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }).optional(),
 });
 
+/** A product listed in the catalog */
 export type Product = z.infer<typeof ProductSchema>;
 
 /** Request body for partially updating a product */
@@ -277,6 +302,7 @@ export const UpdateProductRequestSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+/** Request body for partially updating a product */
 export type UpdateProductRequest = z.infer<typeof UpdateProductRequestSchema>;
 
 /** Request body for creating a new user account */
@@ -287,6 +313,7 @@ export const CreateUserRequestSchema = z.object({
   preferences: UserPreferencesSchema.optional(),
 });
 
+/** Request body for creating a new user account */
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
 /** Registered user account */
@@ -303,6 +330,7 @@ export const UserSchema = z.object({
   roles: z.array(UserRoleSchema).optional(),
 });
 
+/** Registered user account */
 export type User = z.infer<typeof UserSchema>;
 
 /** A single line item within an order */
@@ -314,6 +342,7 @@ export const OrderItemSchema = z.object({
   productSnapshot: ProductSchema.optional(),
 });
 
+/** A single line item within an order */
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 
 /** Paginated list of products with optional filters */
@@ -329,6 +358,7 @@ export const ProductListResponseSchema = z.object({
 }).optional(),
 });
 
+/** Paginated list of products with optional filters */
 export type ProductListResponse = z.infer<typeof ProductListResponseSchema>;
 
 /** Paginated list of users */
@@ -337,6 +367,7 @@ export const UserListResponseSchema = z.object({
   pagination: PaginationInfoSchema,
 });
 
+/** Paginated list of users */
 export type UserListResponse = z.infer<typeof UserListResponseSchema>;
 
 /** A customer purchase order */
@@ -354,4 +385,5 @@ export const OrderSchema = z.object({
   trackingNumber: z.string().nullable().optional(),
 });
 
+/** A customer purchase order */
 export type Order = z.infer<typeof OrderSchema>;

@@ -17,6 +17,12 @@ export const AddressSchema = z.object({
   postalCode: z.string().min(3).max(10).nullable().optional(),
 });
 
+/**
+ * A physical mailing address.
+ *
+ * All addresses must include at least `street`, `city`, and `country`.
+ * The `country` field uses ISO 3166-1 alpha-2 codes (e.g. `US`, `FI`, `DE`).
+ */
 export type Address = z.infer<typeof AddressSchema>;
 
 export const UserProfileSchema = z.object({
@@ -66,6 +72,16 @@ export const UserSchema = z.object({
   address: AddressSchema.optional(),
 });
 
+/**
+ * Represents a user in the system.
+ *
+ * A user can be in one of the following states:
+ * - **active**: The user can log in and use the system.
+ * - **inactive**: The user account is disabled.
+ * - **pending**: The user has registered but not yet confirmed their email.
+ *
+ * See also: `UserProfile` for extended profile information.
+ */
 export type User = z.infer<typeof UserSchema>;
 
 export const ApiResponseSchema = z.object({

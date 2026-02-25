@@ -12,11 +12,13 @@ export type Address = z.infer<typeof AddressSchema>;
 /** An opaque cursor for pagination */
 export const PaginationCursorSchema = z.string();
 
+/** An opaque cursor for pagination */
 export type PaginationCursor = z.infer<typeof PaginationCursorSchema>;
 
 /** An anyOf with null */
 export const AnyOfNullableSchema = AddressSchema.nullable();
 
+/** An anyOf with null */
 export type AnyOfNullable = z.infer<typeof AnyOfNullableSchema>;
 
 /** A oneOf without null should remain a plain union */
@@ -25,6 +27,7 @@ export const NonNullableOneOfSchema = z.union([
   AddressSchema
 ]);
 
+/** A oneOf without null should remain a plain union */
 export type NonNullableOneOf = z.infer<typeof NonNullableOneOfSchema>;
 
 /** A oneOf with null and multiple non-null types */
@@ -33,6 +36,7 @@ export const NullableMultiTypeSchema = z.union([
   AddressSchema
 ]).nullable();
 
+/** A oneOf with null and multiple non-null types */
 export type NullableMultiType = z.infer<typeof NullableMultiTypeSchema>;
 
 export const PaginatedResponseSchema = z.object({
