@@ -1,8 +1,10 @@
 use crate::generators::Generator;
+use crate::generators::common::topological_sort;
 use crate::openapi::{
     AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
 };
 use anyhow::Result;
+use indexmap::IndexMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum PydanticVersion {
@@ -21,6 +23,57 @@ impl Default for PydanticGenerator {
     fn default() -> Self {
         Self::new(PydanticVersion::V1)
     }
+}
+
+impl Clone for PydanticGenerator {
+    fn clone(&self) -> Self {
+        Self {
+            indent_level: self.indent_level,
+            version: self.version,
+        }
+    }
+}
+
+/// Convert a camelCase or PascalCase identifier to snake_case.
+/// e.g. "isActive" -> "is_active", "firstName" -> "first_name"
+fn to_snake_case(name: &str) -> String {
+    let mut result = String::new();
+    let chars: Vec<char> = name.chars().collect();
+    for (i, &c) in chars.iter().enumerate() {
+        if c.is_uppercase() {
+            if i > 0 {
+                let prev = chars[i - 1];
+                let next = chars.get(i + 1).copied();
+                if prev.is_lowercase() || prev.is_ascii_digit() {
+                    result.push('_');
+                } else if let Some(next_c) = next
+                    && next_c.is_lowercase()
+                {
+                    result.push('_');
+                }
+            }
+            result.extend(c.to_lowercase());
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
+/// Tracks which Python symbols need to be imported.
+#[derive(Default)]
+struct UsedImports {
+    base_model: bool,
+    field: bool,
+    email_str: bool,
+    http_url: bool,
+    config_dict: bool,
+    any: bool,
+    literal: bool,
+    enum_cls: bool,
+    date: bool,
+    datetime_: bool,
+    uuid: bool,
 }
 
 impl PydanticGenerator {
@@ -53,6 +106,252 @@ impl PydanticGenerator {
 
     fn format_dict(&self, key_type: &str, value_type: &str) -> String {
         format!("dict[{key_type}, {value_type}]")
+    }
+
+    /// Collect all import requirements by scanning the schema map.
+    fn collect_imports(&self, schemas: &IndexMap<String, Schema>) -> UsedImports {
+        let mut used = UsedImports::default();
+        for schema in schemas.values() {
+            // Top-level enum → generates class X(str, Enum), not Literal
+            if let Schema::Object {
+                enum_values: Some(_),
+                ..
+            } = schema
+            {
+                used.enum_cls = true;
+            }
+            self.scan_top_level_schema(schema, &mut used);
+        }
+        used
+    }
+
+    /// Scan a top-level schema for import requirements.
+    fn scan_top_level_schema(&self, schema: &Schema, used: &mut UsedImports) {
+        let Schema::Object {
+            schema_type,
+            properties,
+            additional_properties,
+            items,
+            enum_values,
+            all_of,
+            one_of,
+            any_of,
+            min_length,
+            max_length,
+            minimum,
+            maximum,
+            pattern,
+            ..
+        } = schema
+        else {
+            return;
+        };
+
+        // Top-level enum: generate_model returns early, no further scanning needed
+        if enum_values.is_some() {
+            return;
+        }
+
+        // allOf composition → BaseModel
+        if let Some(all_of_schemas) = all_of {
+            used.base_model = true;
+            for sub in all_of_schemas {
+                if let Schema::Object {
+                    properties: Some(props),
+                    ..
+                } = sub
+                {
+                    if props.keys().any(|k| to_snake_case(k) != *k) {
+                        used.field = true;
+                        if self.version == PydanticVersion::V2 {
+                            used.config_dict = true;
+                        }
+                    }
+                    for prop_schema in props.values() {
+                        if prop_schema.get_description().is_some() {
+                            used.field = true;
+                        }
+                        self.scan_inline_schema(prop_schema, used);
+                    }
+                } else {
+                    self.scan_inline_schema(sub, used);
+                }
+            }
+            return;
+        }
+
+        // oneOf or anyOf at top level → type alias
+        // Null schemas are filtered out (become "None" in the union, not "Any")
+        if one_of.is_some() || any_of.is_some() {
+            for schemas in [one_of, any_of].into_iter().flatten() {
+                for s in schemas.iter().filter(|s| s.get_type() != Some("null")) {
+                    self.scan_inline_schema(s, used);
+                }
+            }
+            return;
+        }
+
+        // Map type (additionalProperties but no properties) → type alias
+        if properties.is_none()
+            && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
+        {
+            if let Some(AdditionalProperties::Schema(ap)) = additional_properties {
+                self.scan_inline_schema(ap, used);
+            }
+            return;
+        }
+
+        // Constraints on the schema itself (rare for top-level objects)
+        if min_length.is_some()
+            || max_length.is_some()
+            || minimum.is_some()
+            || maximum.is_some()
+            || pattern.is_some()
+        {
+            used.field = true;
+        }
+
+        // Object with properties → BaseModel
+        if schema_type_str(schema_type) == Some("object") || properties.is_some() {
+            used.base_model = true;
+            if let Some(props) = properties {
+                // Check for aliases (camelCase field names)
+                if props.keys().any(|k| to_snake_case(k) != *k) {
+                    used.field = true;
+                    if self.version == PydanticVersion::V2 {
+                        used.config_dict = true;
+                    }
+                }
+                for prop_schema in props.values() {
+                    if prop_schema.get_description().is_some() {
+                        used.field = true;
+                    }
+                    self.scan_inline_schema(prop_schema, used);
+                }
+            }
+            return;
+        }
+
+        // array type at top-level
+        if schema_type_str(schema_type) == Some("array") {
+            if let Some(items_schema) = items {
+                self.scan_inline_schema(items_schema, used);
+            } else {
+                used.any = true;
+            }
+        }
+    }
+
+    /// Scan a schema used inline (as a property type, oneOf member, etc.)
+    /// to determine what imports are needed. Mirrors schema_to_pydantic_type logic.
+    fn scan_inline_schema(&self, schema: &Schema, used: &mut UsedImports) {
+        let Schema::Object {
+            schema_type,
+            properties,
+            additional_properties,
+            items,
+            enum_values,
+            format,
+            all_of,
+            one_of,
+            any_of,
+            min_length,
+            max_length,
+            minimum,
+            maximum,
+            pattern,
+            ..
+        } = schema
+        else {
+            return; // Reference: just uses the type name, no imports needed
+        };
+
+        // Constraints on this inline schema → Field needed on parent
+        if min_length.is_some()
+            || max_length.is_some()
+            || minimum.is_some()
+            || maximum.is_some()
+            || pattern.is_some()
+        {
+            used.field = true;
+        }
+
+        // Mirror schema_to_pydantic_type branching
+        if all_of.is_some() {
+            // allOf inline → dict[str, Any]
+            used.any = true;
+            if let Some(schemas) = all_of {
+                for s in schemas {
+                    self.scan_inline_schema(s, used);
+                }
+            }
+            return;
+        }
+
+        // Null schemas in oneOf/anyOf are filtered out (they become "None" in the union)
+        if let Some(one_of_schemas) = one_of {
+            for s in one_of_schemas
+                .iter()
+                .filter(|s| s.get_type() != Some("null"))
+            {
+                self.scan_inline_schema(s, used);
+            }
+            return;
+        }
+
+        if let Some(any_of_schemas) = any_of {
+            for s in any_of_schemas
+                .iter()
+                .filter(|s| s.get_type() != Some("null"))
+            {
+                self.scan_inline_schema(s, used);
+            }
+            return;
+        }
+
+        match schema_type_str(schema_type) {
+            Some("string") => {
+                if enum_values.is_some() {
+                    used.literal = true;
+                } else {
+                    match format.as_deref() {
+                        Some("email") => used.email_str = true,
+                        Some("uri") => used.http_url = true,
+                        Some("date") => used.date = true,
+                        Some("date-time") => used.datetime_ = true,
+                        Some("uuid") => used.uuid = true,
+                        _ => {}
+                    }
+                }
+            }
+            Some("number") | Some("integer") | Some("boolean") => {}
+            Some("array") => {
+                if let Some(items_schema) = items {
+                    self.scan_inline_schema(items_schema, used);
+                } else {
+                    used.any = true;
+                }
+            }
+            Some("object") | None => {
+                if properties.is_none() {
+                    match additional_properties {
+                        Some(AdditionalProperties::Schema(ap)) => {
+                            self.scan_inline_schema(ap, used);
+                        }
+                        _ => {
+                            used.any = true;
+                        }
+                    }
+                } else {
+                    // Has properties inline → dict[str, Any] in type context
+                    used.any = true;
+                }
+            }
+            _ => {
+                // Unrecognized type (e.g., "null") → Any
+                used.any = true;
+            }
+        }
     }
 
     fn generate_model(&self, name: &str, schema: &Schema) -> Result<String> {
@@ -89,57 +388,58 @@ impl PydanticGenerator {
                     return Ok(output);
                 }
 
-                // Handle composition types
+                // Handle allOf composition
                 if let Some(all_of_schemas) = all_of {
-                    // For allOf, we'll create a model that inherits from multiple bases
                     output.push_str(&format!("{}class {}(BaseModel):\n", self.indent(), name));
                     output.push_str(&format!(
                         "{}    # This model combines multiple schemas (allOf)\n",
                         self.indent()
                     ));
 
-                    // Add fields from all schemas
-                    for schema in all_of_schemas.iter() {
+                    let has_aliases = all_of_schemas.iter().any(|s| {
+                        if let Schema::Object {
+                            properties: Some(props),
+                            ..
+                        } = s
+                        {
+                            props.keys().any(|k| to_snake_case(k) != *k)
+                        } else {
+                            false
+                        }
+                    });
+                    if has_aliases {
+                        self.write_model_config(&mut output);
+                    }
+
+                    for sub_schema in all_of_schemas.iter() {
                         if let Schema::Object {
                             properties: Some(props),
                             required,
                             ..
-                        } = schema
+                        } = sub_schema
                         {
                             for (prop_name, prop_schema) in props {
-                                let base_field_type = self.schema_to_pydantic_type(prop_schema)?;
+                                let snake_name = to_snake_case(prop_name);
+                                let alias = if snake_name != *prop_name {
+                                    Some(prop_name.as_str())
+                                } else {
+                                    None
+                                };
+                                let base_type = self.schema_to_pydantic_type(prop_schema)?;
                                 let is_required = required
                                     .as_ref()
                                     .map(|req| req.contains(prop_name))
                                     .unwrap_or(false);
-
-                                if is_required {
-                                    output.push_str(&format!(
-                                        "{}    {}: {}\n",
-                                        self.indent(),
-                                        prop_name,
-                                        base_field_type
-                                    ));
-                                } else {
-                                    // Handle nullable + optional case to avoid double-wrapping
-                                    if self.is_optional_type(&base_field_type) {
-                                        output.push_str(&format!(
-                                            "{}    {}: {} = None\n",
-                                            self.indent(),
-                                            prop_name,
-                                            base_field_type
-                                        ));
-                                    } else {
-                                        output.push_str(&format!(
-                                            "{}    {}: {} = None\n",
-                                            self.indent(),
-                                            prop_name,
-                                            self.wrap_optional(&base_field_type)
-                                        ));
-                                    }
-                                }
+                                let field_def = self.generate_field_definition(
+                                    &snake_name,
+                                    alias,
+                                    prop_schema,
+                                    base_type,
+                                    is_required,
+                                )?;
+                                output.push_str(&format!("{}    {}\n", self.indent(), field_def));
                             }
-                        } else if let Schema::Reference { reference, .. } = schema {
+                        } else if let Schema::Reference { reference, .. } = sub_schema {
                             let ref_name = reference
                                 .strip_prefix("#/components/schemas/")
                                 .unwrap_or(reference);
@@ -152,8 +452,10 @@ impl PydanticGenerator {
                     }
                     output.push_str("\n\n");
                     return Ok(output);
-                } else if let Some(one_of_schemas) = one_of {
-                    // For oneOf, we'll create a Union type
+                }
+
+                // oneOf → type alias
+                if let Some(one_of_schemas) = one_of {
                     let types: Result<Vec<String>, _> = one_of_schemas
                         .iter()
                         .filter(|s| s.get_type() != Some("null"))
@@ -171,8 +473,10 @@ impl PydanticGenerator {
                         self.format_union(&types)
                     ));
                     return Ok(output);
-                } else if let Some(any_of_schemas) = any_of {
-                    // For anyOf, we'll also create a Union type
+                }
+
+                // anyOf → type alias
+                if let Some(any_of_schemas) = any_of {
                     let types: Result<Vec<String>, _> = any_of_schemas
                         .iter()
                         .filter(|s| s.get_type() != Some("null"))
@@ -192,7 +496,7 @@ impl PydanticGenerator {
                     return Ok(output);
                 }
 
-                // Handle map types (additionalProperties without properties)
+                // Map type (additionalProperties without properties)
                 if properties.is_none()
                     && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
                 {
@@ -201,7 +505,7 @@ impl PydanticGenerator {
                     return Ok(output);
                 }
 
-                // Handle object types
+                // Object type → BaseModel class
                 if schema_type_str(schema_type) == Some("object") || properties.is_some() {
                     output.push_str(&format!("{}class {}(BaseModel):\n", self.indent(), name));
 
@@ -229,21 +533,28 @@ impl PydanticGenerator {
                         if props.is_empty() {
                             output.push_str(&format!("{}    pass\n", self.indent()));
                         } else {
+                            let has_aliases = props.keys().any(|k| to_snake_case(k) != *k);
+                            if has_aliases {
+                                self.write_model_config(&mut output);
+                            }
+
                             for (prop_name, prop_schema) in props {
-                                let base_field_type = self.schema_to_pydantic_type(prop_schema)?;
+                                let snake_name = to_snake_case(prop_name);
+                                let alias = if snake_name != *prop_name {
+                                    Some(prop_name.as_str())
+                                } else {
+                                    None
+                                };
+                                let base_type = self.schema_to_pydantic_type(prop_schema)?;
                                 let is_required = required
                                     .as_ref()
                                     .map(|req| req.contains(prop_name))
                                     .unwrap_or(false);
-
-                                // Handle nullable + optional case to avoid double Optional
-                                let field_type = base_field_type;
-
-                                // Add field with validation constraints
                                 let field_def = self.generate_field_definition(
-                                    prop_name,
+                                    &snake_name,
+                                    alias,
                                     prop_schema,
-                                    field_type,
+                                    base_type,
                                     is_required,
                                 )?;
                                 output.push_str(&format!("{}    {}\n", self.indent(), field_def));
@@ -255,13 +566,12 @@ impl PydanticGenerator {
 
                     output.push('\n');
                 } else {
-                    // Handle primitive type aliases
+                    // Primitive type alias
                     let py_type = self.schema_to_pydantic_type(schema)?;
                     output.push_str(&format!("{}{} = {}\n\n", self.indent(), name, py_type));
                 }
             }
             Schema::Reference { .. } => {
-                // For references, create a type alias
                 let py_type = self.schema_to_pydantic_type(schema)?;
                 output.push_str(&format!("{}{} = {}\n\n", self.indent(), name, py_type));
             }
@@ -270,13 +580,94 @@ impl PydanticGenerator {
         Ok(output)
     }
 
+    /// Emit the model-level config that allows both field name and alias for population.
+    fn write_model_config(&self, output: &mut String) {
+        match self.version {
+            PydanticVersion::V1 => {
+                output.push_str(&format!("{}    class Config:\n", self.indent()));
+                output.push_str(&format!(
+                    "{}        allow_population_by_field_name = True\n\n",
+                    self.indent()
+                ));
+            }
+            PydanticVersion::V2 => {
+                output.push_str(&format!(
+                    "{}    model_config = ConfigDict(populate_by_name=True)\n\n",
+                    self.indent()
+                ));
+            }
+        }
+    }
+
     fn generate_field_definition(
         &self,
-        name: &str,
+        snake_name: &str,
+        alias: Option<&str>,
         schema: &Schema,
-        field_type: String,
+        base_type: String,
         is_required: bool,
     ) -> Result<String> {
+        let field_type = if !is_required && !self.is_optional_type(&base_type) {
+            self.wrap_optional(&base_type)
+        } else {
+            base_type
+        };
+
+        let has_constraints = matches!(
+            schema,
+            Schema::Object {
+                min_length: Some(_),
+                ..
+            }
+        ) || matches!(
+            schema,
+            Schema::Object {
+                max_length: Some(_),
+                ..
+            }
+        ) || matches!(
+            schema,
+            Schema::Object {
+                minimum: Some(_),
+                ..
+            }
+        ) || matches!(
+            schema,
+            Schema::Object {
+                maximum: Some(_),
+                ..
+            }
+        ) || matches!(
+            schema,
+            Schema::Object {
+                pattern: Some(_),
+                ..
+            }
+        );
+
+        let needs_field = alias.is_some() || has_constraints || schema.get_description().is_some();
+
+        if !needs_field {
+            if is_required {
+                return Ok(format!("{snake_name}: {field_type}"));
+            } else {
+                return Ok(format!("{snake_name}: {field_type} = None"));
+            }
+        }
+
+        let mut field_args: Vec<String> = Vec::new();
+
+        // Default value for optional fields (first positional arg)
+        if !is_required {
+            field_args.push("None".to_string());
+        }
+
+        // Alias
+        if let Some(original) = alias {
+            field_args.push(format!("alias=\"{original}\""));
+        }
+
+        // Constraints
         if let Schema::Object {
             min_length,
             max_length,
@@ -286,107 +677,40 @@ impl PydanticGenerator {
             ..
         } = schema
         {
-            let mut constraints = Vec::new();
-
-            // Add validation constraints
-            if let Some(min_len) = min_length {
-                constraints.push(format!("min_length={min_len}"));
+            if let Some(v) = min_length {
+                field_args.push(format!("min_length={v}"));
             }
-            if let Some(max_len) = max_length {
-                constraints.push(format!("max_length={max_len}"));
+            if let Some(v) = max_length {
+                field_args.push(format!("max_length={v}"));
             }
-            if let Some(min_val) = minimum {
-                constraints.push(format!("ge={min_val}"));
+            if let Some(v) = minimum {
+                field_args.push(format!("ge={v}"));
             }
-            if let Some(max_val) = maximum {
-                constraints.push(format!("le={max_val}"));
+            if let Some(v) = maximum {
+                field_args.push(format!("le={v}"));
             }
             if let Some(regex) = pattern {
                 let pattern_key = match self.version {
                     PydanticVersion::V1 => "regex",
                     PydanticVersion::V2 => "pattern",
                 };
-                constraints.push(format!("{pattern_key}=r\"{regex}\""));
+                field_args.push(format!("{pattern_key}=r\"{regex}\""));
             }
-            if let Some(desc) = schema.get_description() {
-                constraints.push(format!(
-                    "description=\"{}\"",
-                    desc.replace("\\", "\\\\")
-                        .replace("\"", "\\\"")
-                        .replace("\n", "\\n")
-                ));
-            }
-
-            if is_required {
-                if constraints.is_empty() {
-                    Ok(format!("{name}: {field_type}"))
-                } else {
-                    Ok(format!(
-                        "{}: {} = Field({})",
-                        name,
-                        field_type,
-                        constraints.join(", ")
-                    ))
-                }
-            } else if constraints.is_empty() {
-                if self.is_optional_type(&field_type) {
-                    Ok(format!("{name}: {field_type} = None"))
-                } else {
-                    Ok(format!(
-                        "{}: {} = None",
-                        name,
-                        self.wrap_optional(&field_type)
-                    ))
-                }
-            } else if self.is_optional_type(&field_type) {
-                Ok(format!(
-                    "{}: {} = Field(None, {})",
-                    name,
-                    field_type,
-                    constraints.join(", ")
-                ))
-            } else {
-                Ok(format!(
-                    "{}: {} = Field(None, {})",
-                    name,
-                    self.wrap_optional(&field_type),
-                    constraints.join(", ")
-                ))
-            }
-        } else if let Some(desc) = schema.get_description() {
-            let escaped_desc = desc
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n");
-            if is_required {
-                Ok(format!(
-                    "{}: {} = Field(description=\"{}\")",
-                    name, field_type, escaped_desc
-                ))
-            } else if self.is_optional_type(&field_type) {
-                Ok(format!(
-                    "{}: {} = Field(None, description=\"{}\")",
-                    name, field_type, escaped_desc
-                ))
-            } else {
-                Ok(format!(
-                    "{}: {} = Field(None, description=\"{}\")",
-                    name,
-                    self.wrap_optional(&field_type),
-                    escaped_desc
-                ))
-            }
-        } else if is_required {
-            Ok(format!("{name}: {field_type}"))
-        } else if self.is_optional_type(&field_type) {
-            Ok(format!("{name}: {field_type} = None"))
-        } else {
-            Ok(format!(
-                "{}: {} = None",
-                name,
-                self.wrap_optional(&field_type)
-            ))
         }
+
+        // Description
+        if let Some(desc) = schema.get_description() {
+            let escaped = desc
+                .replace('\\', "\\\\")
+                .replace('"', "\\\"")
+                .replace('\n', "\\n");
+            field_args.push(format!("description=\"{escaped}\""));
+        }
+
+        Ok(format!(
+            "{snake_name}: {field_type} = Field({})",
+            field_args.join(", ")
+        ))
     }
 
     #[allow(clippy::only_used_in_recursion)]
@@ -413,10 +737,8 @@ impl PydanticGenerator {
             } => {
                 let py_type;
 
-                // Handle composition types
                 if let Some(_all_of_schemas) = all_of {
-                    // For inline allOf, we'll create an anonymous model
-                    py_type = self.format_dict("str", "Any"); // Fallback for complex inline types
+                    py_type = self.format_dict("str", "Any");
                 } else if let Some(one_of_schemas) = one_of {
                     let types: Result<Vec<String>, _> = one_of_schemas
                         .iter()
@@ -442,7 +764,6 @@ impl PydanticGenerator {
                     }
                     py_type = self.format_union(&types);
                 } else {
-                    // Handle basic types
                     match schema_type_str(schema_type) {
                         Some("string") => {
                             if let Some(enum_vals) = enum_values {
@@ -500,7 +821,6 @@ impl PydanticGenerator {
                     }
                 }
 
-                // Handle nullable types
                 let final_type = if is_schema_nullable(nullable, schema_type) {
                     self.wrap_optional(&py_type)
                 } else {
@@ -517,46 +837,86 @@ impl Generator for PydanticGenerator {
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
 
-        // Add header comment
         output.push_str(&format!("# Generated by {command}\n"));
-        output.push_str("# Do not modify manually\n\n");
+        output.push_str("# Do not modify manually\n");
 
-        // Add imports (version-specific)
-        match self.version {
-            PydanticVersion::V1 => {
-                output.push_str("from pydantic import BaseModel, Field, EmailStr, HttpUrl\n");
-                output.push_str("from typing import Any, Literal\n");
-                output.push_str("from enum import Enum\n");
-                output.push_str("from datetime import date, datetime\n");
-                output.push_str("from uuid import UUID\n\n");
-            }
-            PydanticVersion::V2 => {
-                output.push_str("from pydantic import BaseModel, Field, EmailStr, HttpUrl\n");
-                output.push_str("from typing import Any, Literal\n");
-                output.push_str("from enum import Enum\n");
-                output.push_str("from datetime import date, datetime\n");
-                output.push_str("from uuid import UUID\n\n");
-            }
-        }
+        let Some(components) = &schema.components else {
+            return Ok(output);
+        };
+        let Some(schemas) = &components.schemas else {
+            return Ok(output);
+        };
 
-        if let Some(components) = &schema.components
-            && let Some(schemas) = &components.schemas
-        {
-            for (name, schema_def) in schemas {
+        let used = self.collect_imports(schemas);
+
+        // Generate models in topological order (dependencies before dependents)
+        let mut models_code = String::new();
+        let sorted_names = topological_sort(schemas)?;
+        for name in &sorted_names {
+            if let Some(schema_def) = schemas.get(name) {
                 let model = self.generate_model(name, schema_def)?;
-                output.push_str(&model);
+                models_code.push_str(&model);
             }
         }
+
+        // Build import lines, ruff/isort style:
+        //   standard library first, then third-party (with blank line between groups)
+
+        let mut stdlib_lines: Vec<String> = Vec::new();
+
+        if used.date || used.datetime_ {
+            let mut items = Vec::new();
+            if used.date {
+                items.push("date");
+            }
+            if used.datetime_ {
+                items.push("datetime");
+            }
+            stdlib_lines.push(format!("from datetime import {}", items.join(", ")));
+        }
+        if used.enum_cls {
+            stdlib_lines.push("from enum import Enum".to_string());
+        }
+        if used.any || used.literal {
+            let mut items = Vec::new();
+            if used.any {
+                items.push("Any");
+            }
+            if used.literal {
+                items.push("Literal");
+            }
+            stdlib_lines.push(format!("from typing import {}", items.join(", ")));
+        }
+        if used.uuid {
+            stdlib_lines.push("from uuid import UUID".to_string());
+        }
+
+        let mut pydantic_items: Vec<&str> = vec!["BaseModel"];
+        if used.config_dict {
+            pydantic_items.push("ConfigDict");
+        }
+        if used.email_str {
+            pydantic_items.push("EmailStr");
+        }
+        if used.field {
+            pydantic_items.push("Field");
+        }
+        if used.http_url {
+            pydantic_items.push("HttpUrl");
+        }
+        let pydantic_line = format!("from pydantic import {}", pydantic_items.join(", "));
+
+        output.push('\n'); // blank line after header
+        if !stdlib_lines.is_empty() {
+            output.push_str(&stdlib_lines.join("\n"));
+            output.push('\n');
+            output.push('\n'); // blank line between stdlib and pydantic groups
+        }
+        output.push_str(&pydantic_line);
+        output.push('\n');
+        output.push('\n'); // blank line before models
+        output.push_str(&models_code);
 
         Ok(output)
-    }
-}
-
-impl Clone for PydanticGenerator {
-    fn clone(&self) -> Self {
-        Self {
-            indent_level: self.indent_level,
-            version: self.version,
-        }
     }
 }
