@@ -32,55 +32,55 @@ impl TestSuite {
             // Angular tests with full-sample.json
             TestCase {
                 name: "Angular Full Sample".to_string(),
-                input_file: "input-files/full-sample.json".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
                 command_args: vec!["--angular".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/angular/full-sample".to_string(),
             },
             TestCase {
                 name: "Angular Simple Sample".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--angular".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/angular/simple-sample".to_string(),
             },
             // Angular nested tests
             TestCase {
                 name: "Angular Nested Test".to_string(),
-                input_file: "input-files/full-sample.json".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
                 command_args: vec!["--angular".to_string()],
                 expected_dir: "output-samples/angular-nested".to_string(),
             },
             // Comprehensive nested test
             TestCase {
                 name: "Comprehensive Nested Test".to_string(),
-                input_file: "input-files/full-sample.json".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
                 command_args: vec!["--angular".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/comprehensive-nested-test".to_string(),
             },
             // Nested test (TypeScript + Zod only)
             TestCase {
                 name: "Nested Test".to_string(),
-                input_file: "input-files/full-sample.json".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
                 command_args: vec!["--typescript".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/nested-test".to_string(),
             },
             // .NET test
             TestCase {
                 name: "DotNet Test".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--dotnet".to_string()],
                 expected_dir: "output-samples/dotnet".to_string(),
             },
             // Pydantic test
             TestCase {
                 name: "Pydantic Test".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--pydantic".to_string()],
                 expected_dir: "output-samples/pydantic".to_string(),
             },
             // Pydantic v2 tests
             TestCase {
                 name: "Pydantic V2 Test".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec![
                     "--pydantic".to_string(),
                     "--pydantic-version".to_string(),
@@ -90,7 +90,7 @@ impl TestSuite {
             },
             TestCase {
                 name: "JSON Simple Pydantic V2".to_string(),
-                input_file: "input-files/test-data-simple.json".to_string(),
+                input_file: "input-files/json/test-data-simple.json".to_string(),
                 command_args: vec![
                     "--from-json".to_string(),
                     "--pydantic".to_string(),
@@ -101,7 +101,7 @@ impl TestSuite {
             },
             TestCase {
                 name: "JSON Complex Pydantic V2".to_string(),
-                input_file: "input-files/test-data-complex.json".to_string(),
+                input_file: "input-files/json/test-data-complex.json".to_string(),
                 command_args: vec![
                     "--from-json".to_string(),
                     "--pydantic".to_string(),
@@ -113,20 +113,20 @@ impl TestSuite {
             // Python TypedDict tests
             TestCase {
                 name: "Python TypedDict Test".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--python-dict".to_string()],
                 expected_dir: "output-samples/python-typed-dict".to_string(),
             },
             TestCase {
                 name: "Python TypedDict Full Test".to_string(),
-                input_file: "input-files/full-sample.json".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
                 command_args: vec!["--python-dict".to_string()],
                 expected_dir: "output-samples/python-typed-dict-full".to_string(),
             },
             // Promises tests
             TestCase {
                 name: "Angular Promises with Zod".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec![
                     "--angular".to_string(),
                     "--zod".to_string(),
@@ -136,57 +136,57 @@ impl TestSuite {
             },
             TestCase {
                 name: "Angular Promises without Zod".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--angular".to_string(), "--promises".to_string()],
                 expected_dir: "output-samples/angular-promises-no-zod".to_string(),
             },
             // JSON to TypeScript/Zod/Pydantic tests
             TestCase {
                 name: "JSON Simple TypeScript".to_string(),
-                input_file: "input-files/test-data-simple.json".to_string(),
+                input_file: "input-files/json/test-data-simple.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/json-simple-typescript".to_string(),
             },
             TestCase {
                 name: "JSON Simple Zod".to_string(),
-                input_file: "input-files/test-data-simple.json".to_string(),
+                input_file: "input-files/json/test-data-simple.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/json-simple-zod".to_string(),
             },
             TestCase {
                 name: "JSON Simple Pydantic".to_string(),
-                input_file: "input-files/test-data-simple.json".to_string(),
+                input_file: "input-files/json/test-data-simple.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--pydantic".to_string()],
                 expected_dir: "output-samples/json-simple-pydantic".to_string(),
             },
             TestCase {
                 name: "JSON Complex TypeScript".to_string(),
-                input_file: "input-files/test-data-complex.json".to_string(),
+                input_file: "input-files/json/test-data-complex.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/json-complex-typescript".to_string(),
             },
             TestCase {
                 name: "JSON Complex Pydantic".to_string(),
-                input_file: "input-files/test-data-complex.json".to_string(),
+                input_file: "input-files/json/test-data-complex.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--pydantic".to_string()],
                 expected_dir: "output-samples/json-complex-pydantic".to_string(),
             },
             // JSON Schema tests
             TestCase {
                 name: "JSON Simple JSON Schema".to_string(),
-                input_file: "input-files/test-data-simple.json".to_string(),
+                input_file: "input-files/json/test-data-simple.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--json-schema".to_string()],
                 expected_dir: "output-samples/json-simple-json-schema".to_string(),
             },
             TestCase {
                 name: "JSON Complex JSON Schema".to_string(),
-                input_file: "input-files/test-data-complex.json".to_string(),
+                input_file: "input-files/json/test-data-complex.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--json-schema".to_string()],
                 expected_dir: "output-samples/json-complex-json-schema".to_string(),
             },
             TestCase {
                 name: "OpenAPI JSON Schema".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--json-schema".to_string()],
                 expected_dir: "output-samples/openapi-json-schema".to_string(),
             },
@@ -212,56 +212,56 @@ impl TestSuite {
             // Endpoints generator test
             TestCase {
                 name: "Endpoints Test".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--endpoints".to_string()],
                 expected_dir: "output-samples/endpoints-test".to_string(),
             },
             // Pydantic advanced features test
             TestCase {
                 name: "Pydantic Advanced Features".to_string(),
-                input_file: "input-files/test-pydantic-advanced.json".to_string(),
+                input_file: "input-files/generator/test-pydantic-advanced.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--pydantic".to_string()],
                 expected_dir: "output-samples/pydantic-advanced".to_string(),
             },
             // DotNet advanced types test
             TestCase {
                 name: "DotNet Advanced Types".to_string(),
-                input_file: "input-files/test-dotnet-advanced.json".to_string(),
+                input_file: "input-files/generator/test-dotnet-advanced.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--dotnet".to_string()],
                 expected_dir: "output-samples/dotnet-advanced".to_string(),
             },
             // Deep nesting test
             TestCase {
                 name: "Deep Nesting Test".to_string(),
-                input_file: "input-files/test-deep-nesting.json".to_string(),
+                input_file: "input-files/edge-cases/test-deep-nesting.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/deep-nesting".to_string(),
             },
             // Special characters test
             TestCase {
                 name: "Special Characters Test".to_string(),
-                input_file: "input-files/test-special-chars.json".to_string(),
+                input_file: "input-files/edge-cases/test-special-chars.json".to_string(),
                 command_args: vec!["--from-json".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/special-chars".to_string(),
             },
             // Empty schema test
             TestCase {
                 name: "Empty Schema Test".to_string(),
-                input_file: "input-files/test-empty-schema.json".to_string(),
+                input_file: "input-files/edge-cases/test-empty-schema.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/empty-schema".to_string(),
             },
             // Zod all features test
             TestCase {
                 name: "Zod All Features Test".to_string(),
-                input_file: "input-files/test-zod-all-features.json".to_string(),
+                input_file: "input-files/json-schema/test-zod-all-features.json".to_string(),
                 command_args: vec!["--from-json-schema".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/zod-all-features".to_string(),
             },
             // Angular Base URL Argument Mode
             TestCase {
                 name: "Angular Base URL Argument".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec![
                     "--angular".to_string(),
                     "--zod".to_string(),
@@ -273,77 +273,77 @@ impl TestSuite {
             // Multipart/form-data tests
             TestCase {
                 name: "Multipart Angular with Zod".to_string(),
-                input_file: "input-files/test-multipart.json".to_string(),
+                input_file: "input-files/openapi/test-multipart.json".to_string(),
                 command_args: vec!["--angular".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/multipart-angular-zod".to_string(),
             },
             TestCase {
                 name: "Multipart Angular without Zod".to_string(),
-                input_file: "input-files/test-multipart.json".to_string(),
+                input_file: "input-files/openapi/test-multipart.json".to_string(),
                 command_args: vec!["--angular".to_string()],
                 expected_dir: "output-samples/multipart-angular".to_string(),
             },
             TestCase {
                 name: "Multipart TypeScript".to_string(),
-                input_file: "input-files/test-multipart.json".to_string(),
+                input_file: "input-files/openapi/test-multipart.json".to_string(),
                 command_args: vec!["--typescript".to_string()],
                 expected_dir: "output-samples/multipart-typescript".to_string(),
             },
             // Array return type import test
             TestCase {
                 name: "Array Return Import".to_string(),
-                input_file: "input-files/test-array-return-import.json".to_string(),
+                input_file: "input-files/openapi/test-array-return-import.json".to_string(),
                 command_args: vec!["--angular".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/array-return-import".to_string(),
             },
             // Nullable oneOf/anyOf tests (OpenAPI 3.1 pattern)
             TestCase {
                 name: "Nullable oneOf Zod".to_string(),
-                input_file: "input-files/test-nullable-oneof.json".to_string(),
+                input_file: "input-files/openapi/test-nullable-oneof.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/nullable-oneof-zod".to_string(),
             },
             TestCase {
                 name: "Nullable oneOf TypeScript".to_string(),
-                input_file: "input-files/test-nullable-oneof.json".to_string(),
+                input_file: "input-files/openapi/test-nullable-oneof.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/nullable-oneof-typescript".to_string(),
             },
             TestCase {
                 name: "Nullable oneOf Pydantic".to_string(),
-                input_file: "input-files/test-nullable-oneof.json".to_string(),
+                input_file: "input-files/openapi/test-nullable-oneof.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
                 expected_dir: "output-samples/nullable-oneof-pydantic".to_string(),
             },
             // Ref description tests
             TestCase {
                 name: "Ref Description TypeScript".to_string(),
-                input_file: "input-files/test-ref-description.json".to_string(),
+                input_file: "input-files/openapi/test-ref-description.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
                 expected_dir: "output-samples/ref-description-typescript".to_string(),
             },
             TestCase {
                 name: "Ref Description Zod".to_string(),
-                input_file: "input-files/test-ref-description.json".to_string(),
+                input_file: "input-files/openapi/test-ref-description.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/ref-description-zod".to_string(),
             },
             TestCase {
                 name: "Ref Description Pydantic".to_string(),
-                input_file: "input-files/test-ref-description.json".to_string(),
+                input_file: "input-files/openapi/test-ref-description.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
                 expected_dir: "output-samples/ref-description-pydantic".to_string(),
             },
             // Markdown tests
             TestCase {
                 name: "Markdown Simple".to_string(),
-                input_file: "input-files/simple-sample.json".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--markdown".to_string()],
                 expected_dir: "output-samples/markdown-simple".to_string(),
             },
             TestCase {
                 name: "Markdown Full".to_string(),
-                input_file: "input-files/full-sample.json".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--markdown".to_string()],
                 expected_dir: "output-samples/markdown-full".to_string(),
             },

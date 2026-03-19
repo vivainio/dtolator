@@ -292,19 +292,30 @@ impl MarkdownGenerator {
         out
     }
 
-    fn generate_operation(&self, method: &str, path: &str, operation: &Operation) -> String {
+    /// Returns (summary_html, body_markdown) for an endpoint.
+    /// The caller wraps these in a `<details>` block.
+    fn generate_operation(
+        &self,
+        method: &str,
+        path: &str,
+        operation: &Operation,
+    ) -> (String, String) {
+        // Build the <summary> line: `GET` /path — Summary
+        let mut summary_line = format!("<code>{method}</code> {path}");
+        if let Some(summary) = &operation.summary {
+            summary_line.push_str(&format!(" — <strong>{summary}</strong>"));
+        }
+
         let mut out = String::new();
 
-        out.push_str(&format!("#### `{method}` {path}\n\n"));
-
+        // Description (full text) goes into the body
         if let Some(summary) = &operation.summary {
-            out.push_str(&format!("**{summary}**"));
             if let Some(desc) = &operation.description
                 && desc != summary
             {
-                out.push_str(&format!(" — {desc}"));
+                out.push_str(desc);
+                out.push_str("\n\n");
             }
-            out.push_str("\n\n");
         } else if let Some(desc) = &operation.description {
             out.push_str(desc);
             out.push_str("\n\n");
@@ -371,7 +382,7 @@ impl MarkdownGenerator {
             out.push('\n');
         }
 
-        out
+        (summary_line, out)
     }
 }
 
@@ -524,7 +535,10 @@ impl Generator for MarkdownGenerator {
                 output.push_str(&format!("## {tag}\n\n"));
 
                 for &(method, path, operation) in endpoints {
-                    output.push_str(&self.generate_operation(method, path, operation));
+                    let (summary_line, body) = self.generate_operation(method, path, operation);
+
+                    output.push_str(&format!("<details>\n<summary>{summary_line}</summary>\n\n"));
+                    output.push_str(&body);
 
                     // Emit referenced schemas inline after this endpoint
                     if let Some(schemas) = all_schemas {
@@ -543,6 +557,8 @@ impl Generator for MarkdownGenerator {
                             output.push_str("```\n\n");
                         }
                     }
+
+                    output.push_str("</details>\n\n");
                 }
             }
         }
