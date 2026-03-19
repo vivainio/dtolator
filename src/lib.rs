@@ -373,10 +373,23 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
     Ok(())
 }
 
+/// Top-level subcommands (optional — omitting a subcommand uses the legacy flag interface).
+#[derive(clap::Subcommand)]
+pub enum Command {
+    /// Quick-look at an OpenAPI spec: prints minimal endpoint + type summary to stdout
+    Peek {
+        /// OpenAPI JSON file to peek at
+        file: PathBuf,
+    },
+}
+
 /// CLI definition (moved from main.rs) so it can be reused and tested.
 #[derive(Parser)]
 #[command(author, version = env!("BUILD_VERSION"), about, long_about = None)]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Option<Command>,
+
     /// Input OpenAPI schema JSON file
     #[arg(long)]
     pub from_openapi: Option<PathBuf>,
@@ -536,6 +549,18 @@ where
     S: Into<std::ffi::OsString> + Clone,
 {
     let cli = Cli::parse_from(args);
+
+    // Handle subcommands first
+    if let Some(Command::Peek { file }) = &cli.command {
+        let input_content = std::fs::read_to_string(file)
+            .with_context(|| format!("Failed to read file: {}", file.display()))?;
+        let schema: OpenApiSchema = serde_json::from_str(&input_content)
+            .with_context(|| "Failed to parse OpenAPI schema JSON")?;
+        let schema = extract_inline_request_schemas(schema)?;
+        let output = MarkdownGenerator::minimal().generate_with_command(&schema, "")?;
+        print!("{output}");
+        return Ok(());
+    }
 
     // Validate that exactly one input type is provided
     let input_count = [&cli.from_openapi, &cli.from_json, &cli.from_json_schema]
