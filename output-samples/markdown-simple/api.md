@@ -12,7 +12,7 @@ A sample API to demonstrate dtolator
 
 **Responses:**
 
-- **200**: Successful response → User[]
+- **200**: Successful response → `User[]`
 
 ```typescript
 // Represents a user in the system.
@@ -61,11 +61,11 @@ type UserProfile {
 
 **Create New User** — Create a new user account
 
-**Request body:** CreateUserRequest
+**Request body:** `CreateUserRequest`
 
 **Responses:**
 
-- **201**: User created successfully → ApiResponse
+- **201**: User created successfully → `ApiResponse`
 
 ```typescript
 type CreateUserRequest {
@@ -92,11 +92,11 @@ type ApiResponse {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `userId` | path | integer | yes |  |
+| `userId` | path | `integer` | yes |  |
 
 **Responses:**
 
-- **200**: User found → User
+- **200**: User found → `User`
 - **404**: User not found
 
 #### `PUT` /users/{userId}
@@ -107,13 +107,13 @@ type ApiResponse {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `userId` | path | integer | yes |  |
+| `userId` | path | `integer` | yes |  |
 
-**Request body:** CreateUserRequest
+**Request body:** `CreateUserRequest`
 
 **Responses:**
 
-- **200**: User updated successfully → ApiResponse
+- **200**: User updated successfully → `ApiResponse`
 
 #### `DELETE` /users/{userId}
 
@@ -123,11 +123,11 @@ type ApiResponse {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `userId` | path | integer | yes |  |
+| `userId` | path | `integer` | yes |  |
 
 **Responses:**
 
-- **200**: User deleted successfully → ApiResponse
+- **200**: User deleted successfully → `ApiResponse`
 
 #### `POST` /users/{userId}/activate
 
@@ -137,11 +137,11 @@ type ApiResponse {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `userId` | path | integer | yes |  |
+| `userId` | path | `integer` | yes |  |
 
 **Responses:**
 
-- **200**: User activated successfully → ApiResponse
+- **200**: User activated successfully → `ApiResponse`
 
 #### `POST` /users/{userId}/deactivate
 
@@ -151,9 +151,9 @@ type ApiResponse {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `userId` | path | integer | yes |  |
+| `userId` | path | `integer` | yes |  |
 
 **Responses:**
 
-- **200**: User deactivated successfully → ApiResponse
+- **200**: User deactivated successfully → `ApiResponse`
 

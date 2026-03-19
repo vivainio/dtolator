@@ -14,13 +14,13 @@ A comprehensive e-commerce API with user management, product catalog, and order 
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `page` | query | integer |  |  |
-| `limit` | query | integer |  |  |
+| `page` | query | `integer` |  |  |
+| `limit` | query | `integer` |  |  |
 
 **Responses:**
 
-- **200**: Successful response → UserListResponse
-- **400**: Bad request → ErrorResponse
+- **200**: Successful response → `UserListResponse`
+- **400**: Bad request → `ErrorResponse`
 
 ```typescript
 // Paginated list of users
@@ -110,12 +110,12 @@ type ErrorResponse {
 
 **Create New User Account** — Create a new user account
 
-**Request body:** CreateUserRequest
+**Request body:** `CreateUserRequest`
 
 **Responses:**
 
-- **201**: User created successfully → User
-- **400**: Bad request → ErrorResponse
+- **201**: User created successfully → `User`
+- **400**: Bad request → `ErrorResponse`
 
 ```typescript
 // Request body for creating a new user account
@@ -136,12 +136,12 @@ type CreateUserRequest {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `userId` | path | string | yes |  |
+| `userId` | path | `string` | yes |  |
 
 **Responses:**
 
-- **200**: User found → User
-- **404**: User not found → ErrorResponse
+- **200**: User found → `User`
+- **404**: User not found → `ErrorResponse`
 
 ## Products
 
@@ -153,13 +153,13 @@ type CreateUserRequest {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `category` | query | ProductCategory |  |  |
-| `minPrice` | query | number |  |  |
-| `maxPrice` | query | number |  |  |
+| `category` | query | `ProductCategory` |  |  |
+| `minPrice` | query | `number` |  |  |
+| `maxPrice` | query | `number` |  |  |
 
 **Responses:**
 
-- **200**: Products list → ProductListResponse
+- **200**: Products list → `ProductListResponse`
 
 ```typescript
 // Paginated list of products with optional filters
@@ -211,11 +211,11 @@ type Price {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `productId` | path | string | yes |  |
+| `productId` | path | `string` | yes |  |
 
 **Responses:**
 
-- **200**: Product found → Product
+- **200**: Product found → `Product`
 - **404**: Product not found
 
 #### `PUT` /products/{productId}
@@ -226,13 +226,13 @@ type Price {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `productId` | path | string | yes |  |
+| `productId` | path | `string` | yes |  |
 
-**Request body:** UpdateProductRequest
+**Request body:** `UpdateProductRequest`
 
 **Responses:**
 
-- **200**: Product updated → Product
+- **200**: Product updated → `Product`
 
 ```typescript
 // Request body for partially updating a product
@@ -252,11 +252,11 @@ type UpdateProductRequest {
 
 **Create New Order**
 
-**Request body:** CreateOrderRequest
+**Request body:** `CreateOrderRequest`
 
 **Responses:**
 
-- **201**: Order created → Order
+- **201**: Order created → `Order`
 
 ```typescript
 // Request body for placing a new order
@@ -310,11 +310,11 @@ enum OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "deliver
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `orderId` | path | string | yes |  |
+| `orderId` | path | `string` | yes |  |
 
 **Responses:**
 
-- **200**: Order found → Order
+- **200**: Order found → `Order`
 
 #### `PATCH` /orders/{orderId}
 
@@ -324,13 +324,13 @@ enum OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "deliver
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `orderId` | path | string | yes |  |
+| `orderId` | path | `string` | yes |  |
 
-**Request body:** UpdateOrderStatusRequest
+**Request body:** `UpdateOrderStatusRequest`
 
 **Responses:**
 
-- **200**: Order status updated → Order
+- **200**: Order status updated → `Order`
 
 ```typescript
 // Request body for updating an order's status
@@ -349,7 +349,7 @@ type UpdateOrderStatusRequest {
 
 **Responses:**
 
-- **200**: Categories list → Category[]
+- **200**: Categories list → `Category[]`
 
 ```typescript
 // Product category with optional hierarchy
@@ -368,11 +368,11 @@ type Category {
 
 **Create New Category**
 
-**Request body:** CreateCategoryRequest
+**Request body:** `CreateCategoryRequest`
 
 **Responses:**
 
-- **201**: Category created → Category
+- **201**: Category created → `Category`
 
 ```typescript
 // Request body for creating a new category
@@ -395,11 +395,11 @@ type CreateCategoryRequest {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `lowStock` | query | boolean |  |  |
+| `lowStock` | query | `boolean` |  |  |
 
 **Responses:**
 
-- **200**: Inventory levels → InventoryResponse
+- **200**: Inventory levels → `InventoryResponse`
 
 ```typescript
 // Inventory levels for a list of products
@@ -417,13 +417,13 @@ type InventoryResponse {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `productId` | path | string | yes |  |
+| `productId` | path | `string` | yes |  |
 
-**Request body:** UpdateInventoryRequest
+**Request body:** `UpdateInventoryRequest`
 
 **Responses:**
 
-- **200**: Inventory updated → Inventory
+- **200**: Inventory updated → `Inventory`
 
 ```typescript
 // Request body for updating product inventory
@@ -444,12 +444,12 @@ type UpdateInventoryRequest {
 
 | Name | In | Type | Required | Description |
 |------|-----|------|----------|-------------|
-| `startDate` | query | string |  |  |
-| `endDate` | query | string |  |  |
+| `startDate` | query | `string` |  |  |
+| `endDate` | query | `string` |  |  |
 
 **Responses:**
 
-- **200**: Sales analytics data → SalesAnalytics
+- **200**: Sales analytics data → `SalesAnalytics`
 
 ```typescript
 // Aggregated sales metrics for a given period
@@ -469,7 +469,7 @@ type SalesAnalytics {
 
 **Responses:**
 
-- **200**: Product analytics data → ProductAnalytics
+- **200**: Product analytics data → `ProductAnalytics`
 
 ```typescript
 // Catalog statistics and stock health metrics

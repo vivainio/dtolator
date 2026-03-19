@@ -332,7 +332,7 @@ impl MarkdownGenerator {
                         ""
                     };
                     out.push_str(&format!(
-                        "| `{}` | {} | {} | {} |  |\n",
+                        "| `{}` | {} | `{}` | {} |  |\n",
                         param.name, param.location, type_str, required
                     ));
                 }
@@ -346,7 +346,7 @@ impl MarkdownGenerator {
             && let Some(schema) = &media_type.schema
         {
             let type_str = self.schema_type_inline(schema);
-            out.push_str(&format!("**Request body:** {type_str}\n\n"));
+            out.push_str(&format!("**Request body:** `{type_str}`\n\n"));
         }
 
         // Responses
@@ -361,9 +361,10 @@ impl MarkdownGenerator {
                     .map(|s| self.schema_type_inline(s));
 
                 match body_type {
-                    Some(t) => {
-                        out.push_str(&format!("- **{status}**: {} → {t}\n", response.description))
-                    }
+                    Some(t) => out.push_str(&format!(
+                        "- **{status}**: {} → `{t}`\n",
+                        response.description
+                    )),
                     None => out.push_str(&format!("- **{status}**: {}\n", response.description)),
                 }
             }
