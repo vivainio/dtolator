@@ -4,7 +4,9 @@ use crate::openapi::{AdditionalProperties, OpenApiSchema, Operation, Schema, sch
 use anyhow::Result;
 use std::collections::HashSet;
 
-pub struct MarkdownGenerator;
+pub struct MarkdownGenerator {
+    minimal: bool,
+}
 
 impl Default for MarkdownGenerator {
     fn default() -> Self {
@@ -14,7 +16,11 @@ impl Default for MarkdownGenerator {
 
 impl MarkdownGenerator {
     pub fn new() -> Self {
-        Self
+        Self { minimal: false }
+    }
+
+    pub fn minimal() -> Self {
+        Self { minimal: true }
     }
 
     fn schema_type_inline(&self, schema: &Schema) -> String {
@@ -481,6 +487,60 @@ impl MarkdownGenerator {
     }
 }
 
+impl MarkdownGenerator {
+    /// Build a one-line endpoint summary for minimal mode.
+    /// Format: `METHOD` /path `RequestBody` → `ResponseType`
+    fn minimal_endpoint_line(&self, method: &str, path: &str, operation: &Operation) -> String {
+        let mut line = format!("`{method}` {path}");
+
+        // Query parameters
+        if let Some(params) = &operation.parameters {
+            let query_params: Vec<String> = params
+                .iter()
+                .filter(|p| p.location == "query")
+                .map(|p| {
+                    let type_str = p
+                        .schema
+                        .as_ref()
+                        .map(|s| self.schema_type_inline(s))
+                        .unwrap_or_else(|| "any".to_string());
+                    let opt = if p.required.unwrap_or(false) { "" } else { "?" };
+                    format!("{}{opt}: {type_str}", p.name)
+                })
+                .collect();
+            if !query_params.is_empty() {
+                line.push_str(&format!(" ({})", query_params.join(", ")));
+            }
+        }
+
+        // Request body type
+        if let Some(rb) = &operation.request_body
+            && let Some(mt) = rb.content.get("application/json")
+            && let Some(s) = &mt.schema
+        {
+            let type_str = self.schema_type_inline(s);
+            line.push_str(&format!(" `{type_str}`"));
+        }
+
+        // Primary response type (first 2xx with a body)
+        if let Some(responses) = &operation.responses {
+            for (status, response) in responses {
+                if status.starts_with('2')
+                    && let Some(content) = &response.content
+                    && let Some(mt) = content.get("application/json")
+                    && let Some(s) = &mt.schema
+                {
+                    let type_str = self.schema_type_inline(s);
+                    line.push_str(&format!(" → `{type_str}`"));
+                    break;
+                }
+            }
+        }
+
+        line
+    }
+}
+
 impl Generator for MarkdownGenerator {
     fn generate_with_command(&self, schema: &OpenApiSchema, _command: &str) -> Result<String> {
         let mut output = String::new();
@@ -489,10 +549,12 @@ impl Generator for MarkdownGenerator {
 
         // Title
         output.push_str(&format!("# {}\n\n", schema.info.title));
-        output.push_str(&format!("**Version:** {}\n\n", schema.info.version));
-        if let Some(desc) = &schema.info.description {
-            output.push_str(desc);
-            output.push_str("\n\n");
+        if !self.minimal {
+            output.push_str(&format!("**Version:** {}\n\n", schema.info.version));
+            if let Some(desc) = &schema.info.description {
+                output.push_str(desc);
+                output.push_str("\n\n");
+            }
         }
 
         // Endpoints with inline schemas
@@ -535,10 +597,17 @@ impl Generator for MarkdownGenerator {
                 output.push_str(&format!("## {tag}\n\n"));
 
                 for &(method, path, operation) in endpoints {
-                    let (summary_line, body) = self.generate_operation(method, path, operation);
+                    if self.minimal {
+                        let line = self.minimal_endpoint_line(method, path, operation);
+                        output.push_str(&line);
+                        output.push('\n');
+                    } else {
+                        let (summary_line, body) = self.generate_operation(method, path, operation);
 
-                    output.push_str(&format!("<details>\n<summary>{summary_line}</summary>\n\n"));
-                    output.push_str(&body);
+                        output
+                            .push_str(&format!("<details>\n<summary>{summary_line}</summary>\n\n"));
+                        output.push_str(&body);
+                    }
 
                     // Emit referenced schemas inline after this endpoint
                     if let Some(schemas) = all_schemas {
@@ -552,13 +621,20 @@ impl Generator for MarkdownGenerator {
                             ));
                         }
                         if !idl_block.is_empty() {
+                            if self.minimal {
+                                output.push('\n');
+                            }
                             output.push_str("```typescript\n");
                             output.push_str(&idl_block);
                             output.push_str("```\n\n");
+                        } else if self.minimal {
+                            output.push('\n');
                         }
                     }
 
-                    output.push_str("</details>\n\n");
+                    if !self.minimal {
+                        output.push_str("</details>\n\n");
+                    }
                 }
             }
         }

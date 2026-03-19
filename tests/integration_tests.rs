@@ -347,6 +347,25 @@ impl TestSuite {
                 command_args: vec!["--from-openapi".to_string(), "--markdown".to_string()],
                 expected_dir: "output-samples/markdown-full".to_string(),
             },
+            // Markdown Minimal tests
+            TestCase {
+                name: "Markdown Minimal Simple".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
+                command_args: vec![
+                    "--from-openapi".to_string(),
+                    "--markdown-minimal".to_string(),
+                ],
+                expected_dir: "output-samples/markdown-minimal-simple".to_string(),
+            },
+            TestCase {
+                name: "Markdown Minimal Full".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
+                command_args: vec![
+                    "--from-openapi".to_string(),
+                    "--markdown-minimal".to_string(),
+                ],
+                expected_dir: "output-samples/markdown-minimal-full".to_string(),
+            },
         ];
 
         Self {
@@ -568,6 +587,8 @@ impl TestSuite {
             GeneratorType::JsonSchema
         } else if command_args.iter().any(|arg| arg == "--endpoints") {
             GeneratorType::Endpoints
+        } else if command_args.iter().any(|arg| arg == "--markdown-minimal") {
+            GeneratorType::MarkdownMinimal
         } else if command_args.iter().any(|arg| arg == "--markdown") {
             GeneratorType::Markdown
         } else if command_args.iter().any(|arg| arg == "--typescript") {
