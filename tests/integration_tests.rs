@@ -334,6 +334,19 @@ impl TestSuite {
                 command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
                 expected_dir: "output-samples/ref-description-pydantic".to_string(),
             },
+            // Markdown tests
+            TestCase {
+                name: "Markdown Simple".to_string(),
+                input_file: "input-files/simple-sample.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--markdown".to_string()],
+                expected_dir: "output-samples/markdown-simple".to_string(),
+            },
+            TestCase {
+                name: "Markdown Full".to_string(),
+                input_file: "input-files/full-sample.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--markdown".to_string()],
+                expected_dir: "output-samples/markdown-full".to_string(),
+            },
         ];
 
         Self {
@@ -555,6 +568,8 @@ impl TestSuite {
             GeneratorType::JsonSchema
         } else if command_args.iter().any(|arg| arg == "--endpoints") {
             GeneratorType::Endpoints
+        } else if command_args.iter().any(|arg| arg == "--markdown") {
+            GeneratorType::Markdown
         } else if command_args.iter().any(|arg| arg == "--typescript") {
             GeneratorType::TypeScript
         } else if command_args.iter().any(|arg| arg == "--zod") {

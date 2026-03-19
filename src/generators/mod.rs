@@ -4,6 +4,7 @@ pub mod dotnet;
 pub mod endpoints;
 pub mod import_generator;
 pub mod json_schema;
+pub mod markdown;
 pub mod pydantic;
 pub mod python_dict;
 pub mod rust_serde;

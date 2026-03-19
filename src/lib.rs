@@ -10,7 +10,7 @@ pub mod openapi;
 pub use generators::pydantic::PydanticVersion;
 use generators::{
     Generator, angular::AngularGenerator, dotnet::DotNetGenerator, endpoints::EndpointsGenerator,
-    json_schema::JsonSchemaGenerator, pydantic::PydanticGenerator,
+    json_schema::JsonSchemaGenerator, markdown::MarkdownGenerator, pydantic::PydanticGenerator,
     python_dict::PythonDictGenerator, rust_serde::RustSerdeGenerator,
     typescript::TypeScriptGenerator, zod::ZodGenerator,
 };
@@ -42,6 +42,7 @@ pub enum GeneratorType {
     JsonSchema,
     Endpoints,
     RustSerde,
+    Markdown,
 }
 
 /// Base URL mode for Angular API generation
@@ -136,6 +137,9 @@ impl GenerateOptions {
             }
             GeneratorType::RustSerde => {
                 parts.push("--rust-serde".to_string());
+            }
+            GeneratorType::Markdown => {
+                parts.push("--markdown".to_string());
             }
         }
 
@@ -336,6 +340,14 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             write_if_changed(&models_path, &rust_output)?;
             written_files.push("models.rs".to_string());
         }
+        GeneratorType::Markdown => {
+            let md_generator = MarkdownGenerator::new();
+            let md_output = md_generator.generate_with_command(&schema, &command_string)?;
+
+            let api_path = options.output_dir.join("api.md");
+            write_if_changed(&api_path, &md_output)?;
+            written_files.push("api.md".to_string());
+        }
     }
 
     if options.delete_old {
@@ -417,6 +429,10 @@ pub struct Cli {
     #[arg(long)]
     pub rust_serde: bool,
 
+    /// Generate Markdown API documentation
+    #[arg(long)]
+    pub markdown: bool,
+
     /// Generate promises using lastValueFrom instead of Observables (only works with --angular)
     #[arg(long)]
     pub promises: bool,
@@ -472,6 +488,8 @@ impl Cli {
             GeneratorType::Endpoints
         } else if self.rust_serde {
             GeneratorType::RustSerde
+        } else if self.markdown {
+            GeneratorType::Markdown
         } else if self.zod && !self.typescript {
             GeneratorType::Zod
         } else {
@@ -603,6 +621,9 @@ where
                         .generate_with_command(&schema, &command_string)?,
                     GeneratorType::RustSerde => {
                         RustSerdeGenerator::new().generate_with_command(&schema, &command_string)?
+                    }
+                    GeneratorType::Markdown => {
+                        MarkdownGenerator::new().generate_with_command(&schema, &command_string)?
                     }
                     GeneratorType::TypeScript => TypeScriptGenerator::new()
                         .generate_with_command(&schema, &command_string)?,
