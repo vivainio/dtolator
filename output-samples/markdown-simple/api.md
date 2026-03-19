@@ -6,9 +6,10 @@ A sample API to demonstrate dtolator
 
 ## Users
 
-#### `GET` /users
+<details>
+<summary><code>GET</code> /users — <strong>List All Users</strong></summary>
 
-**List All Users** — Retrieve a list of all users in the system
+Retrieve a list of all users in the system
 
 **Responses:**
 
@@ -57,9 +58,12 @@ type UserProfile {
 
 ```
 
-#### `POST` /users
+</details>
 
-**Create New User** — Create a new user account
+<details>
+<summary><code>POST</code> /users — <strong>Create New User</strong></summary>
+
+Create a new user account
 
 **Request body:** `CreateUserRequest`
 
@@ -84,9 +88,12 @@ type ApiResponse {
 
 ```
 
-#### `GET` /users/{userId}
+</details>
 
-**Get User By ID** — Retrieve a specific user by their ID
+<details>
+<summary><code>GET</code> /users/{userId} — <strong>Get User By ID</strong></summary>
+
+Retrieve a specific user by their ID
 
 **Parameters:**
 
@@ -99,9 +106,12 @@ type ApiResponse {
 - **200**: User found → `User`
 - **404**: User not found
 
-#### `PUT` /users/{userId}
+</details>
 
-**Update User Profile** — Update an existing user's information
+<details>
+<summary><code>PUT</code> /users/{userId} — <strong>Update User Profile</strong></summary>
+
+Update an existing user's information
 
 **Parameters:**
 
@@ -115,9 +125,12 @@ type ApiResponse {
 
 - **200**: User updated successfully → `ApiResponse`
 
-#### `DELETE` /users/{userId}
+</details>
 
-**Delete User Account** — Permanently delete a user account
+<details>
+<summary><code>DELETE</code> /users/{userId} — <strong>Delete User Account</strong></summary>
+
+Permanently delete a user account
 
 **Parameters:**
 
@@ -129,9 +142,12 @@ type ApiResponse {
 
 - **200**: User deleted successfully → `ApiResponse`
 
-#### `POST` /users/{userId}/activate
+</details>
 
-**Activate User Account** — Activate a user's account status
+<details>
+<summary><code>POST</code> /users/{userId}/activate — <strong>Activate User Account</strong></summary>
+
+Activate a user's account status
 
 **Parameters:**
 
@@ -143,9 +159,12 @@ type ApiResponse {
 
 - **200**: User activated successfully → `ApiResponse`
 
-#### `POST` /users/{userId}/deactivate
+</details>
 
-**Deactivate User Account** — Deactivate a user's account status
+<details>
+<summary><code>POST</code> /users/{userId}/deactivate — <strong>Deactivate User Account</strong></summary>
+
+Deactivate a user's account status
 
 **Parameters:**
 
@@ -156,4 +175,6 @@ type ApiResponse {
 **Responses:**
 
 - **200**: User deactivated successfully → `ApiResponse`
+
+</details>
 

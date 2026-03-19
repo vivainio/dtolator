@@ -6,9 +6,10 @@ A comprehensive e-commerce API with user management, product catalog, and order 
 
 ## Users
 
-#### `GET` /users
+<details>
+<summary><code>GET</code> /users — <strong>Get All Users With Pagination</strong></summary>
 
-**Get All Users With Pagination** — Retrieve a paginated list of users
+Retrieve a paginated list of users
 
 **Parameters:**
 
@@ -106,9 +107,12 @@ type ErrorResponse {
 
 ```
 
-#### `POST` /users
+</details>
 
-**Create New User Account** — Create a new user account
+<details>
+<summary><code>POST</code> /users — <strong>Create New User Account</strong></summary>
+
+Create a new user account
 
 **Request body:** `CreateUserRequest`
 
@@ -128,9 +132,10 @@ type CreateUserRequest {
 
 ```
 
-#### `GET` /users/{userId}
+</details>
 
-**Get User Profile By ID**
+<details>
+<summary><code>GET</code> /users/{userId} — <strong>Get User Profile By ID</strong></summary>
 
 **Parameters:**
 
@@ -143,11 +148,12 @@ type CreateUserRequest {
 - **200**: User found → `User`
 - **404**: User not found → `ErrorResponse`
 
+</details>
+
 ## Products
 
-#### `GET` /products
-
-**Search Products With Filters**
+<details>
+<summary><code>GET</code> /products — <strong>Search Products With Filters</strong></summary>
 
 **Parameters:**
 
@@ -203,9 +209,10 @@ type Price {
 
 ```
 
-#### `GET` /products/{productId}
+</details>
 
-**Get Product By ID**
+<details>
+<summary><code>GET</code> /products/{productId} — <strong>Get Product By ID</strong></summary>
 
 **Parameters:**
 
@@ -218,9 +225,10 @@ type Price {
 - **200**: Product found → `Product`
 - **404**: Product not found
 
-#### `PUT` /products/{productId}
+</details>
 
-**Update Product**
+<details>
+<summary><code>PUT</code> /products/{productId} — <strong>Update Product</strong></summary>
 
 **Parameters:**
 
@@ -246,11 +254,12 @@ type UpdateProductRequest {
 
 ```
 
+</details>
+
 ## Orders
 
-#### `POST` /orders
-
-**Create New Order**
+<details>
+<summary><code>POST</code> /orders — <strong>Create New Order</strong></summary>
 
 **Request body:** `CreateOrderRequest`
 
@@ -302,9 +311,10 @@ enum OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "deliver
 
 ```
 
-#### `GET` /orders/{orderId}
+</details>
 
-**Get Order By ID**
+<details>
+<summary><code>GET</code> /orders/{orderId} — <strong>Get Order By ID</strong></summary>
 
 **Parameters:**
 
@@ -316,9 +326,10 @@ enum OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "deliver
 
 - **200**: Order found → `Order`
 
-#### `PATCH` /orders/{orderId}
+</details>
 
-**Update Order Status**
+<details>
+<summary><code>PATCH</code> /orders/{orderId} — <strong>Update Order Status</strong></summary>
 
 **Parameters:**
 
@@ -341,11 +352,12 @@ type UpdateOrderStatusRequest {
 
 ```
 
+</details>
+
 ## Categories
 
-#### `GET` /categories
-
-**Get All Product Categories**
+<details>
+<summary><code>GET</code> /categories — <strong>Get All Product Categories</strong></summary>
 
 **Responses:**
 
@@ -364,9 +376,10 @@ type Category {
 
 ```
 
-#### `POST` /categories
+</details>
 
-**Create New Category**
+<details>
+<summary><code>POST</code> /categories — <strong>Create New Category</strong></summary>
 
 **Request body:** `CreateCategoryRequest`
 
@@ -385,11 +398,12 @@ type CreateCategoryRequest {
 
 ```
 
+</details>
+
 ## Inventory
 
-#### `GET` /inventory
-
-**Get Inventory Levels**
+<details>
+<summary><code>GET</code> /inventory — <strong>Get Inventory Levels</strong></summary>
 
 **Parameters:**
 
@@ -409,9 +423,10 @@ type InventoryResponse {
 
 ```
 
-#### `PUT` /inventory/{productId}
+</details>
 
-**Update Product Inventory**
+<details>
+<summary><code>PUT</code> /inventory/{productId} — <strong>Update Product Inventory</strong></summary>
 
 **Parameters:**
 
@@ -434,11 +449,12 @@ type UpdateInventoryRequest {
 
 ```
 
+</details>
+
 ## Analytics
 
-#### `GET` /analytics/sales
-
-**Get Sales Analytics**
+<details>
+<summary><code>GET</code> /analytics/sales — <strong>Get Sales Analytics</strong></summary>
 
 **Parameters:**
 
@@ -463,9 +479,10 @@ type SalesAnalytics {
 
 ```
 
-#### `GET` /analytics/products
+</details>
 
-**Get Product Analytics**
+<details>
+<summary><code>GET</code> /analytics/products — <strong>Get Product Analytics</strong></summary>
 
 **Responses:**
 
@@ -481,4 +498,6 @@ type ProductAnalytics {
 }
 
 ```
+
+</details>
 
