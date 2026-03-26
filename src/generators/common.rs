@@ -62,6 +62,94 @@ pub fn to_pascal_case(input: &str) -> String {
         .collect()
 }
 
+/// Builder for TSDoc/JSDoc comment blocks.
+///
+/// Handles multiline text correctly for all sections: description, `@param`, `@returns`.
+/// Used by all generators that produce TypeScript output.
+///
+/// # Example
+/// ```text
+/// /**
+///  * Summary line
+///  *
+///  * Detailed description that may
+///  * span multiple lines.
+///  *
+///  * @param id - User identifier
+///  * @returns The user object
+///  */
+/// ```
+pub struct TsDocBuilder {
+    indent: String,
+    /// Lines of body text (description, blank separators, @tags).
+    lines: Vec<String>,
+}
+
+impl TsDocBuilder {
+    pub fn new(indent: &str) -> Self {
+        Self {
+            indent: indent.to_string(),
+            lines: Vec::new(),
+        }
+    }
+
+    /// Append a block of text, properly wrapping each line.
+    /// A blank line in the input becomes a ` *` separator.
+    pub fn description(mut self, text: &str) -> Self {
+        for line in text.lines() {
+            if line.is_empty() {
+                self.lines.push(String::new());
+            } else {
+                self.lines.push(line.to_string());
+            }
+        }
+        self
+    }
+
+    /// Append a blank separator line (` *`).
+    pub fn blank(mut self) -> Self {
+        self.lines.push(String::new());
+        self
+    }
+
+    /// Append a `@param name - description` tag.
+    pub fn param(mut self, name: &str, desc: &str) -> Self {
+        self.lines.push(format!("@param {name} - {desc}"));
+        self
+    }
+
+    /// Append a `@returns description` tag.
+    pub fn returns(mut self, desc: &str) -> Self {
+        self.lines.push(format!("@returns {desc}"));
+        self
+    }
+
+    /// Append an arbitrary pre-formatted line.
+    pub fn raw(mut self, line: &str) -> Self {
+        self.lines.push(line.to_string());
+        self
+    }
+
+    /// Build the final comment string.
+    pub fn build(self) -> String {
+        // Single-line shortcut: no tags, no newlines
+        if self.lines.len() == 1 && !self.lines[0].starts_with('@') {
+            return format!("{}/** {} */\n", self.indent, self.lines[0]);
+        }
+
+        let mut out = format!("{}/**\n", self.indent);
+        for line in &self.lines {
+            if line.is_empty() {
+                out.push_str(&format!("{} *\n", self.indent));
+            } else {
+                out.push_str(&format!("{} * {line}\n", self.indent));
+            }
+        }
+        out.push_str(&format!("{} */\n", self.indent));
+        out
+    }
+}
+
 /// Format a description as a JSDoc comment with proper multiline formatting.
 /// Single-line descriptions produce `/** desc */`, multiline descriptions produce:
 /// ```text
@@ -72,20 +160,7 @@ pub fn to_pascal_case(input: &str) -> String {
 /// ```
 /// The `indent` parameter is prepended to each line.
 pub fn format_jsdoc(description: &str, indent: &str) -> String {
-    if description.contains('\n') {
-        let mut result = format!("{indent}/**\n");
-        for line in description.lines() {
-            if line.is_empty() {
-                result.push_str(&format!("{indent} *\n"));
-            } else {
-                result.push_str(&format!("{indent} * {line}\n"));
-            }
-        }
-        result.push_str(&format!("{indent} */\n"));
-        result
-    } else {
-        format!("{indent}/** {description} */\n")
-    }
+    TsDocBuilder::new(indent).description(description).build()
 }
 
 /// Extract type name from a schema reference.

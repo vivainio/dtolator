@@ -1002,40 +1002,33 @@ impl AngularGenerator {
         operation: &Operation,
         return_type: &str,
     ) -> Result<String> {
-        let mut comment = String::new();
-        comment.push_str("  /**\n");
+        use crate::generators::common::TsDocBuilder;
 
-        // Add summary as the main description
-        if let Some(summary) = &operation.summary {
-            comment.push_str(&format!("   * {summary}\n"));
-        } else {
-            comment.push_str(&format!("   * {} {}\n", http_method.to_uppercase(), path));
+        let fallback = format!("{} {}", http_method.to_uppercase(), path);
+        let summary = operation.summary.as_deref().unwrap_or(&fallback);
+
+        let mut doc = TsDocBuilder::new("  ").description(summary);
+
+        // Add detailed description if available and different from summary
+        if let Some(description) = &operation.description
+            && operation.summary.as_deref() != Some(description.as_str())
+        {
+            doc = doc.blank().description(description);
         }
 
-        // Add detailed description if available
-        if let Some(description) = &operation.description {
-            comment.push_str("   *\n");
-            comment.push_str(&format!("   * {description}\n"));
-        }
-
-        comment.push_str("   *\n");
+        doc = doc.blank();
 
         // Document mandatory baseUrl parameter first for consistency
         if self.base_url_mode != BaseUrlMode::Global {
-            comment.push_str("   * @param baseUrl - Base URL for the request\n");
+            doc = doc.param("baseUrl", "Base URL for the request");
         }
 
         // Document path parameters
         if let Some(parameters) = &operation.parameters {
-            let path_params: Vec<&Parameter> =
-                parameters.iter().filter(|p| p.location == "path").collect();
-
-            for param in path_params {
+            for param in parameters.iter().filter(|p| p.location == "path") {
                 let param_name = self.to_camel_case(&param.name);
                 let param_type = self.get_parameter_type(param);
-                comment.push_str(&format!(
-                    "   * @param {param_name} - Path parameter of type {param_type}\n"
-                ));
+                doc = doc.param(&param_name, &format!("Path parameter of type {param_type}"));
             }
         }
 
@@ -1047,7 +1040,7 @@ impl AngularGenerator {
                 .collect();
 
             if !query_params.is_empty() {
-                comment.push_str("   * @param queryParams - Query parameters object\n");
+                doc = doc.param("queryParams", "Query parameters object");
                 for param in query_params {
                     let required = if param.required.unwrap_or(false) {
                         "required"
@@ -1055,10 +1048,10 @@ impl AngularGenerator {
                         "optional"
                     };
                     let param_type = self.get_parameter_type(param);
-                    comment.push_str(&format!(
-                        "   * @param queryParams.{} - {} parameter of type {}\n",
-                        param.name, required, param_type
-                    ));
+                    doc = doc.param(
+                        &format!("queryParams.{}", param.name),
+                        &format!("{required} parameter of type {param_type}"),
+                    );
                 }
             }
         }
@@ -1069,14 +1062,12 @@ impl AngularGenerator {
             && let Some(schema) = &media_type.schema
         {
             let type_name = self.get_schema_type_name(schema);
-            let description = request_body
+            let desc = request_body
                 .description
                 .as_ref()
-                .map(|d| format!(" - {d}"))
-                .unwrap_or_default();
-            comment.push_str(&format!(
-                "   * @param dto - Request body of type {type_name}{description}\n"
-            ));
+                .map(|d| format!("Request body of type {type_name} - {d}"))
+                .unwrap_or_else(|| format!("Request body of type {type_name}"));
+            doc = doc.param("dto", &desc);
         }
 
         // Document headers parameter
@@ -1087,9 +1078,7 @@ impl AngularGenerator {
                 .collect();
 
             if !header_params.is_empty() {
-                comment.push_str(
-                    "   * @param headers - Custom header values or HttpHeaders instance\n",
-                );
+                doc = doc.param("headers", "Custom header values or HttpHeaders instance");
                 for param in header_params {
                     let required = if param.required.unwrap_or(false) {
                         "required"
@@ -1097,16 +1086,16 @@ impl AngularGenerator {
                         "optional"
                     };
                     let param_type = self.get_parameter_type(param);
-                    comment.push_str(&format!(
-                        "   * @param headers.{} - {} header of type {}\n",
-                        param.name, required, param_type
-                    ));
+                    doc = doc.param(
+                        &format!("headers.{}", param.name),
+                        &format!("{required} header of type {param_type}"),
+                    );
                 }
             } else {
-                comment.push_str("   * @param headers - Optional HTTP headers\n");
+                doc = doc.param("headers", "Optional HTTP headers");
             }
         } else {
-            comment.push_str("   * @param headers - Optional HTTP headers\n");
+            doc = doc.param("headers", "Optional HTTP headers");
         }
 
         // Document return type
@@ -1119,19 +1108,17 @@ impl AngularGenerator {
         if let Some(responses) = &operation.responses {
             if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
                 let response_desc = &success_response.description;
-                comment.push_str(&format!(
-                    "   * @returns {return_wrapper}<{return_type}> - {response_desc}\n"
+                doc = doc.returns(&format!(
+                    "{return_wrapper}<{return_type}> - {response_desc}"
                 ));
             } else {
-                comment.push_str(&format!("   * @returns {return_wrapper}<{return_type}>\n"));
+                doc = doc.returns(&format!("{return_wrapper}<{return_type}>"));
             }
         } else {
-            comment.push_str(&format!("   * @returns {return_wrapper}<{return_type}>\n"));
+            doc = doc.returns(&format!("{return_wrapper}<{return_type}>"));
         }
 
-        comment.push_str("   */\n");
-
-        Ok(comment)
+        Ok(doc.build())
     }
 
     /// Resolve a schema reference by looking it up in components.schemas
