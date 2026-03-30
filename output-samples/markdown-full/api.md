@@ -9,7 +9,9 @@ A comprehensive e-commerce API with user management, product catalog, and order 
 <details>
 <summary><code>GET</code> /users — <strong>Get All Users With Pagination</strong></summary>
 
-Retrieve a paginated list of users
+Retrieve a paginated list of users.
+Supports cursor-based and offset pagination.
+Results are sorted by creation date by default.
 
 **Parameters:**
 
@@ -112,7 +114,10 @@ type ErrorResponse {
 <details>
 <summary><code>POST</code> /users — <strong>Create New User Account</strong></summary>
 
-Create a new user account
+Create a new user account.
+
+The email address must be unique across all accounts.
+A verification email is sent upon successful creation.
 
 **Request body:** `CreateUserRequest`
 

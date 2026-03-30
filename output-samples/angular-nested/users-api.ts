@@ -26,7 +26,9 @@ export class UsersApi {
   /**
    * Get All Users With Pagination
    *
-   * Retrieve a paginated list of users
+   * Retrieve a paginated list of users.
+   * Supports cursor-based and offset pagination.
+   * Results are sorted by creation date by default.
    *
    * @param queryParams - Query parameters object
    * @param queryParams.page - optional parameter of type number
@@ -43,7 +45,10 @@ export class UsersApi {
   /**
    * Create New User Account
    *
-   * Create a new user account
+   * Create a new user account.
+   *
+   * The email address must be unique across all accounts.
+   * A verification email is sent upon successful creation.
    *
    * @param dto - Request body of type CreateUserRequest
    * @param headers - Optional HTTP headers

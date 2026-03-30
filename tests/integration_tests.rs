@@ -63,6 +63,19 @@ impl TestSuite {
                 command_args: vec!["--typescript".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/nested-test".to_string(),
             },
+            // Rust Serde tests
+            TestCase {
+                name: "Rust Serde Simple".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
+                command_args: vec!["--rust-serde".to_string()],
+                expected_dir: "output-samples/rust-serde-simple".to_string(),
+            },
+            TestCase {
+                name: "Rust Serde Full".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
+                command_args: vec!["--rust-serde".to_string()],
+                expected_dir: "output-samples/rust-serde-full".to_string(),
+            },
             // .NET test
             TestCase {
                 name: "DotNet Test".to_string(),
@@ -583,6 +596,8 @@ impl TestSuite {
             GeneratorType::PythonDict
         } else if command_args.iter().any(|arg| arg == "--dotnet") {
             GeneratorType::DotNet
+        } else if command_args.iter().any(|arg| arg == "--rust-serde") {
+            GeneratorType::RustSerde
         } else if command_args.iter().any(|arg| arg == "--json-schema") {
             GeneratorType::JsonSchema
         } else if command_args.iter().any(|arg| arg == "--endpoints") {

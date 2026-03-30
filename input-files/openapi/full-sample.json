@@ -33,7 +33,7 @@
       "get": {
         "tags": ["Users"],
         "summary": "Get All Users With Pagination",
-        "description": "Retrieve a paginated list of users",
+        "description": "Retrieve a paginated list of users.\nSupports cursor-based and offset pagination.\nResults are sorted by creation date by default.",
         "parameters": [
           {
             "name": "page",
@@ -92,7 +92,7 @@
       "post": {
         "tags": ["Users"],
         "summary": "Create New User Account",
-        "description": "Create a new user account",
+        "description": "Create a new user account.\n\nThe email address must be unique across all accounts.\nA verification email is sent upon successful creation.",
         "requestBody": {
           "required": true,
           "content": {

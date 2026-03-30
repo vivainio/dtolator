@@ -126,7 +126,7 @@ pub struct ProductAnalytics {
     #[serde(rename = "activeProducts")]
     pub active_products: i64,
     #[serde(rename = "categoryBreakdown")]
-    pub category_breakdown: Option<serde_json::Value>,
+    pub category_breakdown: Option<std::collections::HashMap<String, i64>>,
     #[serde(rename = "lowStockProducts")]
     pub low_stock_products: Option<Vec<serde_json::Value>>,
 }
@@ -246,7 +246,7 @@ pub struct Product {
     pub tags: Option<Vec<String>>,
     pub images: Option<Vec<ImageUrl>>,
     pub inventory: Option<Inventory>,
-    pub specifications: Option<serde_json::Value>,
+    pub specifications: Option<std::collections::HashMap<String, serde_json::Value>>,
     #[serde(rename = "isActive")]
     pub is_active: Option<bool>,
     #[serde(rename = "createdAt")]
@@ -337,5 +337,4 @@ pub struct Order {
     #[serde(rename = "trackingNumber")]
     pub tracking_number: Option<String>,
 }
-
 

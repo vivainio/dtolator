@@ -57,4 +57,3 @@ pub struct ApiResponse {
     pub data: Option<User>,
 }
 
-
