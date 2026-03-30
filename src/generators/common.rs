@@ -95,7 +95,7 @@ impl TsDocBuilder {
 
     /// Append a block of text, properly wrapping each line.
     /// A blank line in the input becomes a ` *` separator.
-    pub fn description(mut self, text: &str) -> Self {
+    pub fn description(&mut self, text: &str) -> &mut Self {
         for line in text.lines() {
             if line.is_empty() {
                 self.lines.push(String::new());
@@ -107,31 +107,31 @@ impl TsDocBuilder {
     }
 
     /// Append a blank separator line (` *`).
-    pub fn blank(mut self) -> Self {
+    pub fn blank(&mut self) -> &mut Self {
         self.lines.push(String::new());
         self
     }
 
     /// Append a `@param name - description` tag.
-    pub fn param(mut self, name: &str, desc: &str) -> Self {
+    pub fn param(&mut self, name: &str, desc: &str) -> &mut Self {
         self.lines.push(format!("@param {name} - {desc}"));
         self
     }
 
     /// Append a `@returns description` tag.
-    pub fn returns(mut self, desc: &str) -> Self {
+    pub fn returns(&mut self, desc: &str) -> &mut Self {
         self.lines.push(format!("@returns {desc}"));
         self
     }
 
     /// Append an arbitrary pre-formatted line.
-    pub fn raw(mut self, line: &str) -> Self {
+    pub fn raw(&mut self, line: &str) -> &mut Self {
         self.lines.push(line.to_string());
         self
     }
 
     /// Build the final comment string.
-    pub fn build(self) -> String {
+    pub fn build(&self) -> String {
         // Single-line shortcut: no tags, no newlines
         if self.lines.len() == 1 && !self.lines[0].starts_with('@') {
             return format!("{}/** {} */\n", self.indent, self.lines[0]);
@@ -160,7 +160,9 @@ impl TsDocBuilder {
 /// ```
 /// The `indent` parameter is prepended to each line.
 pub fn format_jsdoc(description: &str, indent: &str) -> String {
-    TsDocBuilder::new(indent).description(description).build()
+    let mut doc = TsDocBuilder::new(indent);
+    doc.description(description);
+    doc.build()
 }
 
 /// Extract type name from a schema reference.

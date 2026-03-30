@@ -1007,20 +1007,21 @@ impl AngularGenerator {
         let fallback = format!("{} {}", http_method.to_uppercase(), path);
         let summary = operation.summary.as_deref().unwrap_or(&fallback);
 
-        let mut doc = TsDocBuilder::new("  ").description(summary);
+        let mut doc = TsDocBuilder::new("  ");
+        doc.description(summary);
 
         // Add detailed description if available and different from summary
         if let Some(description) = &operation.description
             && operation.summary.as_deref() != Some(description.as_str())
         {
-            doc = doc.blank().description(description);
+            doc.blank().description(description);
         }
 
-        doc = doc.blank();
+        doc.blank();
 
         // Document mandatory baseUrl parameter first for consistency
         if self.base_url_mode != BaseUrlMode::Global {
-            doc = doc.param("baseUrl", "Base URL for the request");
+            doc.param("baseUrl", "Base URL for the request");
         }
 
         // Document path parameters
@@ -1028,7 +1029,7 @@ impl AngularGenerator {
             for param in parameters.iter().filter(|p| p.location == "path") {
                 let param_name = self.to_camel_case(&param.name);
                 let param_type = self.get_parameter_type(param);
-                doc = doc.param(&param_name, &format!("Path parameter of type {param_type}"));
+                doc.param(&param_name, &format!("Path parameter of type {param_type}"));
             }
         }
 
@@ -1040,7 +1041,7 @@ impl AngularGenerator {
                 .collect();
 
             if !query_params.is_empty() {
-                doc = doc.param("queryParams", "Query parameters object");
+                doc.param("queryParams", "Query parameters object");
                 for param in query_params {
                     let required = if param.required.unwrap_or(false) {
                         "required"
@@ -1048,7 +1049,7 @@ impl AngularGenerator {
                         "optional"
                     };
                     let param_type = self.get_parameter_type(param);
-                    doc = doc.param(
+                    doc.param(
                         &format!("queryParams.{}", param.name),
                         &format!("{required} parameter of type {param_type}"),
                     );
@@ -1067,7 +1068,7 @@ impl AngularGenerator {
                 .as_ref()
                 .map(|d| format!("Request body of type {type_name} - {d}"))
                 .unwrap_or_else(|| format!("Request body of type {type_name}"));
-            doc = doc.param("dto", &desc);
+            doc.param("dto", &desc);
         }
 
         // Document headers parameter
@@ -1078,7 +1079,7 @@ impl AngularGenerator {
                 .collect();
 
             if !header_params.is_empty() {
-                doc = doc.param("headers", "Custom header values or HttpHeaders instance");
+                doc.param("headers", "Custom header values or HttpHeaders instance");
                 for param in header_params {
                     let required = if param.required.unwrap_or(false) {
                         "required"
@@ -1086,16 +1087,16 @@ impl AngularGenerator {
                         "optional"
                     };
                     let param_type = self.get_parameter_type(param);
-                    doc = doc.param(
+                    doc.param(
                         &format!("headers.{}", param.name),
                         &format!("{required} header of type {param_type}"),
                     );
                 }
             } else {
-                doc = doc.param("headers", "Optional HTTP headers");
+                doc.param("headers", "Optional HTTP headers");
             }
         } else {
-            doc = doc.param("headers", "Optional HTTP headers");
+            doc.param("headers", "Optional HTTP headers");
         }
 
         // Document return type
@@ -1108,14 +1109,14 @@ impl AngularGenerator {
         if let Some(responses) = &operation.responses {
             if let Some(success_response) = responses.get("200").or_else(|| responses.get("201")) {
                 let response_desc = &success_response.description;
-                doc = doc.returns(&format!(
+                doc.returns(&format!(
                     "{return_wrapper}<{return_type}> - {response_desc}"
                 ));
             } else {
-                doc = doc.returns(&format!("{return_wrapper}<{return_type}>"));
+                doc.returns(&format!("{return_wrapper}<{return_type}>"));
             }
         } else {
-            doc = doc.returns(&format!("{return_wrapper}<{return_type}>"));
+            doc.returns(&format!("{return_wrapper}<{return_type}>"));
         }
 
         Ok(doc.build())

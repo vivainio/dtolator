@@ -391,7 +391,10 @@ impl TypeScriptGenerator {
                     && generated_types.insert(type_name.clone())
                 {
                     if let Some(summary) = &operation.summary {
-                        types.push_str(&format!("/**\n * Query parameters for {summary}\n */\n"));
+                        types.push_str(&crate::generators::common::format_jsdoc(
+                            &format!("Query parameters for {summary}"),
+                            "",
+                        ));
                     }
 
                     let mandatory_params: Vec<&Parameter> = query_params
@@ -453,7 +456,10 @@ impl TypeScriptGenerator {
                     && generated_types.insert(type_name.clone())
                 {
                     if let Some(summary) = &operation.summary {
-                        types.push_str(&format!("/**\n * Header parameters for {summary}\n */\n"));
+                        types.push_str(&crate::generators::common::format_jsdoc(
+                            &format!("Header parameters for {summary}"),
+                            "",
+                        ));
                     }
 
                     types.push_str(&format!("export interface {type_name} {{\n"));
