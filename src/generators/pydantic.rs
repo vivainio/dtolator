@@ -71,6 +71,7 @@ struct UsedImports {
     any: bool,
     literal: bool,
     enum_cls: bool,
+    int_enum_cls: bool,
     date: bool,
     datetime_: bool,
     uuid: bool,
@@ -112,13 +113,17 @@ impl PydanticGenerator {
     fn collect_imports(&self, schemas: &IndexMap<String, Schema>) -> UsedImports {
         let mut used = UsedImports::default();
         for schema in schemas.values() {
-            // Top-level enum → generates class X(str, Enum), not Literal
+            // Top-level enum → generates class X(str, Enum) or class X(IntEnum)
             if let Schema::Object {
-                enum_values: Some(_),
+                enum_values: Some(vals),
                 ..
             } = schema
             {
-                used.enum_cls = true;
+                if vals.iter().all(|v| v.is_i64() || v.is_u64()) {
+                    used.int_enum_cls = true;
+                } else {
+                    used.enum_cls = true;
+                }
             }
             self.scan_top_level_schema(schema, &mut used);
         }
@@ -371,17 +376,37 @@ impl PydanticGenerator {
             } => {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
-                    output.push_str(&format!("{}class {}(str, Enum):\n", self.indent(), name));
-                    for enum_val in enum_vals {
-                        if let Some(val_str) = enum_val.as_str() {
-                            let enum_name =
-                                val_str.to_uppercase().replace(" ", "_").replace("-", "_");
-                            output.push_str(&format!(
-                                "{}    {} = \"{}\"\n",
-                                self.indent(),
-                                enum_name,
-                                val_str
-                            ));
+                    let all_int = enum_vals.iter().all(|v| v.is_i64() || v.is_u64());
+                    if all_int {
+                        output.push_str(&format!("{}class {}(IntEnum):\n", self.indent(), name));
+                        for enum_val in enum_vals {
+                            if let Some(n) = enum_val.as_i64() {
+                                let member = if n >= 0 {
+                                    format!("VALUE_{n}")
+                                } else {
+                                    format!("VALUE_NEG_{}", -n)
+                                };
+                                output.push_str(&format!(
+                                    "{}    {} = {}\n",
+                                    self.indent(),
+                                    member,
+                                    n
+                                ));
+                            }
+                        }
+                    } else {
+                        output.push_str(&format!("{}class {}(str, Enum):\n", self.indent(), name));
+                        for enum_val in enum_vals {
+                            if let Some(val_str) = enum_val.as_str() {
+                                let enum_name =
+                                    val_str.to_uppercase().replace(" ", "_").replace("-", "_");
+                                output.push_str(&format!(
+                                    "{}    {} = \"{}\"\n",
+                                    self.indent(),
+                                    enum_name,
+                                    val_str
+                                ));
+                            }
                         }
                     }
                     output.push_str("\n\n");
@@ -874,8 +899,15 @@ impl Generator for PydanticGenerator {
             }
             stdlib_lines.push(format!("from datetime import {}", items.join(", ")));
         }
-        if used.enum_cls {
-            stdlib_lines.push("from enum import Enum".to_string());
+        if used.enum_cls || used.int_enum_cls {
+            let mut items = Vec::new();
+            if used.enum_cls {
+                items.push("Enum");
+            }
+            if used.int_enum_cls {
+                items.push("IntEnum");
+            }
+            stdlib_lines.push(format!("from enum import {}", items.join(", ")));
         }
         if used.any || used.literal {
             let mut items = Vec::new();

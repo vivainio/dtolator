@@ -168,17 +168,37 @@ impl PythonDictGenerator {
             } => {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
-                    output.push_str(&format!("{}class {}(str, Enum):\n", self.indent(), name));
-                    for enum_val in enum_vals {
-                        if let Some(val_str) = enum_val.as_str() {
-                            let enum_name =
-                                val_str.to_uppercase().replace(" ", "_").replace("-", "_");
-                            output.push_str(&format!(
-                                "{}    {} = \"{}\"\n",
-                                self.indent(),
-                                enum_name,
-                                val_str
-                            ));
+                    let all_int = enum_vals.iter().all(|v| v.is_i64() || v.is_u64());
+                    if all_int {
+                        output.push_str(&format!("{}class {}(IntEnum):\n", self.indent(), name));
+                        for enum_val in enum_vals {
+                            if let Some(n) = enum_val.as_i64() {
+                                let member = if n >= 0 {
+                                    format!("VALUE_{n}")
+                                } else {
+                                    format!("VALUE_NEG_{}", -n)
+                                };
+                                output.push_str(&format!(
+                                    "{}    {} = {}\n",
+                                    self.indent(),
+                                    member,
+                                    n
+                                ));
+                            }
+                        }
+                    } else {
+                        output.push_str(&format!("{}class {}(str, Enum):\n", self.indent(), name));
+                        for enum_val in enum_vals {
+                            if let Some(val_str) = enum_val.as_str() {
+                                let enum_name =
+                                    val_str.to_uppercase().replace(" ", "_").replace("-", "_");
+                                output.push_str(&format!(
+                                    "{}    {} = \"{}\"\n",
+                                    self.indent(),
+                                    enum_name,
+                                    val_str
+                                ));
+                            }
                         }
                     }
                     output.push_str("\n\n");
@@ -469,7 +489,7 @@ impl Generator for PythonDictGenerator {
 
         // Add imports (Python 3.10+ syntax)
         output.push_str("from typing import TypedDict, Literal, Any\n");
-        output.push_str("from enum import Enum\n");
+        output.push_str("from enum import Enum, IntEnum\n");
         output.push_str("from datetime import datetime\n\n");
 
         if let Some(components) = &schema.components
