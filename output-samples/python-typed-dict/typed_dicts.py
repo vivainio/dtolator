@@ -2,7 +2,7 @@
 # Do not modify manually
 
 from typing import TypedDict, Literal, Any
-from enum import Enum
+from enum import Enum, IntEnum
 from datetime import datetime
 
 class AddressRequired(TypedDict):
