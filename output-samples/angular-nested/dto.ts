@@ -111,7 +111,9 @@ export interface Price {
 
 /** Numeric priority level (1 = low, 3 = high) */
 export type Priority =
-;
+  | 1
+  | 2
+  | 3;
 
 /** Catalog statistics and stock health metrics */
 export interface ProductAnalytics {

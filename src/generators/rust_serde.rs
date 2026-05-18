@@ -63,10 +63,13 @@ impl RustSerdeGenerator {
                 items,
                 ..
             } => {
-                if let Some(enum_vals) = enum_values
-                    && enum_vals.iter().all(|v| v.is_string())
-                {
-                    return Ok("String".to_string());
+                if let Some(enum_vals) = enum_values {
+                    if enum_vals.iter().all(|v| v.is_string()) {
+                        return Ok("String".to_string());
+                    }
+                    if enum_vals.iter().all(|v| v.is_i64() || v.is_u64()) {
+                        return Ok("i64".to_string());
+                    }
                 }
 
                 match schema_type_str(schema_type) {
@@ -137,6 +140,11 @@ impl RustSerdeGenerator {
                 }
 
                 if let Some(enum_vals) = enum_values {
+                    if enum_vals.iter().all(|v| v.is_i64() || v.is_u64()) {
+                        output.push_str(&format!("pub type {} = i64;\n\n", name));
+                        return Ok(output);
+                    }
+
                     output.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
                     output.push_str("#[serde(rename_all = \"snake_case\")]\n");
                     output.push_str(&format!("pub enum {} {{\n", name));

@@ -15,6 +15,7 @@ pub enum ZodValue {
     Intersection(Vec<ZodValue>),
     Record(Box<ZodValue>),
     Enum(Vec<String>),
+    IntEnum(Vec<i64>),
     Nullable(Box<ZodValue>),
     File, // For multipart file uploads (z.instanceof(File))
     Unknown,
@@ -85,6 +86,15 @@ impl ZodValue {
                     let value_strs: Vec<String> =
                         values.iter().map(|v| format!("\"{v}\"")).collect();
                     format!("z.enum([{}])", value_strs.join(", "))
+                }
+            }
+            ZodValue::IntEnum(values) => {
+                let literals: Vec<String> =
+                    values.iter().map(|v| format!("z.literal({v})")).collect();
+                if literals.len() == 1 {
+                    literals.into_iter().next().unwrap()
+                } else {
+                    format!("z.union([{}])", literals.join(", "))
                 }
             }
             ZodValue::Nullable(inner) => format!("{}.nullable()", inner.render()),

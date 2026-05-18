@@ -148,7 +148,7 @@ export const PriceSchema = z.object({
 export type Price = z.infer<typeof PriceSchema>;
 
 /** Numeric priority level (1 = low, 3 = high) */
-export const PrioritySchema = z.number().int();
+export const PrioritySchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 
 /** Numeric priority level (1 = low, 3 = high) */
 export type Priority = z.infer<typeof PrioritySchema>;

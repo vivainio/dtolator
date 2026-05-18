@@ -8,6 +8,18 @@ use crate::openapi::{
 use anyhow::Result;
 use std::collections::HashSet;
 
+fn format_ts_enum_literal(value: &serde_json::Value) -> Option<String> {
+    if let Some(s) = value.as_str() {
+        Some(format!("\"{s}\""))
+    } else if let Some(n) = value.as_i64() {
+        Some(n.to_string())
+    } else if let Some(n) = value.as_u64() {
+        Some(n.to_string())
+    } else {
+        value.as_f64().map(|n| n.to_string())
+    }
+}
+
 pub struct TypeScriptGenerator {
     indent_level: usize,
 }
@@ -100,8 +112,8 @@ impl TypeScriptGenerator {
                     output.push_str(&format!("export type {name} =\n"));
                     let enum_strings: Vec<String> = enum_vals
                         .iter()
-                        .filter_map(|v| v.as_str())
-                        .map(|s| format!("  | \"{s}\""))
+                        .filter_map(format_ts_enum_literal)
+                        .map(|s| format!("  | {s}"))
                         .collect();
                     output.push_str(&enum_strings.join("\n"));
                     output.push_str(";\n\n");
@@ -275,7 +287,15 @@ impl TypeScriptGenerator {
                             }
                         }
                         Some("number") | Some("integer") => {
-                            ts_type = "number".to_string();
+                            if let Some(enum_vals) = enum_values {
+                                let enum_strings: Vec<String> = enum_vals
+                                    .iter()
+                                    .filter_map(format_ts_enum_literal)
+                                    .collect();
+                                ts_type = enum_strings.join(" | ");
+                            } else {
+                                ts_type = "number".to_string();
+                            }
                         }
                         Some("boolean") => {
                             ts_type = "boolean".to_string();

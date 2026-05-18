@@ -144,11 +144,19 @@ impl ZodGenerator {
                                 })
                             }
                         }
-                        Some("number") | Some("integer") => ZodValue::Number(NumberConstraints {
-                            is_integer: schema_type_str(schema_type) == Some("integer"),
-                            minimum: *minimum,
-                            maximum: *maximum,
-                        }),
+                        Some("number") | Some("integer") => {
+                            if let Some(enum_vals) = enum_values {
+                                let ints: Vec<i64> =
+                                    enum_vals.iter().filter_map(|v| v.as_i64()).collect();
+                                ZodValue::IntEnum(ints)
+                            } else {
+                                ZodValue::Number(NumberConstraints {
+                                    is_integer: schema_type_str(schema_type) == Some("integer"),
+                                    minimum: *minimum,
+                                    maximum: *maximum,
+                                })
+                            }
+                        }
                         Some("boolean") => ZodValue::Boolean,
                         Some("array") => {
                             if let Some(items_schema) = items {
