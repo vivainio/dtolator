@@ -89,12 +89,11 @@ impl ZodValue {
                 }
             }
             ZodValue::IntEnum(values) => {
-                let literals: Vec<String> =
-                    values.iter().map(|v| format!("z.literal({v})")).collect();
-                if literals.len() == 1 {
-                    literals.into_iter().next().unwrap()
+                if values.len() == 1 {
+                    format!("z.literal({})", values[0])
                 } else {
-                    format!("z.union([{}])", literals.join(", "))
+                    let value_strs: Vec<String> = values.iter().map(|v| v.to_string()).collect();
+                    format!("z.literal([{}])", value_strs.join(", "))
                 }
             }
             ZodValue::Nullable(inner) => format!("{}.nullable()", inner.render()),
