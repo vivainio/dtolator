@@ -161,6 +161,12 @@ class OrderStatus(str, Enum):
     REFUNDED = "refunded"
 
 
+class Priority(IntEnum):
+    VALUE_1 = 1
+    VALUE_2 = 2
+    VALUE_3 = 3
+
+
 class OrderRequired(TypedDict):
     id: str
     userId: str
@@ -170,6 +176,7 @@ class OrderRequired(TypedDict):
 
 
 class Order(OrderRequired, total=False):
+    priority: Priority
     shippingAddress: Address
     billingAddress: Address
     paymentMethod: PaymentMethod

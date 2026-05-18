@@ -669,6 +669,11 @@
         "description": "Role assigned to a user account",
         "enum": ["customer", "admin", "moderator", "vendor"]
       },
+      "Priority": {
+        "type": "integer",
+        "description": "Numeric priority level (1 = low, 3 = high)",
+        "enum": [1, 2, 3]
+      },
       "Address": {
         "type": "object",
         "description": "Physical mailing or shipping address.\r\nUsed for both billing and delivery purposes.",
@@ -874,6 +879,9 @@
           },
           "status": {
             "$ref": "#/components/schemas/OrderStatus"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/Priority"
           },
           "shippingAddress": {
             "$ref": "#/components/schemas/Address"

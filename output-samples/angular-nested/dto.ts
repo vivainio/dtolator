@@ -109,6 +109,10 @@ export interface Price {
   originalAmount?: number | null;
 }
 
+/** Numeric priority level (1 = low, 3 = high) */
+export type Priority =
+;
+
 /** Catalog statistics and stock health metrics */
 export interface ProductAnalytics {
   totalProducts: number;
@@ -287,6 +291,7 @@ export interface Order {
   items: OrderItem[];
   total: Price;
   status: OrderStatus;
+  priority?: Priority;
   shippingAddress?: Address;
   billingAddress?: Address;
   paymentMethod?: PaymentMethod;

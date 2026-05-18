@@ -147,6 +147,12 @@ export const PriceSchema = z.object({
 /** Monetary amount with currency */
 export type Price = z.infer<typeof PriceSchema>;
 
+/** Numeric priority level (1 = low, 3 = high) */
+export const PrioritySchema = z.number().int();
+
+/** Numeric priority level (1 = low, 3 = high) */
+export type Priority = z.infer<typeof PrioritySchema>;
+
 /** Catalog statistics and stock health metrics */
 export const ProductAnalyticsSchema = z.object({
   totalProducts: z.number().min(0).int(),
@@ -377,6 +383,7 @@ export const OrderSchema = z.object({
   items: z.array(OrderItemSchema),
   total: PriceSchema,
   status: OrderStatusSchema,
+  priority: PrioritySchema.optional(),
   shippingAddress: AddressSchema.optional(),
   billingAddress: AddressSchema.optional(),
   paymentMethod: PaymentMethodSchema.optional(),

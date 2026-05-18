@@ -119,6 +119,11 @@ pub struct Price {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Priority {
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductAnalytics {
     #[serde(rename = "totalProducts")]
@@ -324,6 +329,7 @@ pub struct Order {
     pub items: Vec<OrderItem>,
     pub total: Price,
     pub status: OrderStatus,
+    pub priority: Option<Priority>,
     #[serde(rename = "shippingAddress")]
     pub shipping_address: Option<Address>,
     #[serde(rename = "billingAddress")]
