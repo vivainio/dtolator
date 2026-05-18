@@ -15,10 +15,29 @@ pub enum ZodValue {
     Intersection(Vec<ZodValue>),
     Record(Box<ZodValue>),
     Enum(Vec<String>),
-    IntEnum(Vec<i64>),
+    Literal(Vec<LiteralValue>),
     Nullable(Box<ZodValue>),
     File, // For multipart file uploads (z.instanceof(File))
     Unknown,
+}
+
+#[derive(Debug, Clone)]
+pub enum LiteralValue {
+    String(String),
+    Int(i64),
+    Float(f64),
+    Bool(bool),
+}
+
+impl fmt::Display for LiteralValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LiteralValue::String(s) => write!(f, "\"{s}\""),
+            LiteralValue::Int(n) => write!(f, "{n}"),
+            LiteralValue::Float(n) => write!(f, "{n}"),
+            LiteralValue::Bool(b) => write!(f, "{b}"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -88,7 +107,7 @@ impl ZodValue {
                     format!("z.enum([{}])", value_strs.join(", "))
                 }
             }
-            ZodValue::IntEnum(values) => {
+            ZodValue::Literal(values) => {
                 if values.len() == 1 {
                     format!("z.literal({})", values[0])
                 } else {
