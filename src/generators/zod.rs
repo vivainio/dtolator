@@ -1,11 +1,25 @@
 use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
-use crate::generators::zod_schema::{NumberConstraints, StringConstraints, ZodValue};
+use crate::generators::zod_schema::{LiteralValue, NumberConstraints, StringConstraints, ZodValue};
 use crate::openapi::{
     AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
 };
 use anyhow::Result;
+
+fn json_to_literal_value(value: &serde_json::Value) -> Option<LiteralValue> {
+    if let Some(s) = value.as_str() {
+        Some(LiteralValue::String(s.to_string()))
+    } else if let Some(n) = value.as_i64() {
+        Some(LiteralValue::Int(n))
+    } else if let Some(n) = value.as_u64() {
+        Some(LiteralValue::Int(n as i64))
+    } else if let Some(b) = value.as_bool() {
+        Some(LiteralValue::Bool(b))
+    } else {
+        value.as_f64().map(LiteralValue::Float)
+    }
+}
 
 pub struct ZodGenerator {
     indent_level: usize,
@@ -144,11 +158,30 @@ impl ZodGenerator {
                                 })
                             }
                         }
-                        Some("number") | Some("integer") => ZodValue::Number(NumberConstraints {
-                            is_integer: schema_type_str(schema_type) == Some("integer"),
-                            minimum: *minimum,
-                            maximum: *maximum,
-                        }),
+                        Some("number") | Some("integer") => {
+                            if let Some(enum_vals) = enum_values {
+                                let literals: Vec<LiteralValue> = enum_vals
+                                    .iter()
+                                    .filter_map(json_to_literal_value)
+                                    .collect();
+                                ZodValue::Literal(literals)
+                            } else {
+                                ZodValue::Number(NumberConstraints {
+                                    is_integer: schema_type_str(schema_type) == Some("integer"),
+                                    minimum: *minimum,
+                                    maximum: *maximum,
+                                })
+                            }
+                        }
+                        Some("boolean") if enum_values.is_some() => {
+                            let literals: Vec<LiteralValue> = enum_values
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .filter_map(json_to_literal_value)
+                                .collect();
+                            ZodValue::Literal(literals)
+                        }
                         Some("boolean") => ZodValue::Boolean,
                         Some("array") => {
                             if let Some(items_schema) = items {

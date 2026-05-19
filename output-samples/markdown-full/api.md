@@ -295,6 +295,7 @@ type Order {
   items: OrderItem[]
   total: Price
   status: OrderStatus
+  priority?: Priority
   shippingAddress?: Address
   billingAddress?: Address
   paymentMethod?: PaymentMethod
@@ -313,6 +314,9 @@ type OrderItem {
 
 // Current lifecycle status of an order
 enum OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded"
+
+// Numeric priority level (1 = low, 3 = high)
+enum Priority = 1 | 2 | 3
 
 ```
 

@@ -118,6 +118,8 @@ pub struct Price {
     pub original_amount: Option<f64>,
 }
 
+pub type Priority = i64;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductAnalytics {
@@ -324,6 +326,7 @@ pub struct Order {
     pub items: Vec<OrderItem>,
     pub total: Price,
     pub status: OrderStatus,
+    pub priority: Option<Priority>,
     #[serde(rename = "shippingAddress")]
     pub shipping_address: Option<Address>,
     #[serde(rename = "billingAddress")]

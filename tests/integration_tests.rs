@@ -102,6 +102,22 @@ impl TestSuite {
                 expected_dir: "output-samples/pydantic-v2".to_string(),
             },
             TestCase {
+                name: "Pydantic Full".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
+                command_args: vec!["--pydantic".to_string()],
+                expected_dir: "output-samples/pydantic-full".to_string(),
+            },
+            TestCase {
+                name: "Pydantic V2 Full".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
+                command_args: vec![
+                    "--pydantic".to_string(),
+                    "--pydantic-version".to_string(),
+                    "2".to_string(),
+                ],
+                expected_dir: "output-samples/pydantic-v2-full".to_string(),
+            },
+            TestCase {
                 name: "JSON Simple Pydantic V2".to_string(),
                 input_file: "input-files/json/test-data-simple.json".to_string(),
                 command_args: vec![
