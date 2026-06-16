@@ -1,0 +1,14 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "dtolator"
+description = "Convert OpenAPI schema JSON files to Zod schema definitions or TypeScript interfaces"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+readme = "README.md"
+dynamic = ["version"]
+
+[tool.maturin]
+bindings = "bin"
