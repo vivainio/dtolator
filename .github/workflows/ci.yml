@@ -170,4 +170,65 @@ jobs:
         draft: false
         prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-wheels:
+    name: Build wheel (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    needs: test
+    if: github.event_name == 'release'
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set version from release tag
+      shell: bash
+      run: |
+        VERSION="${GITHUB_REF_NAME#v}"
+        cargo install cargo-edit --locked
+        cargo set-version "$VERSION"
+
+    - name: Build wheel
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release --out dist
+        manylinux: auto
+
+    - name: Upload wheel artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: wheels-${{ matrix.target }}
+        path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build-wheels
+    if: github.event_name == 'release'
+    environment: pypi
+    permissions:
+      id-token: write  # OIDC token for PyPI Trusted Publishing
+    steps:
+    - name: Download all wheels
+      uses: actions/download-artifact@v8
+      with:
+        path: dist
+        pattern: wheels-*
+        merge-multiple: true
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist/
