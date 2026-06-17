@@ -19,7 +19,19 @@ Code generator that converts OpenAPI schemas, plain JSON, and JSON Schema files 
 
 ## Installation
 
-Download the latest executable from the [GitHub Releases page](https://github.com/vivainio/dtolator/releases) and place it on your `PATH`.
+Install with [`uv`](https://docs.astral.sh/uv/) (recommended) — it fetches the prebuilt binary from PyPI and puts it on your `PATH`:
+
+```bash
+uv tool install dtolator
+```
+
+To upgrade later:
+
+```bash
+uv tool upgrade dtolator
+```
+
+Or download the latest executable from the [GitHub Releases page](https://github.com/vivainio/dtolator/releases) and place it on your `PATH`.
 
 Or install via Cargo:
 
