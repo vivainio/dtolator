@@ -8,7 +8,18 @@ description = "Convert OpenAPI schema JSON files to Zod schema definitions or Ty
 requires-python = ">=3.10"
 license = { text = "MIT" }
 readme = "README.md"
+authors = [{ name = "Ville Vainio", email = "vivainio@gmail.com" }]
+keywords = ["openapi", "zod", "typescript", "codegen", "schema"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Rust",
+  "Topic :: Software Development :: Code Generators",
+]
 dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/vivainio/dtolator"
+Issues = "https://github.com/vivainio/dtolator/issues"
 
 [tool.maturin]
 bindings = "bin"
