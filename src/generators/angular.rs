@@ -860,7 +860,36 @@ impl AngularGenerator {
     }
 
     fn to_kebab_case(&self, input: &str) -> String {
-        input.replace("_", "-").to_lowercase()
+        let chars: Vec<char> = input.chars().collect();
+        let mut result = String::new();
+
+        for (i, &ch) in chars.iter().enumerate() {
+            if ch == '_' || ch == ' ' {
+                // Treat snake_case underscores and spaces as word separators
+                if !result.ends_with('-') {
+                    result.push('-');
+                }
+            } else if ch.is_uppercase() {
+                // Insert a separator at camelCase/PascalCase boundaries:
+                //  - after a lowercase letter or digit (e.g. "...Words" -> "...-words")
+                //  - between an acronym and a following word (e.g. "APIKey" -> "api-key")
+                let prev = i.checked_sub(1).map(|j| chars[j]);
+                let next = chars.get(i + 1).copied();
+                let boundary = match prev {
+                    Some(p) if p.is_lowercase() || p.is_numeric() => true,
+                    Some(p) if p.is_uppercase() && next.is_some_and(|n| n.is_lowercase()) => true,
+                    _ => false,
+                };
+                if boundary && !result.ends_with('-') {
+                    result.push('-');
+                }
+                result.extend(ch.to_lowercase());
+            } else {
+                result.extend(ch.to_lowercase());
+            }
+        }
+
+        result
     }
 
     fn generate_formdata_conversion(

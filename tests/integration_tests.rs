@@ -322,6 +322,13 @@ impl TestSuite {
                 ],
                 expected_dir: "output-samples/angular-ignore-operation-id".to_string(),
             },
+            // Angular Multi-word Tag (camelCase/PascalCase tags -> kebab-case filenames)
+            TestCase {
+                name: "Angular Multi-word Tag".to_string(),
+                input_file: "input-files/openapi/test-multiword-tag.json".to_string(),
+                command_args: vec!["--angular".to_string()],
+                expected_dir: "output-samples/angular-multiword-tag".to_string(),
+            },
             // Multipart/form-data tests
             TestCase {
                 name: "Multipart Angular with Zod".to_string(),
