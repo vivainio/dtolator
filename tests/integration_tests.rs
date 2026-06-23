@@ -605,9 +605,8 @@ impl TestSuite {
             InputType::Json
         } else if command_args.iter().any(|arg| arg == "--from-json-schema") {
             InputType::JsonSchema
-        } else if command_args.iter().any(|arg| arg == "--from-openapi") {
-            InputType::OpenApi
         } else {
+            // Default to OpenAPI (covers --from-openapi and the implicit default)
             InputType::OpenApi
         }
     }
