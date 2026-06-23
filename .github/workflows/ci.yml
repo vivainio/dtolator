@@ -39,7 +39,7 @@ jobs:
       run: cargo fmt --check
 
     - name: Run clippy
-      run: cargo clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
 
     - name: Setup Node.js for TypeScript checking
       uses: actions/setup-node@v6
