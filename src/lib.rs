@@ -53,6 +53,8 @@ pub enum BaseUrlMode {
     Global,
     /// Pass baseUrl as mandatory first parameter
     Argument,
+    /// Use only the route, with no base URL prefix (relative URLs)
+    None,
 }
 
 impl BaseUrlMode {
@@ -60,6 +62,7 @@ impl BaseUrlMode {
         match self {
             BaseUrlMode::Global => "global",
             BaseUrlMode::Argument => "argument",
+            BaseUrlMode::None => "none",
         }
     }
 }
@@ -80,6 +83,7 @@ pub struct GenerateOptions {
     pub skip_files: Vec<String>,
     pub base_url_mode: BaseUrlMode,
     pub api_url_variable: String,
+    pub ignore_operation_id: bool,
     pub delete_old: bool,
 }
 
@@ -173,6 +177,10 @@ impl GenerateOptions {
             parts.push(format!("--api-url-variable {}", self.api_url_variable));
         }
 
+        if self.ignore_operation_id {
+            parts.push("--ignore-operation-id".to_string());
+        }
+
         parts.join(" ")
     }
 }
@@ -249,6 +257,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 &options.skip_files,
                 options.base_url_mode,
                 &options.api_url_variable,
+                options.ignore_operation_id,
             )?;
         }
         GeneratorType::Pydantic => {
@@ -474,13 +483,17 @@ pub struct Cli {
     #[arg(long)]
     pub skip_file: Vec<String>,
 
-    /// Base URL generation mode: 'global' (default) or 'argument'
+    /// Base URL generation mode: 'global' (default), 'argument', or 'none' (relative URLs, route only)
     #[arg(long = "base-url-mode", default_value = "global")]
     pub base_url: BaseUrlMode,
 
     /// Name of the global variable used for the API base URL (only with --base-url-mode global)
     #[arg(long = "api-url-variable", default_value = "API_URL")]
     pub api_url_variable: String,
+
+    /// Ignore the operationId when generating Angular method names; derive names from the summary instead
+    #[arg(long = "ignore-operation-id")]
+    pub ignore_operation_id: bool,
 
     /// Delete obsolete files from the output directory after generation
     #[arg(long)]
@@ -537,6 +550,7 @@ impl Cli {
             skip_files: self.skip_file.clone(),
             base_url_mode: self.base_url,
             api_url_variable: self.api_url_variable.clone(),
+            ignore_operation_id: self.ignore_operation_id,
             delete_old: self.delete_old,
         }
     }
@@ -648,6 +662,7 @@ where
                         .with_promises(options.with_promises)
                         .with_base_url_mode(options.base_url_mode)
                         .with_api_url_variable(options.api_url_variable.clone())
+                        .with_ignore_operation_id(options.ignore_operation_id)
                         .generate_with_command(&schema, &command_string)?,
                     GeneratorType::Pydantic => PydanticGenerator::new(options.pydantic_version)
                         .generate_with_command(&schema, &command_string)?,
@@ -696,13 +711,15 @@ fn generate_angular_services(
     skip_files: &[String],
     base_url_mode: BaseUrlMode,
     api_url_variable: &str,
+    ignore_operation_id: bool,
 ) -> Result<Vec<String>> {
     let angular_generator = AngularGenerator::new()
         .with_zod_validation(with_zod)
         .with_debug(debug)
         .with_promises(promises)
         .with_base_url_mode(base_url_mode)
-        .with_api_url_variable(api_url_variable.to_string());
+        .with_api_url_variable(api_url_variable.to_string())
+        .with_ignore_operation_id(ignore_operation_id);
     let output = angular_generator.generate_with_command(schema, command_string)?;
 
     // Also generate DTOs and utility function

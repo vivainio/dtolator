@@ -88,8 +88,9 @@ Exactly one required:
 ### Angular-specific options
 
 - `--promises` — Use `lastValueFrom` / `Promise` instead of `Observable`
-- `--base-url-mode <MODE>` — `global` (default) or `argument`
+- `--base-url-mode <MODE>` — `global` (default), `argument`, or `none` (relative URLs, route only)
 - `--api-url-variable <NAME>` — Global variable name for API URL (default: `API_URL`)
+- `--ignore-operation-id` — Derive method names from the operation `summary`, ignoring `operationId`
 
 See [ANGULAR.md](ANGULAR.md) for detailed Angular integration docs.
 

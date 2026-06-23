@@ -299,6 +299,29 @@ impl TestSuite {
                 ],
                 expected_dir: "output-samples/angular-base-url-argument".to_string(),
             },
+            // Angular Base URL None Mode (relative URLs, route only)
+            TestCase {
+                name: "Angular Base URL None".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--zod".to_string(),
+                    "--base-url-mode".to_string(),
+                    "none".to_string(),
+                ],
+                expected_dir: "output-samples/angular-base-url-none".to_string(),
+            },
+            // Angular Ignore Operation Id (method names from summary)
+            TestCase {
+                name: "Angular Ignore Operation Id".to_string(),
+                input_file: "input-files/openapi/simple-sample.json".to_string(),
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--zod".to_string(),
+                    "--ignore-operation-id".to_string(),
+                ],
+                expected_dir: "output-samples/angular-ignore-operation-id".to_string(),
+            },
             // Multipart/form-data tests
             TestCase {
                 name: "Multipart Angular with Zod".to_string(),
@@ -682,6 +705,7 @@ impl TestSuite {
             {
                 match test_case.command_args.get(idx + 1).map(|s| s.as_str()) {
                     Some("argument") => dtolator::BaseUrlMode::Argument,
+                    Some("none") => dtolator::BaseUrlMode::None,
                     _ => dtolator::BaseUrlMode::Global,
                 }
             } else {
@@ -700,6 +724,10 @@ impl TestSuite {
             } else {
                 "API_URL".to_string()
             },
+            ignore_operation_id: test_case
+                .command_args
+                .iter()
+                .any(|arg| arg == "--ignore-operation-id"),
             delete_old: false,
         };
 

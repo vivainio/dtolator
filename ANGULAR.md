@@ -398,10 +398,14 @@ Services are grouped by the **first tag** in the OpenAPI specification:
 - **Class Name**: `{Tag}Api` with proper PascalCase
 
 ### 3. Method Naming Convention
-Method names are derived from the OpenAPI `summary` field:
-1. Take the `summary` value
-2. Remove all spaces: `"Get User By ID"` → `"GetUserByID"`
-3. Convert to camelCase: `"GetUserByID"` → `"getUserByID"`
+Method names are derived from the operation's `operationId` when present, falling back to the `summary` field otherwise:
+- **From `operationId`**: the value is lower-cased on the first character: `"GetUserById"` → `"getUserById"`
+- **From `summary`** (when no `operationId`):
+  1. Take the `summary` value
+  2. Remove all spaces: `"Get User By ID"` → `"GetUserByID"`
+  3. Convert to camelCase: `"GetUserByID"` → `"getUserByID"`
+
+**Ignoring `operationId`**: pass `--ignore-operation-id` to always derive method names from the `summary`, as if no `operationId` were present. This is useful when `operationId` values are auto-generated or inconsistent and the summaries produce cleaner names.
 
 ## OpenAPI Requirements
 
@@ -706,6 +710,42 @@ private apiBaseUrl = 'https://api.example.com/v1';
 // Must provide baseUrl to every call
 this.usersApi.listAllUsers(this.apiBaseUrl).subscribe(...);
 this.usersApi.getUserByID(this.apiBaseUrl, 123).subscribe(...);
+```
+
+### None Mode
+
+**Usage**: `--base-url-mode none`
+
+In this mode, the URL passed to `HttpClient` is the route only — no domain or other base URL prefix. This is useful when requests are served from the same origin as the app, or when a base URL is supplied elsewhere (e.g. an `HttpInterceptor` or a configured `baseHref`).
+
+- **Service Property**: None
+- **Method Parameter**: None
+- **URL Construction**: ``const url = `/...` `` (relative URL, route only)
+
+#### Example (None Mode):
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class UsersApi {
+  private http = inject(HttpClient);
+
+  listAllUsers(headers?: HttpHeaders): Observable<User[]> {
+    const url = `/users`;
+    return this.http.get<User[]>(url, { headers });
+  }
+
+  getUserByID(userId: number, headers?: HttpHeaders): Observable<User> {
+    const url = `/users/${encodeURIComponent(userId)}`;
+    return this.http.get<User>(url, { headers });
+  }
+}
+```
+
+**Usage in Components** (None Mode):
+```typescript
+// No base URL needed — requests are relative to the app's origin
+this.usersApi.listAllUsers().subscribe(...);
+this.usersApi.getUserByID(123).subscribe(...);
 ```
 
 ### Parameter Ordering (Argument Mode)

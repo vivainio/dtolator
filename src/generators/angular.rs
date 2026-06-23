@@ -13,6 +13,7 @@ pub struct AngularGenerator {
     promises: bool,
     base_url_mode: BaseUrlMode,
     api_url_variable: String,
+    ignore_operation_id: bool,
 }
 
 impl Default for AngularGenerator {
@@ -29,6 +30,7 @@ impl AngularGenerator {
             promises: false,
             base_url_mode: BaseUrlMode::Global,
             api_url_variable: "API_URL".to_string(),
+            ignore_operation_id: false,
         }
     }
 
@@ -54,6 +56,11 @@ impl AngularGenerator {
 
     pub fn with_api_url_variable(mut self, name: String) -> Self {
         self.api_url_variable = name;
+        self
+    }
+
+    pub fn with_ignore_operation_id(mut self, ignore: bool) -> Self {
+        self.ignore_operation_id = ignore;
         self
     }
 }
@@ -291,12 +298,18 @@ impl AngularGenerator {
         // Generate URL building
         let path_template = self.format_path_template(path);
 
-        if self.base_url_mode == BaseUrlMode::Global {
-            method.push_str(&format!(
-                "    const url = `${{this.baseUrl}}{path_template}`;\n"
-            ));
-        } else {
-            method.push_str(&format!("    const url = `${{baseUrl}}{path_template}`;\n"));
+        match self.base_url_mode {
+            BaseUrlMode::Global => {
+                method.push_str(&format!(
+                    "    const url = `${{this.baseUrl}}{path_template}`;\n"
+                ));
+            }
+            BaseUrlMode::Argument => {
+                method.push_str(&format!("    const url = `${{baseUrl}}{path_template}`;\n"));
+            }
+            BaseUrlMode::None => {
+                method.push_str(&format!("    const url = `{path_template}`;\n"));
+            }
         }
 
         // Check for multipart/form-data and generate FormData conversion
@@ -442,7 +455,11 @@ impl AngularGenerator {
     }
 
     fn get_method_name(&self, operation: &Operation) -> String {
-        if let Some(operation_id) = &operation.operation_id {
+        if let Some(operation_id) = operation
+            .operation_id
+            .as_ref()
+            .filter(|_| !self.ignore_operation_id)
+        {
             // Convert PascalCase operationId to camelCase for TypeScript convention
             let mut chars = operation_id.chars();
             match chars.next() {
@@ -460,7 +477,7 @@ impl AngularGenerator {
         let mut params = Vec::new();
 
         // Add mandatory baseUrl parameter as the first parameter for consistency
-        if self.base_url_mode != BaseUrlMode::Global {
+        if self.base_url_mode == BaseUrlMode::Argument {
             params.push("baseUrl: string".to_string());
         }
 
@@ -1020,7 +1037,7 @@ impl AngularGenerator {
         doc.blank();
 
         // Document mandatory baseUrl parameter first for consistency
-        if self.base_url_mode != BaseUrlMode::Global {
+        if self.base_url_mode == BaseUrlMode::Argument {
             doc.param("baseUrl", "Base URL for the request");
         }
 
