@@ -990,3 +990,42 @@ fn test_output_and_output_file_are_mutually_exclusive() {
         "--output and --output-file should conflict at parse time"
     );
 }
+
+#[test]
+fn test_help_matches_golden() {
+    // Run the built binary so we exercise the real CLI surface, including clap's
+    // help rendering. stdout is piped (no TTY), so clap's wrap width is stable
+    // across environments and the golden stays deterministic.
+    let golden = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/help.txt");
+
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_dtolator"))
+        .arg("--help")
+        .output()
+        .expect("failed to run dtolator --help");
+
+    assert!(
+        output.status.success(),
+        "dtolator --help should exit successfully"
+    );
+    let actual = String::from_utf8(output.stdout).expect("help output should be UTF-8");
+
+    // Regenerate the golden with: DTOLATOR_TEST_REFRESH=1 cargo test
+    if std::env::var("DTOLATOR_TEST_REFRESH").is_ok() {
+        fs::create_dir_all(golden.parent().unwrap()).expect("create golden dir");
+        fs::write(&golden, &actual).expect("write golden help file");
+        return;
+    }
+
+    let expected = fs::read_to_string(&golden).unwrap_or_else(|_| {
+        panic!(
+            "golden file {} missing; regenerate with DTOLATOR_TEST_REFRESH=1 cargo test",
+            golden.display()
+        )
+    });
+
+    assert_eq!(
+        actual, expected,
+        "dtolator --help drifted from golden; regenerate with \
+         DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests test_help_matches_golden"
+    );
+}
