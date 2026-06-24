@@ -1029,3 +1029,33 @@ fn test_help_matches_golden() {
          DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests test_help_matches_golden"
     );
 }
+
+#[test]
+fn test_cli_docs_match_golden() {
+    use clap::CommandFactory;
+
+    // Render full CLI reference markdown straight from the clap command tree, so
+    // docs/cli.md always reflects the real flags. Committed for docs to link to;
+    // regenerate with DTOLATOR_TEST_REFRESH=1 cargo test.
+    let doc = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/cli.md");
+    let actual = clap_markdown::help_markdown_command(&dtolator::Cli::command());
+
+    if std::env::var("DTOLATOR_TEST_REFRESH").is_ok() {
+        fs::create_dir_all(doc.parent().unwrap()).expect("create docs dir");
+        fs::write(&doc, &actual).expect("write cli.md");
+        return;
+    }
+
+    let expected = fs::read_to_string(&doc).unwrap_or_else(|_| {
+        panic!(
+            "{} missing; regenerate with DTOLATOR_TEST_REFRESH=1 cargo test",
+            doc.display()
+        )
+    });
+
+    assert_eq!(
+        actual, expected,
+        "docs/cli.md drifted from the CLI definition; regenerate with \
+         DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests test_cli_docs_match_golden"
+    );
+}

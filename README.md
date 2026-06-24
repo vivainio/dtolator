@@ -73,6 +73,9 @@ dtolator --from-json data.json --typescript --root MyType
 dtolator --from-json-schema schema.json --pydantic
 ```
 
+For the complete flag reference, see [docs/cli.md](docs/cli.md) (generated from
+the CLI definition; run `DTOLATOR_TEST_REFRESH=1 cargo test` to regenerate).
+
 ### Input types
 
 Exactly one required:
