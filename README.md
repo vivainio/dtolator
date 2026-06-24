@@ -1,5 +1,9 @@
 # dtolator
 
+[![image](https://img.shields.io/pypi/v/dtolator.svg)](https://pypi.org/project/dtolator)
+[![image](https://img.shields.io/pypi/l/dtolator.svg)](https://github.com/vivainio/dtolator/blob/main/LICENSE)
+[![CI](https://github.com/vivainio/dtolator/actions/workflows/ci.yml/badge.svg)](https://github.com/vivainio/dtolator/actions/workflows/ci.yml)
+
 Code generator that converts OpenAPI schemas, plain JSON, and JSON Schema files into typed code for multiple languages and frameworks.
 
 ## Supported outputs
