@@ -419,6 +419,10 @@ pub struct Cli {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
+    /// Write the combined output to a single file (mutually exclusive with --output)
+    #[arg(long, conflicts_with = "output")]
+    pub output_file: Option<PathBuf>,
+
     /// Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
     #[arg(short, long)]
     pub typescript: bool,
@@ -615,6 +619,33 @@ where
         ));
     }
 
+    // --output-file: write the single combined output to one file.
+    // Multi-file generators (Angular, and the --zod dto.ts/schema.ts pair) need a
+    // directory; --angular is rejected here, others fall back to single-output form.
+    if let Some(output_path) = &cli.output_file {
+        if cli.angular {
+            return Err(anyhow::anyhow!(
+                "--angular generates multiple files; use --output <dir> instead of --output-file"
+            ));
+        }
+
+        if let Some(parent) = output_path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create output directory: {}", parent.display())
+            })?;
+        }
+
+        let output = build_single_output(&cli)?;
+        fs::write(output_path, output)
+            .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
+
+        println!("Generated files:");
+        println!("  - {}", output_path.display());
+        return Ok(());
+    }
+
     match &cli.output {
         Some(output_dir) => {
             // Output directory specified — delegate to generate()
@@ -622,77 +653,84 @@ where
             generate(options)?;
         }
         None => {
-            // No output directory — parse schema and print single output to stdout
-            let schema = if let Some(openapi_path) = &cli.from_openapi {
-                let input_content = std::fs::read_to_string(openapi_path).with_context(|| {
-                    format!("Failed to read OpenAPI file: {}", openapi_path.display())
-                })?;
-                serde_json::from_str::<OpenApiSchema>(&input_content)
-                    .with_context(|| "Failed to parse OpenAPI schema JSON")?
-            } else if let Some(json_path) = &cli.from_json {
-                let input_content = std::fs::read_to_string(json_path).with_context(|| {
-                    format!("Failed to read JSON file: {}", json_path.display())
-                })?;
-                json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
-            } else if let Some(json_schema_path) = &cli.from_json_schema {
-                let input_content =
-                    std::fs::read_to_string(json_schema_path).with_context(|| {
-                        format!(
-                            "Failed to read JSON Schema file: {}",
-                            json_schema_path.display()
-                        )
-                    })?;
-                let cleaned_content = strip_json_comments(&input_content);
-                json_schema_to_openapi_schema(serde_json::from_str(&cleaned_content)?, &cli.root)?
-            } else {
-                unreachable!()
-            };
-
-            let schema = extract_inline_request_schemas(schema)?;
-            let options = cli.to_generate_options(PathBuf::new());
-            let command_string = options.build_command_string();
-
-            let output =
-                match options.generator_type {
-                    GeneratorType::Endpoints => {
-                        EndpointsGenerator::new().generate_with_command(&schema, &command_string)?
-                    }
-                    GeneratorType::Angular => AngularGenerator::new()
-                        .with_zod_validation(options.with_zod)
-                        .with_promises(options.with_promises)
-                        .with_base_url_mode(options.base_url_mode)
-                        .with_api_url_variable(options.api_url_variable.clone())
-                        .with_ignore_operation_id(options.ignore_operation_id)
-                        .generate_with_command(&schema, &command_string)?,
-                    GeneratorType::Pydantic => PydanticGenerator::new(options.pydantic_version)
-                        .generate_with_command(&schema, &command_string)?,
-                    GeneratorType::PythonDict => PythonDictGenerator::new()
-                        .generate_with_command(&schema, &command_string)?,
-                    GeneratorType::DotNet => {
-                        DotNetGenerator::new().generate_with_command(&schema, &command_string)?
-                    }
-                    GeneratorType::JsonSchema => JsonSchemaGenerator::new()
-                        .generate_with_command(&schema, &command_string)?,
-                    GeneratorType::RustSerde => {
-                        RustSerdeGenerator::new().generate_with_command(&schema, &command_string)?
-                    }
-                    GeneratorType::Markdown => {
-                        MarkdownGenerator::new().generate_with_command(&schema, &command_string)?
-                    }
-                    GeneratorType::MarkdownMinimal => MarkdownGenerator::minimal()
-                        .generate_with_command(&schema, &command_string)?,
-                    GeneratorType::TypeScript => TypeScriptGenerator::new()
-                        .generate_with_command(&schema, &command_string)?,
-                    GeneratorType::Zod => {
-                        ZodGenerator::new().generate_with_command(&schema, &command_string)?
-                    }
-                };
-
+            // No output path — print the single combined output to stdout
+            let output = build_single_output(&cli)?;
             println!("{output}");
         }
     }
 
     Ok(())
+}
+
+/// Parse the input schema and produce the single combined output for the
+/// selected generator. Shared by stdout output and `--output-file`.
+fn build_single_output(cli: &Cli) -> Result<String> {
+    let schema = if let Some(openapi_path) = &cli.from_openapi {
+        let input_content = std::fs::read_to_string(openapi_path)
+            .with_context(|| format!("Failed to read OpenAPI file: {}", openapi_path.display()))?;
+        serde_json::from_str::<OpenApiSchema>(&input_content)
+            .with_context(|| "Failed to parse OpenAPI schema JSON")?
+    } else if let Some(json_path) = &cli.from_json {
+        let input_content = std::fs::read_to_string(json_path)
+            .with_context(|| format!("Failed to read JSON file: {}", json_path.display()))?;
+        json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
+    } else if let Some(json_schema_path) = &cli.from_json_schema {
+        let input_content = std::fs::read_to_string(json_schema_path).with_context(|| {
+            format!(
+                "Failed to read JSON Schema file: {}",
+                json_schema_path.display()
+            )
+        })?;
+        let cleaned_content = strip_json_comments(&input_content);
+        json_schema_to_openapi_schema(serde_json::from_str(&cleaned_content)?, &cli.root)?
+    } else {
+        unreachable!()
+    };
+
+    let schema = extract_inline_request_schemas(schema)?;
+    let options = cli.to_generate_options(PathBuf::new());
+    let command_string = options.build_command_string();
+
+    let output = match options.generator_type {
+        GeneratorType::Endpoints => {
+            EndpointsGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::Angular => AngularGenerator::new()
+            .with_zod_validation(options.with_zod)
+            .with_promises(options.with_promises)
+            .with_base_url_mode(options.base_url_mode)
+            .with_api_url_variable(options.api_url_variable.clone())
+            .with_ignore_operation_id(options.ignore_operation_id)
+            .generate_with_command(&schema, &command_string)?,
+        GeneratorType::Pydantic => PydanticGenerator::new(options.pydantic_version)
+            .generate_with_command(&schema, &command_string)?,
+        GeneratorType::PythonDict => {
+            PythonDictGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::DotNet => {
+            DotNetGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::JsonSchema => {
+            JsonSchemaGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::RustSerde => {
+            RustSerdeGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::Markdown => {
+            MarkdownGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::MarkdownMinimal => {
+            MarkdownGenerator::minimal().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::TypeScript => {
+            TypeScriptGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+        GeneratorType::Zod => {
+            ZodGenerator::new().generate_with_command(&schema, &command_string)?
+        }
+    };
+
+    Ok(output)
 }
 
 /// Run the CLI using the real process arguments.

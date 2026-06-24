@@ -906,3 +906,90 @@ fn test_suite() {
         suite.failed_tests
     );
 }
+
+#[test]
+fn test_output_file_writes_single_file() {
+    let dir = tempfile::TempDir::new().expect("temp dir");
+    let out = dir.path().join("models.rs");
+
+    dtolator::run_cli_with_args([
+        "dtolator",
+        "--from-openapi",
+        "input-files/openapi/simple-sample.json",
+        "--rust-serde",
+        "--output-file",
+        out.to_str().unwrap(),
+    ])
+    .expect("run_cli_with_args should succeed");
+
+    assert!(out.is_file(), "expected single file at {}", out.display());
+    let contents = fs::read_to_string(&out).expect("read output file");
+    assert!(
+        contents.contains("struct"),
+        "rust_serde output should contain a struct definition"
+    );
+    // Should not have created the directory-mode sibling files.
+    assert!(!dir.path().join("dto.ts").exists());
+}
+
+#[test]
+fn test_output_file_creates_parent_dirs() {
+    let dir = tempfile::TempDir::new().expect("temp dir");
+    let out = dir.path().join("nested/sub/models.py");
+
+    dtolator::run_cli_with_args([
+        "dtolator",
+        "--from-openapi",
+        "input-files/openapi/simple-sample.json",
+        "--pydantic",
+        "--output-file",
+        out.to_str().unwrap(),
+    ])
+    .expect("run_cli_with_args should create parent dirs and succeed");
+
+    assert!(out.is_file(), "expected nested file at {}", out.display());
+}
+
+#[test]
+fn test_output_file_rejects_angular() {
+    let dir = tempfile::TempDir::new().expect("temp dir");
+    let out = dir.path().join("services.ts");
+
+    let err = dtolator::run_cli_with_args([
+        "dtolator",
+        "--from-openapi",
+        "input-files/openapi/simple-sample.json",
+        "--angular",
+        "--output-file",
+        out.to_str().unwrap(),
+    ])
+    .expect_err("--angular with --output-file should error");
+
+    assert!(
+        err.to_string()
+            .contains("--angular generates multiple files"),
+        "unexpected error message: {err}"
+    );
+    assert!(!out.exists(), "no file should be written on error");
+}
+
+#[test]
+fn test_output_and_output_file_are_mutually_exclusive() {
+    use clap::Parser;
+
+    let result = dtolator::Cli::try_parse_from([
+        "dtolator",
+        "--from-openapi",
+        "input-files/openapi/simple-sample.json",
+        "--rust-serde",
+        "--output",
+        "out_dir",
+        "--output-file",
+        "out.rs",
+    ]);
+
+    assert!(
+        result.is_err(),
+        "--output and --output-file should conflict at parse time"
+    );
+}
