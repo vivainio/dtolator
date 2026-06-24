@@ -952,25 +952,22 @@ fn test_output_file_creates_parent_dirs() {
 
 #[test]
 fn test_output_file_rejects_angular() {
-    let dir = tempfile::TempDir::new().expect("temp dir");
-    let out = dir.path().join("services.ts");
+    use clap::Parser;
 
-    let err = dtolator::run_cli_with_args([
+    // clap enforces the conflict at parse time, before any file is written.
+    let result = dtolator::Cli::try_parse_from([
         "dtolator",
         "--from-openapi",
         "input-files/openapi/simple-sample.json",
         "--angular",
         "--output-file",
-        out.to_str().unwrap(),
-    ])
-    .expect_err("--angular with --output-file should error");
+        "services.ts",
+    ]);
 
     assert!(
-        err.to_string()
-            .contains("--angular generates multiple files"),
-        "unexpected error message: {err}"
+        result.is_err(),
+        "--angular and --output-file should conflict at parse time"
     );
-    assert!(!out.exists(), "no file should be written on error");
 }
 
 #[test]

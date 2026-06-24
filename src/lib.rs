@@ -419,8 +419,9 @@ pub struct Cli {
     #[arg(short, long)]
     pub output: Option<PathBuf>,
 
-    /// Write the combined output to a single file (mutually exclusive with --output)
-    #[arg(long, conflicts_with = "output")]
+    /// Write the combined output to a single file (mutually exclusive with --output;
+    /// --angular emits multiple files, so use --output <dir> there instead)
+    #[arg(long, conflicts_with_all = ["output", "angular"])]
     pub output_file: Option<PathBuf>,
 
     /// Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
@@ -504,7 +505,26 @@ pub struct Cli {
     pub delete_old: bool,
 }
 
+/// Where `run_cli` should send the generated output. Derived from the parsed
+/// `--output` / `--output-file` flags, whose mutual exclusion clap enforces.
+enum OutputTarget {
+    /// `--output-file <path>`: one combined file.
+    File(PathBuf),
+    /// `--output <dir>`: a directory of generated files.
+    Dir(PathBuf),
+    /// Neither flag: write the combined output to stdout.
+    Stdout,
+}
+
 impl Cli {
+    fn output_target(&self) -> OutputTarget {
+        match (&self.output_file, &self.output) {
+            (Some(file), _) => OutputTarget::File(file.clone()),
+            (_, Some(dir)) => OutputTarget::Dir(dir.clone()),
+            _ => OutputTarget::Stdout,
+        }
+    }
+
     fn to_generate_options(&self, output_dir: PathBuf) -> GenerateOptions {
         let (input_type, input_path) = if let Some(path) = &self.from_openapi {
             (InputType::OpenApi, path.clone())
@@ -619,41 +639,34 @@ where
         ));
     }
 
-    // --output-file: write the single combined output to one file.
-    // Multi-file generators (Angular, and the --zod dto.ts/schema.ts pair) need a
-    // directory; --angular is rejected here, others fall back to single-output form.
-    if let Some(output_path) = &cli.output_file {
-        if cli.angular {
-            return Err(anyhow::anyhow!(
-                "--angular generates multiple files; use --output <dir> instead of --output-file"
-            ));
-        }
+    // clap guarantees --output and --output-file never appear together (and that
+    // --output-file is never paired with --angular), so the three targets are exhaustive.
+    match cli.output_target() {
+        OutputTarget::File(output_path) => {
+            // Single combined output to one file; create the parent dir if needed.
+            if let Some(parent) = output_path.parent()
+                && !parent.as_os_str().is_empty()
+            {
+                fs::create_dir_all(parent).with_context(|| {
+                    format!("Failed to create output directory: {}", parent.display())
+                })?;
+            }
 
-        if let Some(parent) = output_path.parent()
-            && !parent.as_os_str().is_empty()
-        {
-            fs::create_dir_all(parent).with_context(|| {
-                format!("Failed to create output directory: {}", parent.display())
+            let output = build_single_output(&cli)?;
+            fs::write(&output_path, &output).with_context(|| {
+                format!("Failed to write output file: {}", output_path.display())
             })?;
+
+            println!("Generated files:");
+            println!("  - {}", output_path.display());
         }
-
-        let output = build_single_output(&cli)?;
-        fs::write(output_path, output)
-            .with_context(|| format!("Failed to write output file: {}", output_path.display()))?;
-
-        println!("Generated files:");
-        println!("  - {}", output_path.display());
-        return Ok(());
-    }
-
-    match &cli.output {
-        Some(output_dir) => {
-            // Output directory specified — delegate to generate()
-            let options = cli.to_generate_options(output_dir.clone());
+        OutputTarget::Dir(output_dir) => {
+            // Output directory specified — delegate to generate().
+            let options = cli.to_generate_options(output_dir);
             generate(options)?;
         }
-        None => {
-            // No output path — print the single combined output to stdout
+        OutputTarget::Stdout => {
+            // No output path — print the single combined output to stdout.
             let output = build_single_output(&cli)?;
             println!("{output}");
         }
