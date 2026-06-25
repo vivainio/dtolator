@@ -73,7 +73,7 @@ dtolator --from-json data.json --typescript --root MyType
 dtolator --from-json-schema schema.json --pydantic
 ```
 
-For the complete flag reference, see [docs/cli.md](docs/cli.md) (generated from
+For the complete flag reference, see [docs/cli.md](https://github.com/vivainio/dtolator/blob/main/docs/cli.md) (generated from
 the CLI definition; run `DTOLATOR_TEST_REFRESH=1 cargo test` to regenerate).
 
 ### Input types
@@ -100,7 +100,7 @@ Exactly one required:
 - `--api-url-variable <NAME>` — Global variable name for API URL (default: `API_URL`)
 - `--ignore-operation-id` — Derive method names from the operation `summary`, ignoring `operationId`
 
-See [ANGULAR.md](ANGULAR.md) for detailed Angular integration docs.
+See [ANGULAR.md](https://github.com/vivainio/dtolator/blob/main/ANGULAR.md) for detailed Angular integration docs.
 
 ## OpenAPI features supported
 
@@ -123,7 +123,7 @@ python run-tests.py                  # Integration test suite
 python run-tests.py --refresh        # Update expected outputs after intentional changes
 ```
 
-See [ADVANCED.md](ADVANCED.md) for endpoint generation details.
+See [ADVANCED.md](https://github.com/vivainio/dtolator/blob/main/ADVANCED.md) for endpoint generation details.
 
 ## License
 
