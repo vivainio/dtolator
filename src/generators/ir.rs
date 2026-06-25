@@ -1,103 +1,132 @@
-//! Intermediate representation (IR) for code generation — PROPOSAL / FOR DISCUSSION.
+//! Intermediate representation (IR) for code generation.
 //!
 //! Today every generator under `src/generators/` consumes `&OpenApiSchema`
 //! directly and re-implements the same schema walking in slightly different
-//! ways (`$ref` resolution, nullable/optional handling, inline-object
-//! extraction, `oneOf`/`anyOf`/`allOf`, topological sorting). Bugs fixed in one
-//! generator do not get fixed in the others.
+//! ways (`$ref` resolution, optional/required handling, enum/map/alias
+//! classification, topological sorting). Bugs fixed in one generator do not get
+//! fixed in the others.
 //!
-//! This module proposes the classic compiler frontend/backend split:
+//! This module is the classic compiler frontend/backend split:
 //!
 //! ```text
 //!   OpenApiSchema --lower()--> IrDocument --Backend--> target source
 //! ```
 //!
-//! `lower()` runs ONCE and absorbs all the gnarly OpenAPI-specific logic. Each
-//! backend then renders a clean, target-agnostic IR and never sees a `Schema`.
+//! `lower()` runs ONCE and absorbs the OpenAPI-specific logic. Each backend then
+//! renders a target-agnostic IR and never sees a `Schema`.
 //!
-//! Nothing is wired into the existing generators yet — this is here to react to
-//! in review. See the PR description for scope, migration path, and open
-//! questions.
+//! ## Frontends (input formats)
+//!
+//! `lower()` takes an [`OpenApiSchema`], which is also where the other input
+//! formats already converge: the CLI converts **plain JSON** (`--from-json`)
+//! and **JSON Schema** (`--from-json-schema`) into `OpenApiSchema` *before* any
+//! generator runs (see `lib.rs`). So a backend built on this IR automatically
+//! supports all three input formats — no per-format work needed.
+//!
+//! ## Status
+//!
+//! The Rust/serde generator (`rust_serde.rs`) is wired through this IR as the
+//! first proof of concept; its golden tests pass byte-for-byte. Other backends
+//! still walk `Schema` directly and can be migrated one at a time.
 
-use crate::openapi::{OpenApiSchema, Schema, SchemaType};
-use indexmap::IndexMap;
+use crate::generators::common;
+use crate::openapi::{AdditionalProperties, OpenApiSchema, Schema, schema_type_str};
 
 // ---------------------------------------------------------------------------
 // The IR
 // ---------------------------------------------------------------------------
 
-/// A scalar type, independent of any target language.
-///
-/// Each backend maps these to its own spelling, e.g. `Prim::Int` becomes
-/// `number` (TS), `int` (Python/C#), `i64` (Rust), `z.number().int()` (Zod).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Prim {
+/// A scalar/leaf type, independent of any target language. `format` carries the
+/// OpenAPI `format` hint (e.g. `int32`, `double`, `date-time`) so backends that
+/// distinguish widths/representations can, while others ignore it.
+#[derive(Debug, Clone)]
+pub enum Scalar {
     String,
-    Int,
-    Float,
-    Bool,
-    /// `format: binary` / byte payloads.
-    Bytes,
-    /// `format: date-time` / `date`.
-    DateTime,
-    /// No constraints — `any`/`object`/`unknown` depending on backend.
-    Any,
+    Integer,
+    Number,
+    Boolean,
+    /// Unconstrained — `object`/`any`/free-form JSON.
+    Free,
 }
 
-/// A target-agnostic type. No OpenAPI concepts leak past lowering: nullability,
-/// `$ref`, and inline objects are all already resolved into these variants.
+/// A target-agnostic type reference. `$ref`s are resolved to [`IrType::Named`];
+/// nullability and not-required are kept on separate axes (see [`IrField`]).
 #[derive(Debug, Clone)]
 pub enum IrType {
-    Prim(Prim),
-    /// Reference to a top-level model by name (already normalized).
+    Scalar {
+        kind: Scalar,
+        format: Option<String>,
+    },
+    /// Reference to a top-level declaration by name (already normalized).
     Named(String),
     Array(Box<IrType>),
     /// `additionalProperties` — a string-keyed map of the inner type.
     Map(Box<IrType>),
-    /// `nullable` / not-`required` collapsed into one place.
+    /// Schema-level nullability (`nullable: true` / type array includes `null`).
+    /// Distinct from a field being not-`required`; backends combine the two.
     Optional(Box<IrType>),
     /// `oneOf` / `anyOf`.
     Union(Vec<IrType>),
-    /// An anonymous inline object. Lowering MAY instead hoist these into named
-    /// `IrModel`s — see the open question in the PR description.
-    Object(IrObject),
-    /// A closed set of string values.
+    /// A closed set of string values used inline (not as a named type).
     Enum(Vec<String>),
 }
 
-/// An object shape (fields + their types).
-#[derive(Debug, Clone, Default)]
-pub struct IrObject {
-    pub fields: Vec<IrField>,
-}
-
-/// One field of an object/model.
+/// One field of a struct/model.
 #[derive(Debug, Clone)]
 pub struct IrField {
-    /// Name as it appears in the wire format (the JSON key).
+    /// The wire/JSON key, verbatim.
     pub wire_name: String,
     pub ty: IrType,
-    /// Whether the field is required. Note `Optional` (nullable) is a property
-    /// of `ty`; this is the separate "may be absent" axis.
+    /// Whether the field is required. Orthogonal to `IrType::Optional`
+    /// (nullability) — a backend decides how to render each combination.
     pub required: bool,
     pub docs: Option<String>,
 }
 
-/// A named, top-level model (what becomes a `interface`/`class`/`struct`).
+/// A named object declaration (becomes an `interface`/`class`/`struct`).
 #[derive(Debug, Clone)]
-pub struct IrModel {
+pub struct IrStruct {
     pub name: String,
-    pub object: IrObject,
     pub docs: Option<String>,
+    pub fields: Vec<IrField>,
+    /// The source schema had `oneOf`/`anyOf` variants that this flat struct
+    /// could not fully model. Backends may surface this (e.g. as a note).
+    pub has_unmodeled_variants: bool,
 }
 
-/// The whole lowered document handed to a backend.
+/// A top-level declaration.
+#[derive(Debug, Clone)]
+pub enum IrDecl {
+    Struct(IrStruct),
+    /// A named closed set of string values.
+    Enum {
+        name: String,
+        docs: Option<String>,
+        members: Vec<String>,
+    },
+    /// A named type alias / newtype (maps, integer enums, scalars, refs).
+    Alias {
+        name: String,
+        docs: Option<String>,
+        ty: IrType,
+    },
+}
+
+impl IrDecl {
+    pub fn name(&self) -> &str {
+        match self {
+            IrDecl::Struct(s) => &s.name,
+            IrDecl::Enum { name, .. } => name,
+            IrDecl::Alias { name, .. } => name,
+        }
+    }
+}
+
+/// The whole lowered document handed to a backend. `decls` are topologically
+/// sorted so a backend can emit top-to-bottom without forward references.
 #[derive(Debug, Clone, Default)]
 pub struct IrDocument {
-    /// Topologically sorted so a backend can emit top-to-bottom without
-    /// forward references. (Lowering owns the sort that today lives in
-    /// `common.rs` and a duplicate in `python_dict.rs`.)
-    pub models: Vec<IrModel>,
+    pub decls: Vec<IrDecl>,
     // pub endpoints: Vec<IrEndpoint>,  // follow-up: lower paths/operations
 }
 
@@ -105,87 +134,24 @@ pub struct IrDocument {
 // Backend trait — a thin convention for the type-emitting generators.
 // ---------------------------------------------------------------------------
 
-/// Renders an [`IrDocument`] to a target language.
-///
-/// Deliberately NOT a per-node visitor (`render_array`, `render_optional`, …):
-/// that fights the borrow checker and forces awkward state threading. A single
-/// `type_ref` that recurses internally matches how the generators already work.
+/// Renders an [`IrDocument`] to a target language. Deliberately NOT a per-node
+/// visitor: a single `type_ref` that recurses internally matches how the
+/// generators already work and avoids threading writer state through every node.
 pub trait Backend {
-    /// Render a type in reference position, e.g. the right-hand side of a field
-    /// declaration: `string | null`, `Optional[str]`, `z.string().nullable()`.
+    /// Render a type in reference position (right-hand side of a field).
     fn type_ref(&self, ty: &IrType) -> String;
+    /// Render one declaration into the output buffer.
+    fn decl(&self, decl: &IrDecl, out: &mut String);
+    /// File header / imports. Default: nothing.
+    fn preamble(&self, _doc: &IrDocument, _out: &mut String) {}
 
-    /// Render one named model into `w`.
-    fn model(&self, model: &IrModel, w: &mut CodeWriter);
-
-    /// Imports / file header. Default: nothing.
-    fn preamble(&self, _doc: &IrDocument, _w: &mut CodeWriter) {}
-
-    /// Drive the whole document. Most backends won't need to override this.
     fn render(&self, doc: &IrDocument) -> String {
-        let mut w = CodeWriter::new(self.indent_unit());
-        self.preamble(doc, &mut w);
-        for model in &doc.models {
-            self.model(model, &mut w);
+        let mut out = String::new();
+        self.preamble(doc, &mut out);
+        for decl in &doc.decls {
+            self.decl(decl, &mut out);
         }
-        w.finish()
-    }
-
-    /// The indentation unit for this language ("  " or "    ").
-    fn indent_unit(&self) -> &'static str {
-        "  "
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Shared writer — replaces the per-generator `indent_level` + `repeat` dance.
-// ---------------------------------------------------------------------------
-
-/// Accumulates source text with managed indentation. Replaces the
-/// `indent_level: usize` + `"  ".repeat(n)` pattern copied across generators.
-pub struct CodeWriter {
-    buf: String,
-    unit: &'static str,
-    level: usize,
-}
-
-impl CodeWriter {
-    pub fn new(unit: &'static str) -> Self {
-        Self {
-            buf: String::new(),
-            unit,
-            level: 0,
-        }
-    }
-
-    pub fn indent(&mut self) {
-        self.level += 1;
-    }
-
-    pub fn dedent(&mut self) {
-        self.level = self.level.saturating_sub(1);
-    }
-
-    /// Write one indented line (no trailing newline needed in `text`).
-    pub fn line(&mut self, text: &str) {
-        if text.is_empty() {
-            self.buf.push('\n');
-            return;
-        }
-        for _ in 0..self.level {
-            self.buf.push_str(self.unit);
-        }
-        self.buf.push_str(text);
-        self.buf.push('\n');
-    }
-
-    /// A blank separator line.
-    pub fn blank(&mut self) {
-        self.buf.push('\n');
-    }
-
-    pub fn finish(self) -> String {
-        self.buf
+        out
     }
 }
 
@@ -193,74 +159,143 @@ impl CodeWriter {
 // Lowering: OpenApiSchema -> IrDocument
 // ---------------------------------------------------------------------------
 
-/// Lower a parsed OpenAPI document into the IR.
-///
-/// Partial implementation covering the common object/field cases — enough to
-/// show the shape against the real `Schema` type. `allOf` merging, full
-/// `oneOf`/`anyOf` discrimination, and path/operation lowering are intentionally
-/// left as follow-ups (see PR open questions).
+/// Lower a parsed OpenAPI document (or anything normalized into one — see the
+/// module docs on frontends) into the IR.
 pub fn lower(schema: &OpenApiSchema) -> IrDocument {
-    let mut models = Vec::new();
+    let mut decls = Vec::new();
 
     if let Some(components) = &schema.components
         && let Some(schemas) = &components.schemas
     {
-        for (name, def) in schemas {
-            models.push(lower_model(name, def));
+        // Reuse the single canonical topological sort (the one previously also
+        // re-implemented as a DFS in python_dict.rs). Fall back to natural order
+        // only if a cycle makes a total order impossible.
+        let names = common::topological_sort(schemas)
+            .unwrap_or_else(|_| schemas.keys().cloned().collect());
+        for name in names {
+            if let Some(def) = schemas.get(&name) {
+                decls.push(lower_decl(&name, def));
+            }
         }
-        // NOTE: topological sort over `models` would happen here, reusing the
-        // single Kahn's-algorithm implementation from `common.rs`.
     }
 
-    IrDocument { models }
+    IrDocument { decls }
 }
 
-fn lower_model(name: &str, schema: &Schema) -> IrModel {
+/// Classify a top-level schema into a declaration. Mirrors the structural
+/// decisions every model generator makes: map alias, enum, integer-enum alias,
+/// struct, or opaque alias.
+fn lower_decl(name: &str, schema: &Schema) -> IrDecl {
     let docs = schema.get_description().map(str::to_string);
-    let object = match schema {
+    match schema {
         Schema::Object {
+            schema_type,
             properties,
             required,
+            additional_properties,
+            enum_values,
+            all_of,
+            one_of,
+            any_of,
             ..
-        } => lower_object(properties.as_ref(), required.as_ref()),
-        // A top-level `$ref` alias or scalar newtype: model with no fields for
-        // now; a real impl would carry a type alias variant.
-        Schema::Reference { .. } => IrObject::default(),
-    };
-    IrModel {
-        name: name.to_string(),
-        object,
-        docs,
-    }
-}
-
-fn lower_object(
-    properties: Option<&IndexMap<String, Schema>>,
-    required: Option<&Vec<String>>,
-) -> IrObject {
-    let mut fields = Vec::new();
-    if let Some(props) = properties {
-        for (field_name, field_schema) in props {
-            let is_required = required.is_some_and(|r| r.iter().any(|n| n == field_name));
-            let mut ty = lower_type(field_schema);
-            // Fold nullability into the type.
-            if field_schema.is_nullable() {
-                ty = IrType::Optional(Box::new(ty));
+        } => {
+            // Map type: additionalProperties with no declared properties.
+            if properties.is_none()
+                && let Some(AdditionalProperties::Schema(value)) = additional_properties
+            {
+                return IrDecl::Alias {
+                    name: name.to_string(),
+                    docs,
+                    ty: IrType::Map(Box::new(lower_type(value))),
+                };
             }
-            fields.push(IrField {
-                wire_name: field_name.clone(),
-                ty,
-                required: is_required,
-                docs: field_schema.get_description().map(str::to_string),
-            });
+
+            // Enums: integer enums collapse to an integer alias; string enums
+            // become a named enum.
+            if let Some(values) = enum_values {
+                if values.iter().all(|v| v.is_i64() || v.is_u64()) {
+                    return IrDecl::Alias {
+                        name: name.to_string(),
+                        docs,
+                        ty: IrType::Scalar {
+                            kind: Scalar::Integer,
+                            format: None,
+                        },
+                    };
+                }
+                let members = values
+                    .iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect();
+                return IrDecl::Enum {
+                    name: name.to_string(),
+                    docs,
+                    members,
+                };
+            }
+
+            // Otherwise a struct: fields come from allOf members if present,
+            // else from properties.
+            let fields = if let Some(all_of_schemas) = all_of {
+                let mut acc = Vec::new();
+                for member in all_of_schemas {
+                    if let Schema::Object {
+                        properties: Some(props),
+                        required: req,
+                        ..
+                    } = member
+                    {
+                        collect_fields(props, req.as_ref(), &mut acc);
+                    }
+                }
+                acc
+            } else if let Some(props) = properties {
+                let mut acc = Vec::new();
+                collect_fields(props, required.as_ref(), &mut acc);
+                acc
+            } else {
+                Vec::new()
+            };
+
+            let _ = schema_type; // schema_type is informational here.
+            IrDecl::Struct(IrStruct {
+                name: name.to_string(),
+                docs,
+                fields,
+                has_unmodeled_variants: one_of.is_some() || any_of.is_some(),
+            })
         }
+        // A top-level bare `$ref` (or anything else) becomes an opaque alias.
+        Schema::Reference { .. } => IrDecl::Alias {
+            name: name.to_string(),
+            docs,
+            ty: IrType::Scalar {
+                kind: Scalar::Free,
+                format: None,
+            },
+        },
     }
-    IrObject { fields }
 }
 
-/// Map a single `Schema` node to an `IrType`. This is the logic currently
-/// duplicated as `schema_to_typescript` / `schema_to_zod` / `schema_to_python_type`
-/// / etc. — here it lives exactly once.
+fn collect_fields(
+    props: &indexmap::IndexMap<String, Schema>,
+    required: Option<&Vec<String>>,
+    out: &mut Vec<IrField>,
+) {
+    for (field_name, field_schema) in props {
+        let is_required = required.is_some_and(|r| r.iter().any(|n| n == field_name));
+        out.push(IrField {
+            wire_name: field_name.clone(),
+            ty: lower_type(field_schema),
+            required: is_required,
+            docs: field_schema.get_description().map(str::to_string),
+        });
+    }
+}
+
+/// Map a single `Schema` node (in field/value position) to an `IrType`. This is
+/// the logic duplicated today as `schema_to_typescript` / `to_rust_type` /
+/// `schema_to_python_type` — here it lives once.
 fn lower_type(schema: &Schema) -> IrType {
     match schema {
         Schema::Reference { reference, .. } => IrType::Named(ref_name(reference)),
@@ -269,6 +304,7 @@ fn lower_type(schema: &Schema) -> IrType {
             items,
             enum_values,
             additional_properties,
+            properties,
             one_of,
             any_of,
             format,
@@ -278,45 +314,63 @@ fn lower_type(schema: &Schema) -> IrType {
                 return IrType::Union(variants.iter().map(lower_type).collect());
             }
             if let Some(values) = enum_values {
-                let members = values
-                    .iter()
-                    .filter_map(|v| v.as_str().map(str::to_string))
-                    .collect();
-                return IrType::Enum(members);
+                // String enums keep their members (useful for literal-union
+                // backends); integer enums fall through to a plain integer.
+                if values.iter().any(|v| v.is_string()) {
+                    let members = values
+                        .iter()
+                        .filter_map(|v| v.as_str().map(str::to_string))
+                        .collect();
+                    return IrType::Enum(members);
+                }
             }
-            match schema_type.as_ref().and_then(SchemaType::primary_type) {
+            match schema_type_str(schema_type) {
                 Some("array") => {
-                    let inner = items.as_deref().map(lower_type).unwrap_or(IrType::Prim(Prim::Any));
+                    let inner = items
+                        .as_deref()
+                        .map(lower_type)
+                        .unwrap_or(IrType::Scalar {
+                            kind: Scalar::Free,
+                            format: None,
+                        });
                     IrType::Array(Box::new(inner))
                 }
-                Some("object") | None => {
-                    if let Some(crate::openapi::AdditionalProperties::Schema(value)) =
-                        additional_properties
+                Some("object") => {
+                    if properties.is_none()
+                        && let Some(AdditionalProperties::Schema(value)) = additional_properties
                     {
                         IrType::Map(Box::new(lower_type(value)))
                     } else {
-                        IrType::Prim(Prim::Any)
+                        IrType::Scalar {
+                            kind: Scalar::Free,
+                            format: None,
+                        }
                     }
                 }
-                Some("string") => match format.as_deref() {
-                    Some("date-time") | Some("date") => IrType::Prim(Prim::DateTime),
-                    Some("binary") | Some("byte") => IrType::Prim(Prim::Bytes),
-                    _ => IrType::Prim(Prim::String),
+                Some("string") => scalar(Scalar::String, format),
+                Some("integer") => scalar(Scalar::Integer, format),
+                Some("number") => scalar(Scalar::Number, format),
+                Some("boolean") => scalar(Scalar::Boolean, format),
+                _ => IrType::Scalar {
+                    kind: Scalar::Free,
+                    format: None,
                 },
-                Some("integer") => IrType::Prim(Prim::Int),
-                Some("number") => IrType::Prim(Prim::Float),
-                Some("boolean") => IrType::Prim(Prim::Bool),
-                _ => IrType::Prim(Prim::Any),
             }
         }
+    }
+}
+
+fn scalar(kind: Scalar, format: &Option<String>) -> IrType {
+    IrType::Scalar {
+        kind,
+        format: format.clone(),
     }
 }
 
 /// `#/components/schemas/Foo` -> `Foo`.
 fn ref_name(reference: &str) -> String {
     reference
-        .rsplit('/')
-        .next()
+        .strip_prefix("#/components/schemas/")
         .unwrap_or(reference)
         .to_string()
 }

@@ -1,6 +1,7 @@
 use crate::generators::Generator;
 use crate::generators::common;
-use crate::openapi::{AdditionalProperties, OpenApiSchema, Schema, schema_type_str};
+use crate::generators::ir::{self, Backend, IrDecl, IrField, IrStruct, IrType, Scalar};
+use crate::openapi::OpenApiSchema;
 use anyhow::Result;
 
 pub struct RustSerdeGenerator;
@@ -15,228 +16,19 @@ impl RustSerdeGenerator {
     pub fn new() -> Self {
         Self
     }
+}
 
-    fn to_snake_case(&self, name: &str) -> String {
-        let mut result = String::new();
-        let mut prev_was_upper = false;
+/// Renders the shared [`ir::IrDocument`] as Rust types with serde derives.
+///
+/// This is the first generator migrated onto the IR (see `ir.rs`): all
+/// schema-walking now happens once in `ir::lower`, and this backend only decides
+/// how the IR is spelled in Rust.
+struct RustBackend;
 
-        for (i, ch) in name.chars().enumerate() {
-            if ch.is_uppercase() {
-                if i > 0 && !prev_was_upper {
-                    result.push('_');
-                }
-                result.push(ch.to_lowercase().next().unwrap_or(ch));
-                prev_was_upper = true;
-            } else if ch == '-' || ch == ' ' {
-                if !result.ends_with('_') {
-                    result.push('_');
-                }
-                prev_was_upper = false;
-            } else {
-                result.push(ch);
-                prev_was_upper = false;
-            }
-        }
-
-        if result.is_empty() {
-            "field".to_string()
-        } else {
-            result
-        }
-    }
-
-    fn to_rust_type(&self, schema: &Schema) -> Result<String> {
-        match schema {
-            Schema::Reference { reference, .. } => {
-                let type_name = reference
-                    .strip_prefix("#/components/schemas/")
-                    .unwrap_or(reference)
-                    .to_string();
-                Ok(type_name)
-            }
-            Schema::Object {
-                schema_type,
-                properties,
-                additional_properties,
-                format,
-                enum_values,
-                items,
-                ..
-            } => {
-                if let Some(enum_vals) = enum_values {
-                    if enum_vals.iter().all(|v| v.is_string()) {
-                        return Ok("String".to_string());
-                    }
-                    if enum_vals.iter().all(|v| v.is_i64() || v.is_u64()) {
-                        return Ok("i64".to_string());
-                    }
-                }
-
-                match schema_type_str(schema_type) {
-                    Some("string") => match format.as_deref() {
-                        Some("date") => Ok("String".to_string()),
-                        Some("date-time") => Ok("String".to_string()),
-                        Some("uuid") => Ok("String".to_string()),
-                        Some("email") => Ok("String".to_string()),
-                        Some("uri") | Some("url") => Ok("String".to_string()),
-                        _ => Ok("String".to_string()),
-                    },
-                    Some("integer") => match format.as_deref() {
-                        Some("int32") => Ok("i32".to_string()),
-                        Some("int64") => Ok("i64".to_string()),
-                        _ => Ok("i64".to_string()),
-                    },
-                    Some("number") => match format.as_deref() {
-                        Some("float") => Ok("f32".to_string()),
-                        Some("double") => Ok("f64".to_string()),
-                        _ => Ok("f64".to_string()),
-                    },
-                    Some("boolean") => Ok("bool".to_string()),
-                    Some("array") => {
-                        if let Some(items_schema) = items {
-                            let item_type = self.to_rust_type(items_schema)?;
-                            Ok(format!("Vec<{}>", item_type))
-                        } else {
-                            Ok("Vec<serde_json::Value>".to_string())
-                        }
-                    }
-                    Some("object") => {
-                        if properties.is_none()
-                            && let Some(AdditionalProperties::Schema(ap_schema)) =
-                                additional_properties
-                        {
-                            let value_type = self.to_rust_type(ap_schema)?;
-                            return Ok(format!("std::collections::HashMap<String, {value_type}>"));
-                        }
-                        Ok("serde_json::Value".to_string())
-                    }
-                    _ => Ok("serde_json::Value".to_string()),
-                }
-            }
-        }
-    }
-
-    fn generate_struct(&self, name: &str, schema: &Schema) -> Result<String> {
-        let mut output = String::new();
-
-        match schema {
-            Schema::Object {
-                properties,
-                required,
-                additional_properties,
-                enum_values,
-                all_of,
-                one_of,
-                any_of,
-                ..
-            } => {
-                // Handle map types (additionalProperties without properties)
-                if properties.is_none()
-                    && matches!(additional_properties, Some(AdditionalProperties::Schema(_)))
-                {
-                    let rust_type = self.to_rust_type(schema)?;
-                    output.push_str(&format!("pub type {} = {};\n\n", name, rust_type));
-                    return Ok(output);
-                }
-
-                if let Some(enum_vals) = enum_values {
-                    if enum_vals.iter().all(|v| v.is_i64() || v.is_u64()) {
-                        output.push_str(&format!("pub type {} = i64;\n\n", name));
-                        return Ok(output);
-                    }
-
-                    output.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
-                    output.push_str("#[serde(rename_all = \"snake_case\")]\n");
-                    output.push_str(&format!("pub enum {} {{\n", name));
-
-                    for enum_val in enum_vals {
-                        if let Some(val_str) = enum_val.as_str() {
-                            let variant_name = self.to_rust_enum_variant(val_str);
-                            output.push_str(&format!("    #[serde(rename = \"{}\")]\n", val_str));
-                            output.push_str(&format!("    {},\n", variant_name));
-                        }
-                    }
-
-                    output.push_str("}\n\n");
-                    return Ok(output);
-                }
-
-                output.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
-                output.push_str("#[serde(rename_all = \"camelCase\")]\n");
-                output.push_str(&format!("pub struct {} {{\n", name));
-
-                if let Some(all_of_schemas) = all_of {
-                    for schema in all_of_schemas.iter() {
-                        if let Schema::Object {
-                            properties: Some(props),
-                            required: req,
-                            ..
-                        } = schema
-                        {
-                            for (prop_name, prop_schema) in props {
-                                let field_name = self.to_snake_case(prop_name);
-                                let field_type = self.to_rust_type(prop_schema)?;
-                                let is_required =
-                                    req.as_ref().map(|r| r.contains(prop_name)).unwrap_or(false);
-
-                                let final_type = if !is_required {
-                                    format!("Option<{}>", field_type)
-                                } else {
-                                    field_type
-                                };
-
-                                if prop_name != &field_name {
-                                    output.push_str(&format!(
-                                        "    #[serde(rename = \"{}\")]\n",
-                                        prop_name
-                                    ));
-                                }
-                                output.push_str(&format!(
-                                    "    pub {}: {},\n",
-                                    field_name, final_type
-                                ));
-                            }
-                        }
-                    }
-                } else if let Some(props) = properties {
-                    for (prop_name, prop_schema) in props {
-                        let field_name = self.to_snake_case(prop_name);
-                        let field_type = self.to_rust_type(prop_schema)?;
-                        let is_required = required
-                            .as_ref()
-                            .map(|req| req.contains(prop_name))
-                            .unwrap_or(false);
-
-                        let final_type = if !is_required {
-                            format!("Option<{}>", field_type)
-                        } else {
-                            field_type
-                        };
-
-                        if prop_name != &field_name {
-                            output.push_str(&format!("    #[serde(rename = \"{}\")]\n", prop_name));
-                        }
-                        output.push_str(&format!("    pub {}: {},\n", field_name, final_type));
-                    }
-                }
-
-                if one_of.is_some() || any_of.is_some() {
-                    output.push_str(
-                        "    // Note: oneOf/anyOf schemas are combined as optional fields\n",
-                    );
-                }
-
-                output.push_str("}\n\n");
-            }
-            _ => {
-                output.push_str(&format!("pub type {} = serde_json::Value;\n\n", name));
-            }
-        }
-
-        Ok(output)
-    }
-
-    fn to_rust_enum_variant(&self, value: &str) -> String {
+impl RustBackend {
+    /// Render an enum variant identifier from a wire value, e.g. `low-stock`
+    /// or `low_stock` -> `LowStock`.
+    fn enum_variant(value: &str) -> String {
         let mut result = String::new();
         let mut capitalize_next = true;
 
@@ -259,26 +51,94 @@ impl RustSerdeGenerator {
             result
         }
     }
+
+    fn render_field(&self, field: &IrField, out: &mut String) {
+        let field_name = common::to_snake_case(&field.wire_name);
+        let base_type = self.type_ref(&field.ty);
+        let final_type = if field.required {
+            base_type
+        } else {
+            format!("Option<{}>", base_type)
+        };
+
+        if field.wire_name != field_name {
+            out.push_str(&format!("    #[serde(rename = \"{}\")]\n", field.wire_name));
+        }
+        out.push_str(&format!("    pub {}: {},\n", field_name, final_type));
+    }
+
+    fn render_struct(&self, s: &IrStruct, out: &mut String) {
+        out.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
+        out.push_str("#[serde(rename_all = \"camelCase\")]\n");
+        out.push_str(&format!("pub struct {} {{\n", s.name));
+        for field in &s.fields {
+            self.render_field(field, out);
+        }
+        if s.has_unmodeled_variants {
+            out.push_str("    // Note: oneOf/anyOf schemas are combined as optional fields\n");
+        }
+        out.push_str("}\n\n");
+    }
+}
+
+impl Backend for RustBackend {
+    fn type_ref(&self, ty: &IrType) -> String {
+        match ty {
+            // Rust models optionality via `Option<T>` driven by `required`, so a
+            // nullable inner type is rendered transparently here.
+            IrType::Optional(inner) => self.type_ref(inner),
+            IrType::Named(name) => name.clone(),
+            IrType::Array(inner) => format!("Vec<{}>", self.type_ref(inner)),
+            IrType::Map(value) => {
+                format!("std::collections::HashMap<String, {}>", self.type_ref(value))
+            }
+            // Inline string enums and unmodeled unions degrade to opaque values,
+            // matching the original generator.
+            IrType::Enum(_) => "String".to_string(),
+            IrType::Union(_) => "serde_json::Value".to_string(),
+            IrType::Scalar { kind, format } => match kind {
+                Scalar::String => "String".to_string(),
+                Scalar::Boolean => "bool".to_string(),
+                Scalar::Integer => match format.as_deref() {
+                    Some("int32") => "i32".to_string(),
+                    _ => "i64".to_string(),
+                },
+                Scalar::Number => match format.as_deref() {
+                    Some("float") => "f32".to_string(),
+                    _ => "f64".to_string(),
+                },
+                Scalar::Free => "serde_json::Value".to_string(),
+            },
+        }
+    }
+
+    fn decl(&self, decl: &IrDecl, out: &mut String) {
+        match decl {
+            IrDecl::Struct(s) => self.render_struct(s, out),
+            IrDecl::Enum { name, members, .. } => {
+                out.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
+                out.push_str("#[serde(rename_all = \"snake_case\")]\n");
+                out.push_str(&format!("pub enum {} {{\n", name));
+                for member in members {
+                    out.push_str(&format!("    #[serde(rename = \"{}\")]\n", member));
+                    out.push_str(&format!("    {},\n", Self::enum_variant(member)));
+                }
+                out.push_str("}\n\n");
+            }
+            IrDecl::Alias { name, ty, .. } => {
+                out.push_str(&format!("pub type {} = {};\n\n", name, self.type_ref(ty)));
+            }
+        }
+    }
+
+    fn preamble(&self, _doc: &ir::IrDocument, out: &mut String) {
+        out.push_str("use serde::{Deserialize, Serialize};\n\n");
+    }
 }
 
 impl Generator for RustSerdeGenerator {
     fn generate_with_command(&self, schema: &OpenApiSchema, _command: &str) -> Result<String> {
-        let mut output = String::new();
-
-        output.push_str("use serde::{Deserialize, Serialize};\n\n");
-
-        if let Some(components) = &schema.components
-            && let Some(schemas) = &components.schemas
-        {
-            let sorted_names = common::topological_sort(schemas)?;
-
-            for name in sorted_names {
-                if let Some(schema) = schemas.get(&name) {
-                    output.push_str(&self.generate_struct(&name, schema)?);
-                }
-            }
-        }
-
-        Ok(output)
+        let document = ir::lower(schema);
+        Ok(RustBackend.render(&document))
     }
 }
