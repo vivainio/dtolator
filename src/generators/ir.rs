@@ -45,7 +45,11 @@ pub enum Scalar {
     Integer,
     Number,
     Boolean,
-    /// Unconstrained — `object`/`any`/free-form JSON.
+    /// A typed-but-shapeless object (`type: object` with no properties) — a
+    /// string-keyed bag. Distinct from [`Scalar::Free`] so backends that have a
+    /// dictionary type (C#) can use it while others fall back to "any".
+    Object,
+    /// Unconstrained — no `type`, arbitrary JSON.
     Free,
 }
 
@@ -167,19 +171,34 @@ pub fn lower(schema: &OpenApiSchema) -> IrDocument {
     if let Some(components) = &schema.components
         && let Some(schemas) = &components.schemas
     {
-        // Reuse the single canonical topological sort (the one previously also
-        // re-implemented as a DFS in python_dict.rs). Fall back to natural order
-        // only if a cycle makes a total order impossible.
-        let names = common::topological_sort(schemas)
-            .unwrap_or_else(|_| schemas.keys().cloned().collect());
-        for name in names {
-            if let Some(def) = schemas.get(&name) {
-                decls.push(lower_decl(&name, def));
-            }
+        // Preserve source declaration order. Backends that cannot forward-
+        // reference opt into dependency ordering via `topologically_sorted`.
+        for (name, def) in schemas {
+            decls.push(lower_decl(name, def));
         }
     }
 
     IrDocument { decls }
+}
+
+/// Reorder a document's declarations into dependency (topological) order, so a
+/// backend that cannot forward-reference types can emit top-to-bottom. Reuses
+/// the single canonical sort in `common` (previously also re-implemented as a
+/// DFS in `python_dict.rs`). Backends that don't care keep source order.
+pub fn topologically_sorted(mut doc: IrDocument, schema: &OpenApiSchema) -> IrDocument {
+    if let Some(components) = &schema.components
+        && let Some(schemas) = &components.schemas
+        && let Ok(order) = common::topological_sort(schemas)
+    {
+        let rank: std::collections::HashMap<&str, usize> = order
+            .iter()
+            .enumerate()
+            .map(|(i, n)| (n.as_str(), i))
+            .collect();
+        doc.decls
+            .sort_by_key(|d| rank.get(d.name()).copied().unwrap_or(usize::MAX));
+    }
+    doc
 }
 
 /// Classify a top-level schema into a declaration. Mirrors the structural
@@ -284,9 +303,14 @@ fn collect_fields(
 ) {
     for (field_name, field_schema) in props {
         let is_required = required.is_some_and(|r| r.iter().any(|n| n == field_name));
+        let mut ty = lower_type(field_schema);
+        // Keep schema-level nullability as a distinct axis from required.
+        if field_schema.is_nullable() {
+            ty = IrType::Optional(Box::new(ty));
+        }
         out.push(IrField {
             wire_name: field_name.clone(),
-            ty: lower_type(field_schema),
+            ty,
             required: is_required,
             docs: field_schema.get_description().map(str::to_string),
         });
@@ -342,7 +366,7 @@ fn lower_type(schema: &Schema) -> IrType {
                         IrType::Map(Box::new(lower_type(value)))
                     } else {
                         IrType::Scalar {
-                            kind: Scalar::Free,
+                            kind: Scalar::Object,
                             format: None,
                         }
                     }

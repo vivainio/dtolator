@@ -107,7 +107,7 @@ impl Backend for RustBackend {
                     Some("float") => "f32".to_string(),
                     _ => "f64".to_string(),
                 },
-                Scalar::Free => "serde_json::Value".to_string(),
+                Scalar::Object | Scalar::Free => "serde_json::Value".to_string(),
             },
         }
     }
@@ -138,7 +138,9 @@ impl Backend for RustBackend {
 
 impl Generator for RustSerdeGenerator {
     fn generate_with_command(&self, schema: &OpenApiSchema, _command: &str) -> Result<String> {
-        let document = ir::lower(schema);
+        // Rust has no forward-reference problem in a single file, but the
+        // original generator emitted types in dependency order; preserve that.
+        let document = ir::topologically_sorted(ir::lower(schema), schema);
         Ok(RustBackend.render(&document))
     }
 }
