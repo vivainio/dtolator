@@ -26,7 +26,7 @@ Convert OpenAPI schema JSON files to Zod schema definitions or TypeScript interf
 
   Default value: `Root`
 * `-o`, `--output <OUTPUT>` — Output directory path (if specified, writes dto.ts and optionally schema.ts files)
-* `--output-file <OUTPUT_FILE>` — Write the combined output to a single file (mutually exclusive with --output; --angular emits multiple files, so use --output <dir> there instead)
+* `--output-file <OUTPUT_FILE>` — Write the combined output to a single file (mutually exclusive with --output; --angular emits multiple files, so use --output with a directory there instead)
 * `-t`, `--typescript` — Generate TypeScript interfaces instead of Zod schemas (when not using output directory)
 * `-z`, `--zod` — Generate Zod schemas (creates schema.ts and makes dto.ts import from it)
 * `-a`, `--angular` — Generate Angular API services (creates multiple service files and utilities)

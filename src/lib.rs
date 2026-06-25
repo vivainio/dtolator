@@ -420,7 +420,7 @@ pub struct Cli {
     pub output: Option<PathBuf>,
 
     /// Write the combined output to a single file (mutually exclusive with --output;
-    /// --angular emits multiple files, so use --output <dir> there instead)
+    /// --angular emits multiple files, so use --output with a directory there instead)
     #[arg(long, conflicts_with_all = ["output", "angular"])]
     pub output_file: Option<PathBuf>,
 
