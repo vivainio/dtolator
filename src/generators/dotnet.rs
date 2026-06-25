@@ -1,5 +1,5 @@
 use crate::generators::Generator;
-use crate::generators::ir::{self, Backend, IrDecl, IrField, IrStruct, IrType, Scalar};
+use crate::generators::ir::{self, Backend, EnumValues, IrDecl, IrField, IrStruct, IrType, Scalar};
 use crate::openapi::OpenApiSchema;
 use anyhow::Result;
 
@@ -154,20 +154,20 @@ impl Backend for DotNetBackend {
     fn decl(&self, decl: &IrDecl, out: &mut String) {
         match decl {
             IrDecl::Struct(s) => self.render_struct(s, out),
-            IrDecl::Enum {
-                name,
-                docs,
-                members,
-            } => {
+            IrDecl::Enum { name, docs, values } => {
                 Self::summary(docs.as_ref(), out);
                 out.push_str(&format!("public enum {}\n", name));
                 out.push_str("{\n");
-                for (i, member) in members.iter().enumerate() {
-                    if i > 0 {
-                        out.push_str(",\n");
+                // Only string members map to C# enum members (mirrors the
+                // original generator, which skipped non-string enum values).
+                if let EnumValues::Strings(members) = values {
+                    for (i, member) in members.iter().enumerate() {
+                        if i > 0 {
+                            out.push_str(",\n");
+                        }
+                        out.push_str(&format!("    [JsonPropertyName(\"{}\")]\n", member));
+                        out.push_str(&format!("    {}", Self::to_pascal_case(member)));
                     }
-                    out.push_str(&format!("    [JsonPropertyName(\"{}\")]\n", member));
-                    out.push_str(&format!("    {}", Self::to_pascal_case(member)));
                 }
                 out.push_str("\n}\n\n");
             }

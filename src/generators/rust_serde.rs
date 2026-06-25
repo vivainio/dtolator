@@ -1,6 +1,6 @@
 use crate::generators::Generator;
 use crate::generators::common;
-use crate::generators::ir::{self, Backend, IrDecl, IrField, IrStruct, IrType, Scalar};
+use crate::generators::ir::{self, Backend, EnumValues, IrDecl, IrField, IrStruct, IrType, Scalar};
 use crate::openapi::OpenApiSchema;
 use anyhow::Result;
 
@@ -115,16 +115,23 @@ impl Backend for RustBackend {
     fn decl(&self, decl: &IrDecl, out: &mut String) {
         match decl {
             IrDecl::Struct(s) => self.render_struct(s, out),
-            IrDecl::Enum { name, members, .. } => {
-                out.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
-                out.push_str("#[serde(rename_all = \"snake_case\")]\n");
-                out.push_str(&format!("pub enum {} {{\n", name));
-                for member in members {
-                    out.push_str(&format!("    #[serde(rename = \"{}\")]\n", member));
-                    out.push_str(&format!("    {},\n", Self::enum_variant(member)));
+            IrDecl::Enum { name, values, .. } => match values {
+                // Integer enums degrade to a plain integer alias (matching the
+                // original generator).
+                EnumValues::Integers(_) => {
+                    out.push_str(&format!("pub type {} = i64;\n\n", name));
                 }
-                out.push_str("}\n\n");
-            }
+                EnumValues::Strings(members) => {
+                    out.push_str("#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\n");
+                    out.push_str("#[serde(rename_all = \"snake_case\")]\n");
+                    out.push_str(&format!("pub enum {} {{\n", name));
+                    for member in members {
+                        out.push_str(&format!("    #[serde(rename = \"{}\")]\n", member));
+                        out.push_str(&format!("    {},\n", Self::enum_variant(member)));
+                    }
+                    out.push_str("}\n\n");
+                }
+            },
             IrDecl::Alias { name, ty, .. } => {
                 out.push_str(&format!("pub type {} = {};\n\n", name, self.type_ref(ty)));
             }

@@ -98,17 +98,26 @@ pub struct IrStruct {
     pub has_unmodeled_variants: bool,
 }
 
+/// The members of a named enum, preserving their JSON value kind so each
+/// backend can render them faithfully (string enum vs. integer enum) instead of
+/// the IR collapsing one into the other.
+#[derive(Debug, Clone)]
+pub enum EnumValues {
+    Strings(Vec<String>),
+    Integers(Vec<i64>),
+}
+
 /// A top-level declaration.
 #[derive(Debug, Clone)]
 pub enum IrDecl {
     Struct(IrStruct),
-    /// A named closed set of string values.
+    /// A named closed set of values.
     Enum {
         name: String,
         docs: Option<String>,
-        members: Vec<String>,
+        values: EnumValues,
     },
-    /// A named type alias / newtype (maps, integer enums, scalars, refs).
+    /// A named type alias / newtype (maps, scalars, refs, unions).
     Alias {
         name: String,
         docs: Option<String>,
@@ -201,6 +210,93 @@ pub fn topologically_sorted(mut doc: IrDocument, schema: &OpenApiSchema) -> IrDo
     doc
 }
 
+/// Reorder declarations using a depth-first dependency walk with alphabetical
+/// tie-breaking. This is a *different* total order from [`topologically_sorted`]
+/// (Kahn's) — the python-dict generator historically used this DFS variant, and
+/// reproducing it keeps that generator's output stable. The two orderings are
+/// kept side by side here (rather than in two generators) so the divergence is
+/// visible and can be reconciled later.
+pub fn dfs_dependency_sorted(mut doc: IrDocument, schema: &OpenApiSchema) -> IrDocument {
+    let Some(schemas) = schema.components.as_ref().and_then(|c| c.schemas.as_ref()) else {
+        return doc;
+    };
+    let known: std::collections::HashSet<&str> = schemas.keys().map(String::as_str).collect();
+
+    fn deps_of(schema: &Schema, known: &std::collections::HashSet<&str>) -> Vec<String> {
+        let mut deps = std::collections::HashSet::new();
+        fn walk(s: &Schema, known: &std::collections::HashSet<&str>, out: &mut std::collections::HashSet<String>) {
+            match s {
+                Schema::Reference { reference, .. } => {
+                    if let Some(n) = reference.strip_prefix("#/components/schemas/")
+                        && known.contains(n)
+                    {
+                        out.insert(n.to_string());
+                    }
+                }
+                Schema::Object {
+                    properties,
+                    items,
+                    one_of,
+                    any_of,
+                    ..
+                } => {
+                    for p in properties.iter().flat_map(|m| m.values()) {
+                        walk(p, known, out);
+                    }
+                    if let Some(it) = items {
+                        walk(it, known, out);
+                    }
+                    for v in [one_of, any_of].into_iter().flatten().flatten() {
+                        walk(v, known, out);
+                    }
+                }
+            }
+        }
+        walk(schema, known, &mut deps);
+        let mut v: Vec<String> = deps.into_iter().collect();
+        v.sort();
+        v
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn visit(
+        name: &str,
+        schemas: &indexmap::IndexMap<String, Schema>,
+        known: &std::collections::HashSet<&str>,
+        visited: &mut std::collections::HashSet<String>,
+        in_stack: &mut std::collections::HashSet<String>,
+        order: &mut Vec<String>,
+    ) {
+        if in_stack.contains(name) || visited.contains(name) {
+            return;
+        }
+        in_stack.insert(name.to_string());
+        if let Some(def) = schemas.get(name) {
+            for dep in deps_of(def, known) {
+                visit(&dep, schemas, known, visited, in_stack, order);
+            }
+        }
+        in_stack.remove(name);
+        visited.insert(name.to_string());
+        order.push(name.to_string());
+    }
+
+    let mut keys: Vec<&String> = schemas.keys().collect();
+    keys.sort();
+    let mut order = Vec::new();
+    let mut visited = std::collections::HashSet::new();
+    let mut in_stack = std::collections::HashSet::new();
+    for key in keys {
+        visit(key, schemas, &known, &mut visited, &mut in_stack, &mut order);
+    }
+
+    let rank: std::collections::HashMap<&str, usize> =
+        order.iter().enumerate().map(|(i, n)| (n.as_str(), i)).collect();
+    doc.decls
+        .sort_by_key(|d| rank.get(d.name()).copied().unwrap_or(usize::MAX));
+    doc
+}
+
 /// Classify a top-level schema into a declaration. Mirrors the structural
 /// decisions every model generator makes: map alias, enum, integer-enum alias,
 /// struct, or opaque alias.
@@ -229,27 +325,22 @@ fn lower_decl(name: &str, schema: &Schema) -> IrDecl {
                 };
             }
 
-            // Enums: integer enums collapse to an integer alias; string enums
-            // become a named enum.
+            // Enums keep their value kind so backends render them faithfully.
             if let Some(values) = enum_values {
-                if values.iter().all(|v| v.is_i64() || v.is_u64()) {
-                    return IrDecl::Alias {
-                        name: name.to_string(),
-                        docs,
-                        ty: IrType::Scalar {
-                            kind: Scalar::Integer,
-                            format: None,
-                        },
-                    };
-                }
-                let members = values
-                    .iter()
-                    .filter_map(|v| v.as_str().map(str::to_string))
-                    .collect();
+                let enum_values = if values.iter().all(|v| v.is_i64() || v.is_u64()) {
+                    EnumValues::Integers(values.iter().filter_map(|v| v.as_i64()).collect())
+                } else {
+                    EnumValues::Strings(
+                        values
+                            .iter()
+                            .filter_map(|v| v.as_str().map(str::to_string))
+                            .collect(),
+                    )
+                };
                 return IrDecl::Enum {
                     name: name.to_string(),
                     docs,
-                    members,
+                    values: enum_values,
                 };
             }
 
@@ -276,22 +367,30 @@ fn lower_decl(name: &str, schema: &Schema) -> IrDecl {
                 Vec::new()
             };
 
-            let _ = schema_type; // schema_type is informational here.
-            IrDecl::Struct(IrStruct {
-                name: name.to_string(),
-                docs,
-                fields,
-                has_unmodeled_variants: one_of.is_some() || any_of.is_some(),
-            })
+            // Object-shaped schemas become structs; a bare scalar/array schema
+            // at top level becomes a type alias.
+            let is_object =
+                schema_type_str(schema_type) == Some("object") || properties.is_some() || all_of.is_some();
+            if is_object {
+                IrDecl::Struct(IrStruct {
+                    name: name.to_string(),
+                    docs,
+                    fields,
+                    has_unmodeled_variants: one_of.is_some() || any_of.is_some(),
+                })
+            } else {
+                IrDecl::Alias {
+                    name: name.to_string(),
+                    docs,
+                    ty: lower_type(schema),
+                }
+            }
         }
-        // A top-level bare `$ref` (or anything else) becomes an opaque alias.
-        Schema::Reference { .. } => IrDecl::Alias {
+        // A top-level bare `$ref` becomes an alias to the referenced type.
+        Schema::Reference { reference, .. } => IrDecl::Alias {
             name: name.to_string(),
             docs,
-            ty: IrType::Scalar {
-                kind: Scalar::Free,
-                format: None,
-            },
+            ty: IrType::Named(ref_name(reference)),
         },
     }
 }
@@ -338,9 +437,9 @@ fn lower_type(schema: &Schema) -> IrType {
                 return IrType::Union(variants.iter().map(lower_type).collect());
             }
             if let Some(values) = enum_values {
-                // String enums keep their members (useful for literal-union
-                // backends); integer enums fall through to a plain integer.
-                if values.iter().any(|v| v.is_string()) {
+                // All-string enums become a closed set (literal union / Literal);
+                // integer or mixed enums fall through to a plain scalar.
+                if values.iter().all(|v| v.is_string()) {
                     let members = values
                         .iter()
                         .filter_map(|v| v.as_str().map(str::to_string))
