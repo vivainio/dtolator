@@ -420,11 +420,30 @@ impl PydanticGenerator {
 
                 // Handle allOf composition
                 if let Some(all_of_schemas) = all_of {
-                    output.push_str(&format!("{}class {}(BaseModel):\n", self.indent(), name));
-                    output.push_str(&format!(
-                        "{}    # This model combines multiple schemas (allOf)\n",
-                        self.indent()
-                    ));
+                    // `$ref` members become real base classes (Python subclassing,
+                    // matching the OpenAPI inheritance the `allOf` expresses); inline
+                    // object members contribute their properties as fields. A model
+                    // with no `$ref` base still needs to extend `BaseModel`.
+                    let base_classes: Vec<String> = all_of_schemas
+                        .iter()
+                        .filter_map(|s| match s {
+                            Schema::Reference { reference, .. } => Some(
+                                reference
+                                    .strip_prefix("#/components/schemas/")
+                                    .unwrap_or(reference)
+                                    .to_string(),
+                            ),
+                            _ => None,
+                        })
+                        .collect();
+                    let base_classes = if base_classes.is_empty() {
+                        vec!["BaseModel".to_string()]
+                    } else {
+                        base_classes
+                    };
+
+                    let mut class = PythonClassDef::new(name, base_classes);
+                    class.docstring = schema.get_description().map(|d| d.to_string());
 
                     let has_aliases = all_of_schemas.iter().any(|s| {
                         if let Schema::Object {
@@ -437,27 +456,8 @@ impl PydanticGenerator {
                             false
                         }
                     });
-                    // The allOf body interleaves `# Inherits from ...` comments
-                    // with fields, which `PythonClassDef` doesn't model, so it is
-                    // assembled as text here. The config preamble matches the
-                    // structured renderer: an inner `class Config:` (v1) or a
-                    // `model_config` line (v2), each followed by a blank line.
                     if has_aliases {
-                        match self.version {
-                            PydanticVersion::V1 => {
-                                output.push_str(&format!("{}    class Config:\n", self.indent()));
-                                output.push_str(&format!(
-                                    "{}        allow_population_by_field_name = True\n\n",
-                                    self.indent()
-                                ));
-                            }
-                            PydanticVersion::V2 => {
-                                output.push_str(&format!(
-                                    "{}    model_config = ConfigDict(populate_by_name=True)\n\n",
-                                    self.indent()
-                                ));
-                            }
-                        }
+                        self.apply_model_config(&mut class);
                     }
 
                     for sub_schema in all_of_schemas.iter() {
@@ -485,26 +485,15 @@ impl PydanticGenerator {
                                     base_type,
                                     is_required,
                                 )?;
-                                let field_def = match default {
-                                    Some(default) => {
-                                        format!("{snake_name}: {field_type} = {default}")
-                                    }
-                                    None => format!("{snake_name}: {field_type}"),
-                                };
-                                output.push_str(&format!("{}    {}\n", self.indent(), field_def));
+                                class
+                                    .attributes
+                                    .insert(snake_name, PythonAttribute::field(field_type, default));
                             }
-                        } else if let Schema::Reference { reference, .. } = sub_schema {
-                            let ref_name = reference
-                                .strip_prefix("#/components/schemas/")
-                                .unwrap_or(reference);
-                            output.push_str(&format!(
-                                "{}    # Inherits from {}\n",
-                                self.indent(),
-                                ref_name
-                            ));
                         }
                     }
-                    output.push_str("\n\n");
+
+                    output.push_str(&class.render());
+                    output.push('\n');
                     return Ok(output);
                 }
 
