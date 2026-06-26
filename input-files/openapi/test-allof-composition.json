@@ -1,0 +1,44 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Test allOf Composition API",
+    "version": "1.0.0",
+    "description": "Test pydantic allOf composition: $ref inheritance + inline aliased fields"
+  },
+  "components": {
+    "schemas": {
+      "BaseEntity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id"]
+      },
+      "User": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseEntity"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string"
+              },
+              "emailAddress": {
+                "type": "string"
+              }
+            },
+            "required": ["displayName"]
+          }
+        ]
+      }
+    }
+  }
+}

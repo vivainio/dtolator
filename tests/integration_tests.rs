@@ -393,6 +393,24 @@ impl TestSuite {
                 command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
                 expected_dir: "output-samples/ref-description-pydantic".to_string(),
             },
+            // allOf composition tests ($ref inheritance + inline aliased fields)
+            TestCase {
+                name: "allOf Composition Pydantic".to_string(),
+                input_file: "input-files/openapi/test-allof-composition.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
+                expected_dir: "output-samples/allof-composition-pydantic".to_string(),
+            },
+            TestCase {
+                name: "allOf Composition Pydantic V2".to_string(),
+                input_file: "input-files/openapi/test-allof-composition.json".to_string(),
+                command_args: vec![
+                    "--from-openapi".to_string(),
+                    "--pydantic".to_string(),
+                    "--pydantic-version".to_string(),
+                    "2".to_string(),
+                ],
+                expected_dir: "output-samples/allof-composition-pydantic-v2".to_string(),
+            },
             // Markdown tests
             TestCase {
                 name: "Markdown Simple".to_string(),
