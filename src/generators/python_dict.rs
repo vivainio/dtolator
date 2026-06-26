@@ -288,47 +288,32 @@ impl PythonDictGenerator {
                         }
                     }
 
-                    // Build a TypedDict class: bare `name: type` fields, with an
-                    // optional `total=False` marker on the header.
-                    let build = |class_name: String,
-                                 base_classes: Vec<String>,
-                                 total_false: bool,
-                                 fields: &[(&String, String)]| {
-                        let mut class = PythonClassDef::new(class_name, base_classes);
-                        if total_false {
-                            class
-                                .class_kwargs
-                                .insert("total".to_string(), "False".to_string());
-                        }
-                        for (prop_name, field_type) in fields {
-                            class.attributes.insert(
-                                (*prop_name).clone(),
-                                PythonAttribute::field(field_type.clone(), None),
-                            );
-                        }
-                        class
-                    };
-
                     if !required_props.is_empty() && !optional_props.is_empty() {
                         // Required fields go in a base class; optional fields in a
                         // `total=False` subclass, matching the plain-object convention.
                         let required_name = format!("{name}Required");
                         let required_class =
-                            build(required_name.clone(), bases, false, &required_props);
-                        let full_class =
-                            build(name.to_string(), vec![required_name], true, &optional_props);
+                            typed_dict_class(required_name.clone(), bases, false, &required_props);
+                        let full_class = typed_dict_class(
+                            name.to_string(),
+                            vec![required_name],
+                            true,
+                            &optional_props,
+                        );
                         output.push_str(&required_class.render());
                         output.push_str("\n\n");
                         output.push_str(&full_class.render());
                     } else if !optional_props.is_empty() {
                         output.push_str(
-                            &build(name.to_string(), bases, true, &optional_props).render(),
+                            &typed_dict_class(name.to_string(), bases, true, &optional_props)
+                                .render(),
                         );
                     } else {
                         // Required-only fields, or a model with only base classes
                         // (which renders an empty `pass` body).
                         output.push_str(
-                            &build(name.to_string(), bases, false, &required_props).render(),
+                            &typed_dict_class(name.to_string(), bases, false, &required_props)
+                                .render(),
                         );
                     }
                     output.push('\n');
@@ -580,6 +565,29 @@ impl PythonDictGenerator {
             }
         }
     }
+}
+
+/// Build a TypedDict class definition: bare `name: type` fields, with an
+/// optional `total=False` marker on the header.
+fn typed_dict_class(
+    class_name: String,
+    base_classes: Vec<String>,
+    total_false: bool,
+    fields: &[(&String, String)],
+) -> PythonClassDef {
+    let mut class = PythonClassDef::new(class_name, base_classes);
+    if total_false {
+        class
+            .class_kwargs
+            .insert("total".to_string(), "False".to_string());
+    }
+    for (prop_name, field_type) in fields {
+        class.attributes.insert(
+            (*prop_name).clone(),
+            PythonAttribute::field(field_type.clone(), None),
+        );
+    }
+    class
 }
 
 impl Generator for PythonDictGenerator {
