@@ -176,38 +176,42 @@ impl PythonDictGenerator {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
                     let all_int = enum_vals.iter().all(|v| v.is_i64() || v.is_u64());
-                    if all_int {
-                        output.push_str(&format!("{}class {}(IntEnum):\n", self.indent(), name));
-                        for enum_val in enum_vals {
-                            if let Some(n) = enum_val.as_i64() {
+                    let (base_classes, attributes) = if all_int {
+                        let attributes = enum_vals
+                            .iter()
+                            .filter_map(|v| v.as_i64())
+                            .map(|n| {
                                 let member = if n >= 0 {
                                     format!("VALUE_{n}")
                                 } else {
                                     format!("VALUE_NEG_{}", -n)
                                 };
-                                output.push_str(&format!(
-                                    "{}    {} = {}\n",
-                                    self.indent(),
-                                    member,
-                                    n
-                                ));
-                            }
-                        }
+                                (member, PythonAttribute::assignment(n.to_string()))
+                            })
+                            .collect();
+                        (vec!["IntEnum".to_string()], attributes)
                     } else {
-                        output.push_str(&format!("{}class {}(str, Enum):\n", self.indent(), name));
-                        for enum_val in enum_vals {
-                            if let Some(val_str) = enum_val.as_str() {
+                        let attributes = enum_vals
+                            .iter()
+                            .filter_map(|v| v.as_str())
+                            .map(|val_str| {
                                 let enum_name =
                                     val_str.to_uppercase().replace(" ", "_").replace("-", "_");
-                                output.push_str(&format!(
-                                    "{}    {} = \"{}\"\n",
-                                    self.indent(),
+                                (
                                     enum_name,
-                                    val_str
-                                ));
-                            }
-                        }
-                    }
+                                    PythonAttribute::assignment(format!("\"{val_str}\"")),
+                                )
+                            })
+                            .collect();
+                        (vec!["str".to_string(), "Enum".to_string()], attributes)
+                    };
+                    let class = PythonClassDef {
+                        name: name.to_string(),
+                        base_classes,
+                        attributes,
+                        ..Default::default()
+                    };
+                    output.push_str(&class.render());
                     output.push_str("\n\n");
                     return Ok(output);
                 }
@@ -338,97 +342,82 @@ impl PythonDictGenerator {
                         .iter()
                         .collect();
 
-                    if let Some(props) = properties {
-                        if props.is_empty() {
-                            output.push_str(&format!(
-                                "{}class {}(TypedDict):\n",
-                                self.indent(),
-                                name
-                            ));
-                            output.push_str(&format!("{}    pass\n", self.indent()));
-                        } else {
-                            let has_required = required_fields
-                                .iter()
-                                .any(|field| props.contains_key(*field));
-                            let has_optional =
-                                props.keys().any(|key| !required_fields.contains(&key));
+                    if let Some(props) = properties.as_ref().filter(|p| !p.is_empty()) {
+                        let has_required = required_fields
+                            .iter()
+                            .any(|field| props.contains_key(*field));
+                        let has_optional = props.keys().any(|key| !required_fields.contains(&key));
 
-                            if has_required && has_optional {
-                                // Create base TypedDict for required fields
-                                output.push_str(&format!(
-                                    "{}class {}Required(TypedDict):\n",
-                                    self.indent(),
-                                    name
-                                ));
-                                for field_name in &required_fields {
-                                    if let Some(field_schema) = props.get(*field_name) {
-                                        let field_type =
-                                            self.schema_to_python_type(field_schema)?;
-                                        output.push_str(&format!(
-                                            "{}    {}: {}\n",
-                                            self.indent(),
-                                            field_name,
-                                            field_type
-                                        ));
-                                    }
-                                }
-                                output.push_str("\n\n");
-
-                                // Create full TypedDict that inherits from required and adds optional fields
-                                output.push_str(&format!(
-                                    "{}class {}({}Required, total=False):\n",
-                                    self.indent(),
-                                    name,
-                                    name
-                                ));
-                                for (prop_name, prop_schema) in props {
-                                    if !required_fields.contains(&prop_name) {
-                                        let field_type = self.schema_to_python_type(prop_schema)?;
-                                        output.push_str(&format!(
-                                            "{}    {}: {}\n",
-                                            self.indent(),
-                                            prop_name,
-                                            field_type
-                                        ));
-                                    }
-                                }
-                            } else if has_required {
-                                // Only required fields
-                                output.push_str(&format!(
-                                    "{}class {}(TypedDict):\n",
-                                    self.indent(),
-                                    name
-                                ));
-                                for (prop_name, prop_schema) in props {
-                                    let field_type = self.schema_to_python_type(prop_schema)?;
-                                    output.push_str(&format!(
-                                        "{}    {}: {}\n",
-                                        self.indent(),
-                                        prop_name,
-                                        field_type
-                                    ));
-                                }
-                            } else {
-                                // Only optional fields
-                                output.push_str(&format!(
-                                    "{}class {}(TypedDict, total=False):\n",
-                                    self.indent(),
-                                    name
-                                ));
-                                for (prop_name, prop_schema) in props {
-                                    let field_type = self.schema_to_python_type(prop_schema)?;
-                                    output.push_str(&format!(
-                                        "{}    {}: {}\n",
-                                        self.indent(),
-                                        prop_name,
-                                        field_type
+                        if has_required && has_optional {
+                            // Required fields go in a base TypedDict; optional fields
+                            // in a `total=False` subclass that inherits from it.
+                            let mut required_props: Vec<(&String, String)> = Vec::new();
+                            for field_name in &required_fields {
+                                if let Some(field_schema) = props.get(*field_name) {
+                                    required_props.push((
+                                        *field_name,
+                                        self.schema_to_python_type(field_schema)?,
                                     ));
                                 }
                             }
+                            let mut optional_props: Vec<(&String, String)> = Vec::new();
+                            for (prop_name, prop_schema) in props {
+                                if !required_fields.contains(&prop_name) {
+                                    optional_props.push((
+                                        prop_name,
+                                        self.schema_to_python_type(prop_schema)?,
+                                    ));
+                                }
+                            }
+
+                            let required_name = format!("{name}Required");
+                            output.push_str(
+                                &typed_dict_class(
+                                    required_name.clone(),
+                                    vec!["TypedDict".to_string()],
+                                    false,
+                                    &required_props,
+                                )
+                                .render(),
+                            );
+                            output.push_str("\n\n");
+                            output.push_str(
+                                &typed_dict_class(
+                                    name.to_string(),
+                                    vec![required_name],
+                                    true,
+                                    &optional_props,
+                                )
+                                .render(),
+                            );
+                        } else {
+                            // Every field is required, or every field is optional;
+                            // a single class, `total=False` only in the latter case.
+                            let mut fields: Vec<(&String, String)> = Vec::new();
+                            for (prop_name, prop_schema) in props {
+                                fields.push((prop_name, self.schema_to_python_type(prop_schema)?));
+                            }
+                            output.push_str(
+                                &typed_dict_class(
+                                    name.to_string(),
+                                    vec!["TypedDict".to_string()],
+                                    !has_required,
+                                    &fields,
+                                )
+                                .render(),
+                            );
                         }
                     } else {
-                        output.push_str(&format!("{}class {}(TypedDict):\n", self.indent(), name));
-                        output.push_str(&format!("{}    pass\n", self.indent()));
+                        // Empty or absent properties render an empty `pass` body.
+                        output.push_str(
+                            &typed_dict_class(
+                                name.to_string(),
+                                vec!["TypedDict".to_string()],
+                                false,
+                                &[],
+                            )
+                            .render(),
+                        );
                     }
 
                     output.push('\n');
