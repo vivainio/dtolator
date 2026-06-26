@@ -11,12 +11,9 @@ class BaseEntity(BaseModel):
     id: str
     created_at: datetime | None = Field(None, alias="createdAt")
 
-class User(BaseModel):
-    # This model combines multiple schemas (allOf)
+class User(BaseEntity):
     model_config = ConfigDict(populate_by_name=True)
 
-    # Inherits from BaseEntity
     display_name: str = Field(alias="displayName")
     email_address: str | None = Field(None, alias="emailAddress")
-
 

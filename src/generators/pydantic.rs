@@ -1,5 +1,6 @@
 use crate::generators::Generator;
 use crate::generators::common::topological_sort;
+use crate::generators::python_class::{PythonAttribute, PythonClassDef};
 use crate::openapi::{
     AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
 };
@@ -377,49 +378,72 @@ impl PydanticGenerator {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
                     let all_int = enum_vals.iter().all(|v| v.is_i64() || v.is_u64());
-                    if all_int {
-                        output.push_str(&format!("{}class {}(IntEnum):\n", self.indent(), name));
-                        for enum_val in enum_vals {
-                            if let Some(n) = enum_val.as_i64() {
+                    let (base_classes, attributes) = if all_int {
+                        let attributes = enum_vals
+                            .iter()
+                            .filter_map(|v| v.as_i64())
+                            .map(|n| {
                                 let member = if n >= 0 {
                                     format!("VALUE_{n}")
                                 } else {
                                     format!("VALUE_NEG_{}", -n)
                                 };
-                                output.push_str(&format!(
-                                    "{}    {} = {}\n",
-                                    self.indent(),
-                                    member,
-                                    n
-                                ));
-                            }
-                        }
+                                (member, PythonAttribute::assignment(n.to_string()))
+                            })
+                            .collect();
+                        (vec!["IntEnum".to_string()], attributes)
                     } else {
-                        output.push_str(&format!("{}class {}(str, Enum):\n", self.indent(), name));
-                        for enum_val in enum_vals {
-                            if let Some(val_str) = enum_val.as_str() {
+                        let attributes = enum_vals
+                            .iter()
+                            .filter_map(|v| v.as_str())
+                            .map(|val_str| {
                                 let enum_name =
                                     val_str.to_uppercase().replace(" ", "_").replace("-", "_");
-                                output.push_str(&format!(
-                                    "{}    {} = \"{}\"\n",
-                                    self.indent(),
+                                (
                                     enum_name,
-                                    val_str
-                                ));
-                            }
-                        }
-                    }
+                                    PythonAttribute::assignment(format!("\"{val_str}\"")),
+                                )
+                            })
+                            .collect();
+                        (vec!["str".to_string(), "Enum".to_string()], attributes)
+                    };
+                    let class = PythonClassDef {
+                        name: name.to_string(),
+                        base_classes,
+                        attributes,
+                        ..Default::default()
+                    };
+                    output.push_str(&class.render());
                     output.push_str("\n\n");
                     return Ok(output);
                 }
 
                 // Handle allOf composition
                 if let Some(all_of_schemas) = all_of {
-                    output.push_str(&format!("{}class {}(BaseModel):\n", self.indent(), name));
-                    output.push_str(&format!(
-                        "{}    # This model combines multiple schemas (allOf)\n",
-                        self.indent()
-                    ));
+                    // `$ref` members become real base classes (Python subclassing,
+                    // matching the OpenAPI inheritance the `allOf` expresses); inline
+                    // object members contribute their properties as fields. A model
+                    // with no `$ref` base still needs to extend `BaseModel`.
+                    let base_classes: Vec<String> = all_of_schemas
+                        .iter()
+                        .filter_map(|s| match s {
+                            Schema::Reference { reference, .. } => Some(
+                                reference
+                                    .strip_prefix("#/components/schemas/")
+                                    .unwrap_or(reference)
+                                    .to_string(),
+                            ),
+                            _ => None,
+                        })
+                        .collect();
+                    let base_classes = if base_classes.is_empty() {
+                        vec!["BaseModel".to_string()]
+                    } else {
+                        base_classes
+                    };
+
+                    let mut class = PythonClassDef::new(name, base_classes);
+                    class.docstring = schema.get_description().map(|d| d.to_string());
 
                     let has_aliases = all_of_schemas.iter().any(|s| {
                         if let Schema::Object {
@@ -433,7 +457,7 @@ impl PydanticGenerator {
                         }
                     });
                     if has_aliases {
-                        self.write_model_config(&mut output);
+                        self.apply_model_config(&mut class);
                     }
 
                     for sub_schema in all_of_schemas.iter() {
@@ -455,27 +479,22 @@ impl PydanticGenerator {
                                     .as_ref()
                                     .map(|req| req.contains(prop_name))
                                     .unwrap_or(false);
-                                let field_def = self.generate_field_definition(
-                                    &snake_name,
+                                let (field_type, default) = self.field_type_and_default(
                                     alias,
                                     prop_schema,
                                     base_type,
                                     is_required,
                                 )?;
-                                output.push_str(&format!("{}    {}\n", self.indent(), field_def));
+                                class.attributes.insert(
+                                    snake_name,
+                                    PythonAttribute::field(field_type, default),
+                                );
                             }
-                        } else if let Schema::Reference { reference, .. } = sub_schema {
-                            let ref_name = reference
-                                .strip_prefix("#/components/schemas/")
-                                .unwrap_or(reference);
-                            output.push_str(&format!(
-                                "{}    # Inherits from {}\n",
-                                self.indent(),
-                                ref_name
-                            ));
                         }
                     }
-                    output.push_str("\n\n");
+
+                    output.push_str(&class.render());
+                    output.push('\n');
                     return Ok(output);
                 }
 
@@ -532,63 +551,43 @@ impl PydanticGenerator {
 
                 // Object type → BaseModel class
                 if schema_type_str(schema_type) == Some("object") || properties.is_some() {
-                    output.push_str(&format!("{}class {}(BaseModel):\n", self.indent(), name));
+                    let mut class = PythonClassDef::new(name, vec!["BaseModel".to_string()]);
+                    class.docstring = schema.get_description().map(|d| d.to_string());
 
-                    if let Some(desc) = schema.get_description() {
-                        if desc.contains('\n') {
-                            output.push_str(&format!("{}    \"\"\"\n", self.indent()));
-                            for line in desc.lines() {
-                                if line.is_empty() {
-                                    output.push_str(&format!("{}\n", self.indent()));
-                                } else {
-                                    output.push_str(&format!("{}    {}\n", self.indent(), line));
-                                }
-                            }
-                            output.push_str(&format!("{}    \"\"\"\n", self.indent()));
-                        } else {
-                            output.push_str(&format!(
-                                "{}    \"\"\"{}\"\"\"\n",
-                                self.indent(),
-                                desc
-                            ));
+                    // An object with non-empty properties becomes annotated
+                    // fields; an empty or absent `properties` leaves the body
+                    // empty and the renderer emits `pass`.
+                    if let Some(props) = properties.as_ref().filter(|p| !p.is_empty()) {
+                        let has_aliases = props.keys().any(|k| to_snake_case(k) != *k);
+                        if has_aliases {
+                            self.apply_model_config(&mut class);
+                        }
+
+                        for (prop_name, prop_schema) in props {
+                            let snake_name = to_snake_case(prop_name);
+                            let alias = if snake_name != *prop_name {
+                                Some(prop_name.as_str())
+                            } else {
+                                None
+                            };
+                            let base_type = self.schema_to_pydantic_type(prop_schema)?;
+                            let is_required = required
+                                .as_ref()
+                                .map(|req| req.contains(prop_name))
+                                .unwrap_or(false);
+                            let (field_type, default) = self.field_type_and_default(
+                                alias,
+                                prop_schema,
+                                base_type,
+                                is_required,
+                            )?;
+                            class
+                                .attributes
+                                .insert(snake_name, PythonAttribute::field(field_type, default));
                         }
                     }
 
-                    if let Some(props) = properties {
-                        if props.is_empty() {
-                            output.push_str(&format!("{}    pass\n", self.indent()));
-                        } else {
-                            let has_aliases = props.keys().any(|k| to_snake_case(k) != *k);
-                            if has_aliases {
-                                self.write_model_config(&mut output);
-                            }
-
-                            for (prop_name, prop_schema) in props {
-                                let snake_name = to_snake_case(prop_name);
-                                let alias = if snake_name != *prop_name {
-                                    Some(prop_name.as_str())
-                                } else {
-                                    None
-                                };
-                                let base_type = self.schema_to_pydantic_type(prop_schema)?;
-                                let is_required = required
-                                    .as_ref()
-                                    .map(|req| req.contains(prop_name))
-                                    .unwrap_or(false);
-                                let field_def = self.generate_field_definition(
-                                    &snake_name,
-                                    alias,
-                                    prop_schema,
-                                    base_type,
-                                    is_required,
-                                )?;
-                                output.push_str(&format!("{}    {}\n", self.indent(), field_def));
-                            }
-                        }
-                    } else {
-                        output.push_str(&format!("{}    pass\n", self.indent()));
-                    }
-
+                    output.push_str(&class.render());
                     output.push('\n');
                 } else {
                     // Primitive type alias
@@ -605,33 +604,44 @@ impl PydanticGenerator {
         Ok(output)
     }
 
-    /// Emit the model-level config that allows both field name and alias for population.
-    fn write_model_config(&self, output: &mut String) {
+    /// Add the model-level config that allows both field name and alias for
+    /// population. In v1 this is an inner `class Config:`, in v2 a `model_config`
+    /// assignment; both are rendered before the fields with a trailing blank line.
+    fn apply_model_config(&self, class: &mut PythonClassDef) {
         match self.version {
             PydanticVersion::V1 => {
-                output.push_str(&format!("{}    class Config:\n", self.indent()));
-                output.push_str(&format!(
-                    "{}        allow_population_by_field_name = True\n\n",
-                    self.indent()
-                ));
+                let config = PythonClassDef {
+                    name: "Config".to_string(),
+                    attributes: IndexMap::from([(
+                        "allow_population_by_field_name".to_string(),
+                        PythonAttribute::assignment("True"),
+                    )]),
+                    ..Default::default()
+                };
+                class.inner_classes.push(config);
             }
             PydanticVersion::V2 => {
-                output.push_str(&format!(
-                    "{}    model_config = ConfigDict(populate_by_name=True)\n\n",
-                    self.indent()
-                ));
+                class.attributes.insert(
+                    "model_config".to_string(),
+                    PythonAttribute {
+                        blank_line_after: true,
+                        ..PythonAttribute::assignment("ConfigDict(populate_by_name=True)")
+                    },
+                );
             }
         }
     }
 
-    fn generate_field_definition(
+    /// Compute the type annotation and optional default expression for a field.
+    /// Returns `(field_type, default)` where `default` is the right-hand side of
+    /// `=` (`None`, `Field(...)`, etc.), or `None` for a required plain field.
+    fn field_type_and_default(
         &self,
-        snake_name: &str,
         alias: Option<&str>,
         schema: &Schema,
         base_type: String,
         is_required: bool,
-    ) -> Result<String> {
+    ) -> Result<(String, Option<String>)> {
         let field_type = if !is_required && !self.is_optional_type(&base_type) {
             self.wrap_optional(&base_type)
         } else {
@@ -673,11 +683,12 @@ impl PydanticGenerator {
         let needs_field = alias.is_some() || has_constraints || schema.get_description().is_some();
 
         if !needs_field {
-            if is_required {
-                return Ok(format!("{snake_name}: {field_type}"));
+            let default = if is_required {
+                None
             } else {
-                return Ok(format!("{snake_name}: {field_type} = None"));
-            }
+                Some("None".to_string())
+            };
+            return Ok((field_type, default));
         }
 
         let mut field_args: Vec<String> = Vec::new();
@@ -732,9 +743,9 @@ impl PydanticGenerator {
             field_args.push(format!("description=\"{escaped}\""));
         }
 
-        Ok(format!(
-            "{snake_name}: {field_type} = Field({})",
-            field_args.join(", ")
+        Ok((
+            field_type,
+            Some(format!("Field({})", field_args.join(", "))),
         ))
     }
 
