@@ -1,4 +1,5 @@
 use crate::generators::Generator;
+use crate::generators::python_class::{PythonAttribute, PythonClassDef};
 use crate::openapi::{
     AdditionalProperties, OpenApiSchema, Schema, is_schema_nullable, schema_type_str,
 };
@@ -256,10 +257,11 @@ impl PythonDictGenerator {
                             _ => None,
                         })
                         .collect();
+                    // A model with no `$ref` base still needs to extend `TypedDict`.
                     let bases = if base_classes.is_empty() {
-                        "TypedDict".to_string()
+                        vec!["TypedDict".to_string()]
                     } else {
-                        base_classes.join(", ")
+                        base_classes
                     };
 
                     let mut required_props: Vec<(&String, String)> = Vec::new();
@@ -286,48 +288,48 @@ impl PythonDictGenerator {
                         }
                     }
 
-                    let emit = |output: &mut String, fields: &[(&String, String)]| {
-                        for (prop_name, field_type) in fields {
-                            output.push_str(&format!(
-                                "{}    {}: {}\n",
-                                self.indent(),
-                                prop_name,
-                                field_type
-                            ));
+                    // Build a TypedDict class: bare `name: type` fields, with an
+                    // optional `total=False` marker on the header.
+                    let build = |class_name: String,
+                                 base_classes: Vec<String>,
+                                 total_false: bool,
+                                 fields: &[(&String, String)]| {
+                        let mut class = PythonClassDef::new(class_name, base_classes);
+                        if total_false {
+                            class
+                                .class_kwargs
+                                .insert("total".to_string(), "False".to_string());
                         }
+                        for (prop_name, field_type) in fields {
+                            class.attributes.insert(
+                                (*prop_name).clone(),
+                                PythonAttribute::field(field_type.clone(), None),
+                            );
+                        }
+                        class
                     };
 
                     if !required_props.is_empty() && !optional_props.is_empty() {
-                        output.push_str(&format!(
-                            "{}class {}Required({}):\n",
-                            self.indent(),
-                            name,
-                            bases
-                        ));
-                        emit(&mut output, &required_props);
+                        // Required fields go in a base class; optional fields in a
+                        // `total=False` subclass, matching the plain-object convention.
+                        let required_name = format!("{name}Required");
+                        let required_class =
+                            build(required_name.clone(), bases, false, &required_props);
+                        let full_class =
+                            build(name.to_string(), vec![required_name], true, &optional_props);
+                        output.push_str(&required_class.render());
                         output.push_str("\n\n");
-                        output.push_str(&format!(
-                            "{}class {}({}Required, total=False):\n",
-                            self.indent(),
-                            name,
-                            name
-                        ));
-                        emit(&mut output, &optional_props);
-                    } else if !required_props.is_empty() {
-                        output.push_str(&format!("{}class {}({}):\n", self.indent(), name, bases));
-                        emit(&mut output, &required_props);
+                        output.push_str(&full_class.render());
                     } else if !optional_props.is_empty() {
-                        output.push_str(&format!(
-                            "{}class {}({}, total=False):\n",
-                            self.indent(),
-                            name,
-                            bases
-                        ));
-                        emit(&mut output, &optional_props);
+                        output.push_str(
+                            &build(name.to_string(), bases, true, &optional_props).render(),
+                        );
                     } else {
-                        // Only base classes, no inline fields of its own.
-                        output.push_str(&format!("{}class {}({}):\n", self.indent(), name, bases));
-                        output.push_str(&format!("{}    pass\n", self.indent()));
+                        // Required-only fields, or a model with only base classes
+                        // (which renders an empty `pass` body).
+                        output.push_str(
+                            &build(name.to_string(), bases, false, &required_props).render(),
+                        );
                     }
                     output.push('\n');
                     return Ok(output);
