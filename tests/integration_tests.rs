@@ -411,6 +411,12 @@ impl TestSuite {
                 ],
                 expected_dir: "output-samples/allof-composition-pydantic-v2".to_string(),
             },
+            TestCase {
+                name: "allOf Composition TypedDict".to_string(),
+                input_file: "input-files/openapi/test-allof-composition.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--python-dict".to_string()],
+                expected_dir: "output-samples/allof-composition-python-dict".to_string(),
+            },
             // Markdown tests
             TestCase {
                 name: "Markdown Simple".to_string(),

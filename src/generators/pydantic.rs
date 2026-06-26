@@ -485,9 +485,10 @@ impl PydanticGenerator {
                                     base_type,
                                     is_required,
                                 )?;
-                                class
-                                    .attributes
-                                    .insert(snake_name, PythonAttribute::field(field_type, default));
+                                class.attributes.insert(
+                                    snake_name,
+                                    PythonAttribute::field(field_type, default),
+                                );
                             }
                         }
                     }

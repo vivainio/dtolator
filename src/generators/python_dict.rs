@@ -53,6 +53,7 @@ impl PythonDictGenerator {
             Schema::Object {
                 properties,
                 items,
+                all_of,
                 one_of,
                 any_of,
                 ..
@@ -64,6 +65,11 @@ impl PythonDictGenerator {
                 }
                 if let Some(item_schema) = items {
                     self.collect_dependencies_recursive(item_schema, known_schemas, deps);
+                }
+                if let Some(schemas) = all_of {
+                    for s in schemas {
+                        self.collect_dependencies_recursive(s, known_schemas, deps);
+                    }
                 }
                 if let Some(schemas) = one_of {
                     for s in schemas {
@@ -161,7 +167,7 @@ impl PythonDictGenerator {
                 required,
                 additional_properties,
                 enum_values,
-
+                all_of,
                 one_of,
                 any_of,
                 ..
@@ -229,6 +235,101 @@ impl PythonDictGenerator {
                         name,
                         types?.join(" | ")
                     ));
+                    return Ok(output);
+                }
+
+                // Handle allOf composition: `$ref` members become TypedDict base
+                // classes (the inheritance the allOf expresses), inline object
+                // members contribute their own fields. Required/optional fields are
+                // split into a `*Required` base and a `total=False` subclass, the
+                // same convention used for plain objects below.
+                if let Some(all_of_schemas) = all_of {
+                    let base_classes: Vec<String> = all_of_schemas
+                        .iter()
+                        .filter_map(|s| match s {
+                            Schema::Reference { reference, .. } => Some(
+                                reference
+                                    .strip_prefix("#/components/schemas/")
+                                    .unwrap_or(reference)
+                                    .to_string(),
+                            ),
+                            _ => None,
+                        })
+                        .collect();
+                    let bases = if base_classes.is_empty() {
+                        "TypedDict".to_string()
+                    } else {
+                        base_classes.join(", ")
+                    };
+
+                    let mut required_props: Vec<(&String, String)> = Vec::new();
+                    let mut optional_props: Vec<(&String, String)> = Vec::new();
+                    for sub in all_of_schemas {
+                        if let Schema::Object {
+                            properties: Some(props),
+                            required,
+                            ..
+                        } = sub
+                        {
+                            for (prop_name, prop_schema) in props {
+                                let field_type = self.schema_to_python_type(prop_schema)?;
+                                let is_required = required
+                                    .as_ref()
+                                    .map(|req| req.contains(prop_name))
+                                    .unwrap_or(false);
+                                if is_required {
+                                    required_props.push((prop_name, field_type));
+                                } else {
+                                    optional_props.push((prop_name, field_type));
+                                }
+                            }
+                        }
+                    }
+
+                    let emit = |output: &mut String, fields: &[(&String, String)]| {
+                        for (prop_name, field_type) in fields {
+                            output.push_str(&format!(
+                                "{}    {}: {}\n",
+                                self.indent(),
+                                prop_name,
+                                field_type
+                            ));
+                        }
+                    };
+
+                    if !required_props.is_empty() && !optional_props.is_empty() {
+                        output.push_str(&format!(
+                            "{}class {}Required({}):\n",
+                            self.indent(),
+                            name,
+                            bases
+                        ));
+                        emit(&mut output, &required_props);
+                        output.push_str("\n\n");
+                        output.push_str(&format!(
+                            "{}class {}({}Required, total=False):\n",
+                            self.indent(),
+                            name,
+                            name
+                        ));
+                        emit(&mut output, &optional_props);
+                    } else if !required_props.is_empty() {
+                        output.push_str(&format!("{}class {}({}):\n", self.indent(), name, bases));
+                        emit(&mut output, &required_props);
+                    } else if !optional_props.is_empty() {
+                        output.push_str(&format!(
+                            "{}class {}({}, total=False):\n",
+                            self.indent(),
+                            name,
+                            bases
+                        ));
+                        emit(&mut output, &optional_props);
+                    } else {
+                        // Only base classes, no inline fields of its own.
+                        output.push_str(&format!("{}class {}({}):\n", self.indent(), name, bases));
+                        output.push_str(&format!("{}    pass\n", self.indent()));
+                    }
+                    output.push('\n');
                     return Ok(output);
                 }
 
