@@ -378,36 +378,41 @@ impl PydanticGenerator {
                 // Handle enum types
                 if let Some(enum_vals) = enum_values {
                     let all_int = enum_vals.iter().all(|v| v.is_i64() || v.is_u64());
-                    let mut class = if all_int {
-                        PythonClassDef::new(name, vec!["IntEnum".to_string()])
-                    } else {
-                        PythonClassDef::new(name, vec!["str".to_string(), "Enum".to_string()])
-                    };
-                    if all_int {
-                        for enum_val in enum_vals {
-                            if let Some(n) = enum_val.as_i64() {
+                    let (base_classes, attributes) = if all_int {
+                        let attributes = enum_vals
+                            .iter()
+                            .filter_map(|v| v.as_i64())
+                            .map(|n| {
                                 let member = if n >= 0 {
                                     format!("VALUE_{n}")
                                 } else {
                                     format!("VALUE_NEG_{}", -n)
                                 };
-                                class
-                                    .attributes
-                                    .insert(member, PythonAttribute::assignment(n.to_string()));
-                            }
-                        }
+                                (member, PythonAttribute::assignment(n.to_string()))
+                            })
+                            .collect();
+                        (vec!["IntEnum".to_string()], attributes)
                     } else {
-                        for enum_val in enum_vals {
-                            if let Some(val_str) = enum_val.as_str() {
+                        let attributes = enum_vals
+                            .iter()
+                            .filter_map(|v| v.as_str())
+                            .map(|val_str| {
                                 let enum_name =
                                     val_str.to_uppercase().replace(" ", "_").replace("-", "_");
-                                class.attributes.insert(
+                                (
                                     enum_name,
                                     PythonAttribute::assignment(format!("\"{val_str}\"")),
-                                );
-                            }
-                        }
-                    }
+                                )
+                            })
+                            .collect();
+                        (vec!["str".to_string(), "Enum".to_string()], attributes)
+                    };
+                    let class = PythonClassDef {
+                        name: name.to_string(),
+                        base_classes,
+                        attributes,
+                        ..Default::default()
+                    };
                     output.push_str(&class.render());
                     output.push_str("\n\n");
                     return Ok(output);
@@ -615,20 +620,24 @@ impl PydanticGenerator {
     fn apply_model_config(&self, class: &mut PythonClassDef) {
         match self.version {
             PydanticVersion::V1 => {
-                let mut config = PythonClassDef::new("Config", vec![]);
-                config.attributes.insert(
-                    "allow_population_by_field_name".to_string(),
-                    PythonAttribute::assignment("True"),
-                );
+                let config = PythonClassDef {
+                    name: "Config".to_string(),
+                    attributes: IndexMap::from([(
+                        "allow_population_by_field_name".to_string(),
+                        PythonAttribute::assignment("True"),
+                    )]),
+                    ..Default::default()
+                };
                 class.inner_classes.push(config);
             }
             PydanticVersion::V2 => {
-                let mut model_config =
-                    PythonAttribute::assignment("ConfigDict(populate_by_name=True)");
-                model_config.blank_line_after = true;
-                class
-                    .attributes
-                    .insert("model_config".to_string(), model_config);
+                class.attributes.insert(
+                    "model_config".to_string(),
+                    PythonAttribute {
+                        blank_line_after: true,
+                        ..PythonAttribute::assignment("ConfigDict(populate_by_name=True)")
+                    },
+                );
             }
         }
     }
