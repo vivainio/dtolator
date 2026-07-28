@@ -15,7 +15,9 @@ def run_tests(refresh: bool = False) -> None:
         print("Running dtolator test suite...")
 
     subprocess.run(
-        ["cargo", "test", "--test", "integration_tests", "--", "--nocapture"], env=env
+        ["cargo", "test", "--test", "integration_tests", "--", "--nocapture"],
+        env=env,
+        check=True,
     )
 
 
@@ -55,7 +57,8 @@ def run_coverage() -> None:
             "tests/*",
             "--ignore-panics",
             "--ignore-timeouts",
-        ]
+        ],
+        check=True,
     )
 
 
