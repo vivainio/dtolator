@@ -368,7 +368,13 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
     }
 
     if options.delete_old {
-        delete_obsolete_files(&options.output_dir, &written_files)?;
+        let mut managed_files = written_files.clone();
+        for skipped_file in &options.skip_files {
+            if !managed_files.contains(skipped_file) {
+                managed_files.push(skipped_file.clone());
+            }
+        }
+        delete_obsolete_files(&options.output_dir, &managed_files)?;
     }
 
     // Angular already prints its own message via generate_angular_services
@@ -939,24 +945,47 @@ fn write_if_changed(path: &Path, contents: &str) -> Result<bool> {
     Ok(true)
 }
 
-/// Delete files in `dir` that are not in `keep` (filenames only, not paths).
+const GENERATED_FILES_MANIFEST: &str = ".dtolator-generated-files.json";
+
+/// Delete previously generated files in `dir` that are not in `keep`.
+///
+/// The manifest prevents `--delete-old` from treating unrelated user files as
+/// generated output. On the first manifest-enabled run there is deliberately
+/// nothing to delete.
 fn delete_obsolete_files(dir: &Path, keep: &[String]) -> Result<()> {
-    for entry in fs::read_dir(dir)
-        .with_context(|| format!("Failed to read output directory: {}", dir.display()))?
-    {
-        let entry = entry?;
-        if !entry.file_type()?.is_file() {
+    let manifest_path = dir.join(GENERATED_FILES_MANIFEST);
+    let previous_files: Vec<String> = match fs::read_to_string(&manifest_path) {
+        Ok(contents) => serde_json::from_str(&contents)
+            .with_context(|| format!("Failed to parse manifest: {}", manifest_path.display()))?,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("Failed to read manifest: {}", manifest_path.display()));
+        }
+    };
+
+    for name in previous_files {
+        // Manifests only contain direct child filenames. Ignore malformed
+        // entries rather than allowing a manifest to delete outside `dir`.
+        let path = Path::new(&name);
+        if path.components().count() != 1 || keep.contains(&name) {
             continue;
         }
-        if let Some(name) = entry.file_name().to_str()
-            && !keep.contains(&name.to_string())
-        {
-            fs::remove_file(entry.path()).with_context(|| {
-                format!("Failed to delete obsolete file: {}", entry.path().display())
+
+        let obsolete_path = dir.join(path);
+        if obsolete_path.is_file() {
+            fs::remove_file(&obsolete_path).with_context(|| {
+                format!(
+                    "Failed to delete obsolete file: {}",
+                    obsolete_path.display()
+                )
             })?;
-            println!("Deleted obsolete file: {}", entry.path().display());
+            println!("Deleted obsolete file: {}", obsolete_path.display());
         }
     }
+
+    let manifest = serde_json::to_string_pretty(keep)?;
+    write_if_changed(&manifest_path, &format!("{manifest}\n"))?;
     Ok(())
 }
 
@@ -1542,9 +1571,23 @@ fn strip_json_comments(content: &str) -> String {
     // This handles /* ... */ style comments that might be in generated JSON Schema files
     let mut result = String::new();
     let mut chars = content.chars().peekable();
+    let mut in_string = false;
+    let mut escaped = false;
 
     while let Some(ch) = chars.next() {
-        if ch == '/' && chars.peek() == Some(&'*') {
+        if in_string {
+            result.push(ch);
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+        } else if ch == '"' {
+            in_string = true;
+            result.push(ch);
+        } else if ch == '/' && chars.peek() == Some(&'*') {
             // Start of /* comment - skip until we find */
             chars.next(); // consume the *
             let mut prev_was_star = false;
@@ -1553,14 +1596,6 @@ fn strip_json_comments(content: &str) -> String {
                     break;
                 }
                 prev_was_star = comment_ch == '*';
-            }
-            // Skip any trailing whitespace/newlines after comment
-            while let Some(&whitespace_ch) = chars.peek() {
-                if whitespace_ch.is_whitespace() {
-                    chars.next();
-                } else {
-                    break;
-                }
             }
         } else {
             // Regular character, keep it
@@ -1653,5 +1688,25 @@ fn generate_dto_name(operation_id: &Option<String>, summary: &Option<String>) ->
         format!("{}Dto", generators::common::summary_to_pascal_case(summary))
     } else {
         "UnknownDto".to_string()
+    }
+}
+
+#[cfg(test)]
+mod lib_tests {
+    use super::strip_json_comments;
+
+    #[test]
+    fn strip_json_comments_preserves_comment_markers_inside_strings() {
+        let input = r#"{"pattern":"https://host/*/item","escaped":"\"/*still text*/"}"#;
+        assert_eq!(strip_json_comments(input), input);
+    }
+
+    #[test]
+    fn strip_json_comments_removes_block_comments() {
+        let input = "{\n  /* generated metadata */\n  \"type\": \"object\"\n}";
+        assert_eq!(
+            strip_json_comments(input),
+            "{\n  \n  \"type\": \"object\"\n}"
+        );
     }
 }

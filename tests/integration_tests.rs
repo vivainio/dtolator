@@ -1038,3 +1038,44 @@ fn test_cli_docs_match_golden() {
          DTOLATOR_TEST_REFRESH=1 cargo test --test integration_tests test_cli_docs_match_golden"
     );
 }
+
+#[test]
+fn test_delete_old_only_removes_previously_generated_files() {
+    let dir = tempfile::TempDir::new().expect("temp dir");
+    let output_dir = dir.path().join("output");
+    fs::create_dir_all(&output_dir).expect("create output dir");
+    let user_file = output_dir.join("notes.txt");
+    fs::write(&user_file, "keep me").expect("write user file");
+
+    let base_options = GenerateOptions {
+        input_type: InputType::OpenApi,
+        input_path: PathBuf::from("input-files/openapi/simple-sample.json"),
+        output_dir: output_dir.clone(),
+        generator_type: GeneratorType::RustSerde,
+        pydantic_version: PydanticVersion::V1,
+        with_zod: false,
+        with_promises: false,
+        hide_version: true,
+        root_name: "Root".to_string(),
+        debug: false,
+        skip_files: Vec::new(),
+        base_url_mode: dtolator::BaseUrlMode::Global,
+        api_url_variable: "API_URL".to_string(),
+        ignore_operation_id: false,
+        delete_old: true,
+    };
+
+    generate(base_options.clone()).expect("first generation");
+    assert!(output_dir.join("models.rs").is_file());
+    assert!(user_file.is_file());
+
+    generate(GenerateOptions {
+        generator_type: GeneratorType::TypeScript,
+        ..base_options
+    })
+    .expect("second generation");
+
+    assert!(!output_dir.join("models.rs").exists());
+    assert!(output_dir.join("dto.ts").is_file());
+    assert!(user_file.is_file(), "unmanaged files must not be deleted");
+}
