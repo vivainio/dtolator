@@ -3,6 +3,9 @@ pub mod common;
 pub mod dotnet;
 pub mod endpoints;
 pub mod import_generator;
+// Proposal / for discussion — not yet wired into the generators. See PR.
+#[allow(dead_code)]
+pub mod ir;
 pub mod json_schema;
 pub mod markdown;
 pub mod pydantic;

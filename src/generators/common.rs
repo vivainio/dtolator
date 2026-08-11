@@ -62,6 +62,39 @@ pub fn to_pascal_case(input: &str) -> String {
         .collect()
 }
 
+/// Convert a member/property name to `snake_case`.
+///
+/// Inserts an underscore before each uppercase run boundary and treats `-`/space
+/// as separators. Falls back to `"field"` when the result would be empty.
+pub fn to_snake_case(name: &str) -> String {
+    let mut result = String::new();
+    let mut prev_was_upper = false;
+
+    for (i, ch) in name.chars().enumerate() {
+        if ch.is_uppercase() {
+            if i > 0 && !prev_was_upper {
+                result.push('_');
+            }
+            result.push(ch.to_lowercase().next().unwrap_or(ch));
+            prev_was_upper = true;
+        } else if ch == '-' || ch == ' ' {
+            if !result.ends_with('_') {
+                result.push('_');
+            }
+            prev_was_upper = false;
+        } else {
+            result.push(ch);
+            prev_was_upper = false;
+        }
+    }
+
+    if result.is_empty() {
+        "field".to_string()
+    } else {
+        result
+    }
+}
+
 /// Builder for TSDoc/JSDoc comment blocks.
 ///
 /// Handles multiline text correctly for all sections: description, `@param`, `@returns`.
