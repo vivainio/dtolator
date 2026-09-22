@@ -6,6 +6,7 @@ pub mod import_generator;
 pub mod json_schema;
 pub mod markdown;
 pub mod pydantic;
+pub mod python_class;
 pub mod python_dict;
 pub mod rust_serde;
 pub mod typescript;
