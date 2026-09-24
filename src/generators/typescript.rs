@@ -1,3 +1,4 @@
+use crate::TsEnumStyle;
 use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
@@ -22,6 +23,7 @@ fn format_ts_enum_literal(value: &serde_json::Value) -> Option<String> {
 
 pub struct TypeScriptGenerator {
     indent_level: usize,
+    enum_style: TsEnumStyle,
 }
 
 impl Default for TypeScriptGenerator {
@@ -32,7 +34,15 @@ impl Default for TypeScriptGenerator {
 
 impl TypeScriptGenerator {
     pub fn new() -> Self {
-        Self { indent_level: 0 }
+        Self {
+            indent_level: 0,
+            enum_style: TsEnumStyle::default(),
+        }
+    }
+
+    pub fn with_enum_style(mut self, enum_style: TsEnumStyle) -> Self {
+        self.enum_style = enum_style;
+        self
     }
 
     fn is_valid_identifier(name: &str) -> bool {
@@ -93,6 +103,17 @@ impl TypeScriptGenerator {
 
         if let Some(desc) = schema.get_description() {
             output.push_str(&crate::generators::common::format_jsdoc(desc, ""));
+        }
+
+        if let Some(decl) = common::render_ts_enum_decl(name, schema, self.enum_style) {
+            output.push_str(&decl);
+            if self.enum_style == TsEnumStyle::Const {
+                output.push_str(&format!(
+                    "export type {name} = (typeof {name})[keyof typeof {name}];\n"
+                ));
+            }
+            output.push('\n');
+            return Ok(output);
         }
 
         match schema {
@@ -642,6 +663,7 @@ impl Clone for TypeScriptGenerator {
     fn clone(&self) -> Self {
         Self {
             indent_level: self.indent_level,
+            enum_style: self.enum_style,
         }
     }
 }

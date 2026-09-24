@@ -1,0 +1,42 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Enum Styles API",
+    "version": "1.0.0",
+    "description": "Named enums rendered with --ts-enum-style"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ItemStatus": {
+        "type": "string",
+        "description": "Lifecycle status of an item",
+        "enum": ["draft", "active", "archived"]
+      },
+      "TrickyNames": {
+        "type": "string",
+        "enum": ["in-progress", "IN_PROGRESS", "inProgress", "2fa", "", "with \"quotes\""]
+      },
+      "Priority": {
+        "type": "integer",
+        "enum": [-1, 0, 1, 2]
+      },
+      "NullableColor": {
+        "type": "string",
+        "nullable": true,
+        "enum": ["red", "green"]
+      },
+      "Item": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/ItemStatus" },
+          "priority": { "$ref": "#/components/schemas/Priority" },
+          "color": { "$ref": "#/components/schemas/NullableColor" },
+          "inlineKind": { "type": "string", "enum": ["a", "b"] }
+        }
+      }
+    }
+  }
+}
