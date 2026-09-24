@@ -1,4 +1,5 @@
-use crate::openapi::{AdditionalProperties, Schema};
+use crate::TsEnumStyle;
+use crate::openapi::{AdditionalProperties, Schema, is_schema_nullable};
 use anyhow::Result;
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -163,6 +164,101 @@ pub fn format_jsdoc(description: &str, indent: &str) -> String {
     let mut doc = TsDocBuilder::new(indent);
     doc.description(description);
     doc.build()
+}
+
+/// Build a TypeScript enum member name from an enum value.
+/// e.g. "in-progress" -> "InProgress", "IN_PROGRESS" -> "InProgress", -2 -> "ValueNeg2"
+fn ts_enum_member_name(value: &serde_json::Value) -> Option<String> {
+    let name = if let Some(s) = value.as_str() {
+        let name: String = s
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|word| !word.is_empty())
+            .map(|word| {
+                let mut chars = word.chars();
+                let first = chars.next().unwrap_or_default();
+                // Shouting words (IN_PROGRESS) become Pascal case; mixed case is kept
+                let rest = if word.chars().any(|c| c.is_lowercase()) {
+                    chars.as_str().to_string()
+                } else {
+                    chars.as_str().to_lowercase()
+                };
+                first.to_uppercase().collect::<String>() + &rest
+            })
+            .collect();
+        if name.is_empty() {
+            "Empty".to_string()
+        } else if name.starts_with(|c: char| c.is_ascii_digit()) {
+            format!("_{name}")
+        } else {
+            name
+        }
+    } else if value.is_number() {
+        let n = value.to_string();
+        let name = match n.strip_prefix('-') {
+            Some(abs) => format!("ValueNeg{abs}"),
+            None => format!("Value{n}"),
+        };
+        name.chars()
+            .map(|c| if c.is_alphanumeric() { c } else { '_' })
+            .collect()
+    } else {
+        return None;
+    };
+    Some(name)
+}
+
+/// Render a named top-level enum schema as a TypeScript `enum` or `as const` object.
+///
+/// Returns `None` when the schema should stay a literal union: union style, a
+/// non-enum schema, a nullable enum (a declaration can't carry `null`), or values
+/// other than strings and numbers.
+pub fn render_ts_enum_decl(name: &str, schema: &Schema, style: TsEnumStyle) -> Option<String> {
+    let Schema::Object {
+        enum_values: Some(values),
+        nullable,
+        schema_type,
+        ..
+    } = schema
+    else {
+        return None;
+    };
+    if style == TsEnumStyle::Union || values.is_empty() || is_schema_nullable(nullable, schema_type)
+    {
+        return None;
+    }
+
+    let mut used = HashSet::new();
+    let mut members = Vec::new();
+    for value in values {
+        let base = ts_enum_member_name(value)?;
+        let mut member = base.clone();
+        let mut n = 2;
+        while !used.insert(member.clone()) {
+            member = format!("{base}_{n}");
+            n += 1;
+        }
+        members.push((member, value.to_string()));
+    }
+
+    let mut output = String::new();
+    match style {
+        TsEnumStyle::Enum => {
+            output.push_str(&format!("export enum {name} {{\n"));
+            for (member, literal) in members {
+                output.push_str(&format!("  {member} = {literal},\n"));
+            }
+            output.push_str("}\n");
+        }
+        TsEnumStyle::Const => {
+            output.push_str(&format!("export const {name} = {{\n"));
+            for (member, literal) in members {
+                output.push_str(&format!("  {member}: {literal},\n"));
+            }
+            output.push_str("} as const;\n");
+        }
+        TsEnumStyle::Union => unreachable!(),
+    }
+    Some(output)
 }
 
 /// Extract type name from a schema reference.

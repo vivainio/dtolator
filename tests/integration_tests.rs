@@ -287,6 +287,72 @@ impl TestSuite {
                 command_args: vec!["--from-json-schema".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/zod-all-features".to_string(),
             },
+            // Named enums as TS enums / const objects (--ts-enum-style)
+            TestCase {
+                name: "TS Enum Style Enum".to_string(),
+                input_file: "input-files/openapi/test-enum-styles.json".to_string(),
+                command_args: vec![
+                    "--from-openapi".to_string(),
+                    "--typescript".to_string(),
+                    "--ts-enum-style".to_string(),
+                    "enum".to_string(),
+                ],
+                expected_dir: "output-samples/ts-enum-style-enum".to_string(),
+            },
+            TestCase {
+                name: "TS Enum Style Const".to_string(),
+                input_file: "input-files/openapi/test-enum-styles.json".to_string(),
+                command_args: vec![
+                    "--from-openapi".to_string(),
+                    "--typescript".to_string(),
+                    "--ts-enum-style".to_string(),
+                    "const".to_string(),
+                ],
+                expected_dir: "output-samples/ts-enum-style-const".to_string(),
+            },
+            TestCase {
+                name: "Zod Enum Style Enum".to_string(),
+                input_file: "input-files/openapi/test-enum-styles.json".to_string(),
+                command_args: vec![
+                    "--from-openapi".to_string(),
+                    "--zod".to_string(),
+                    "--ts-enum-style".to_string(),
+                    "enum".to_string(),
+                ],
+                expected_dir: "output-samples/zod-enum-style-enum".to_string(),
+            },
+            TestCase {
+                name: "Zod Enum Style Const".to_string(),
+                input_file: "input-files/openapi/test-enum-styles.json".to_string(),
+                command_args: vec![
+                    "--from-openapi".to_string(),
+                    "--zod".to_string(),
+                    "--ts-enum-style".to_string(),
+                    "const".to_string(),
+                ],
+                expected_dir: "output-samples/zod-enum-style-const".to_string(),
+            },
+            TestCase {
+                name: "Angular Zod Enum Style Enum".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--zod".to_string(),
+                    "--ts-enum-style".to_string(),
+                    "enum".to_string(),
+                ],
+                expected_dir: "output-samples/angular-zod-enum-style-enum".to_string(),
+            },
+            TestCase {
+                name: "Angular Enum Style Enum".to_string(),
+                input_file: "input-files/openapi/full-sample.json".to_string(),
+                command_args: vec![
+                    "--angular".to_string(),
+                    "--ts-enum-style".to_string(),
+                    "enum".to_string(),
+                ],
+                expected_dir: "output-samples/angular-enum-style-enum".to_string(),
+            },
             // Angular Base URL Argument Mode
             TestCase {
                 name: "Angular Base URL Argument".to_string(),
@@ -759,6 +825,17 @@ impl TestSuite {
                 .iter()
                 .any(|arg| arg == "--ignore-operation-id"),
             delete_old: false,
+            ts_enum_style: match test_case
+                .command_args
+                .iter()
+                .position(|arg| arg == "--ts-enum-style")
+                .and_then(|idx| test_case.command_args.get(idx + 1))
+                .map(|s| s.as_str())
+            {
+                Some("const") => dtolator::TsEnumStyle::Const,
+                Some("enum") => dtolator::TsEnumStyle::Enum,
+                _ => dtolator::TsEnumStyle::Union,
+            },
         };
 
         if let Err(e) = generate(options) {
@@ -1069,6 +1146,7 @@ fn test_delete_old_only_removes_previously_generated_files() {
         api_url_variable: "API_URL".to_string(),
         ignore_operation_id: false,
         delete_old: true,
+        ts_enum_style: dtolator::TsEnumStyle::Union,
     };
 
     generate(base_options.clone()).expect("first generation");

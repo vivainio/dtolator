@@ -63,6 +63,18 @@ Convert OpenAPI schema JSON files to Zod schema definitions or TypeScript interf
   Default value: `API_URL`
 * `--ignore-operation-id` — Ignore the operationId when generating Angular method names; derive names from the summary instead
 * `--delete-old` — Delete obsolete files from the output directory after generation
+* `--ts-enum-style <TS_ENUM_STYLE>` — How named enum schemas are emitted in TypeScript and Zod output
+
+  Default value: `union`
+
+  Possible values:
+  - `union`:
+    String literal union: `type Status = "a" | "b"`
+  - `const`:
+    `as const` object plus a same-named union type
+  - `enum`:
+    TypeScript `enum` declaration
+
 
 
 

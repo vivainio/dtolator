@@ -57,6 +57,28 @@ pub enum BaseUrlMode {
     None,
 }
 
+/// How named enum schemas are emitted in TypeScript and Zod output
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, clap::ValueEnum)]
+pub enum TsEnumStyle {
+    /// String literal union: `type Status = "a" | "b"`
+    #[default]
+    Union,
+    /// `as const` object plus a same-named union type
+    Const,
+    /// TypeScript `enum` declaration
+    Enum,
+}
+
+impl TsEnumStyle {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TsEnumStyle::Union => "union",
+            TsEnumStyle::Const => "const",
+            TsEnumStyle::Enum => "enum",
+        }
+    }
+}
+
 impl BaseUrlMode {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -85,6 +107,7 @@ pub struct GenerateOptions {
     pub api_url_variable: String,
     pub ignore_operation_id: bool,
     pub delete_old: bool,
+    pub ts_enum_style: TsEnumStyle,
 }
 
 impl GenerateOptions {
@@ -169,6 +192,10 @@ impl GenerateOptions {
             parts.push("--debug".to_string());
         }
 
+        if self.ts_enum_style != TsEnumStyle::Union {
+            parts.push(format!("--ts-enum-style {}", self.ts_enum_style.as_str()));
+        }
+
         if self.base_url_mode != BaseUrlMode::Global {
             parts.push(format!("--base-url-mode {}", self.base_url_mode.as_str()));
         }
@@ -187,6 +214,7 @@ impl GenerateOptions {
 
 /// Library entry point for generation. This mirrors the directory-output behavior of the CLI.
 pub fn generate(options: GenerateOptions) -> Result<()> {
+    let ts_enum_style = options.ts_enum_style;
     // Read and parse the input file into an OpenApiSchema
     let schema = match options.input_type {
         InputType::OpenApi => {
@@ -258,6 +286,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 options.base_url_mode,
                 &options.api_url_variable,
                 options.ignore_operation_id,
+                options.ts_enum_style,
             )?;
         }
         GeneratorType::Pydantic => {
@@ -299,14 +328,14 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
         }
         GeneratorType::Zod => {
             // Generate schema.ts (Zod schemas + inferred types) and dto.ts (query/header param types)
-            let zod_generator = ZodGenerator::new();
+            let zod_generator = ZodGenerator::new().with_enum_style(ts_enum_style);
             let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
             let schema_path = options.output_dir.join("schema.ts");
             write_if_changed(&schema_path, &zod_output)?;
             written_files.push("schema.ts".to_string());
 
-            let ts_generator = TypeScriptGenerator::new();
+            let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
             let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
             let dto_path = options.output_dir.join("dto.ts");
@@ -322,14 +351,14 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 written_files.push("endpoints.ts".to_string());
             } else if options.with_zod {
                 // TypeScript + Zod (same behavior as CLI with --typescript --zod)
-                let zod_generator = ZodGenerator::new();
+                let zod_generator = ZodGenerator::new().with_enum_style(ts_enum_style);
                 let zod_output = zod_generator.generate_with_command(&schema, &command_string)?;
 
                 let schema_path = options.output_dir.join("schema.ts");
                 write_if_changed(&schema_path, &zod_output)?;
                 written_files.push("schema.ts".to_string());
 
-                let ts_generator = TypeScriptGenerator::new();
+                let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
                 let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
@@ -337,7 +366,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 written_files.push("dto.ts".to_string());
             } else {
                 // TypeScript only
-                let ts_generator = TypeScriptGenerator::new();
+                let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
@@ -509,6 +538,10 @@ pub struct Cli {
     /// Delete obsolete files from the output directory after generation
     #[arg(long)]
     pub delete_old: bool,
+
+    /// How named enum schemas are emitted in TypeScript and Zod output
+    #[arg(long = "ts-enum-style", default_value = "union")]
+    pub ts_enum_style: TsEnumStyle,
 }
 
 /// Where `run_cli` should send the generated output. Derived from the parsed
@@ -582,6 +615,7 @@ impl Cli {
             api_url_variable: self.api_url_variable.clone(),
             ignore_operation_id: self.ignore_operation_id,
             delete_old: self.delete_old,
+            ts_enum_style: self.ts_enum_style,
         }
     }
 }
@@ -709,6 +743,7 @@ fn build_single_output(cli: &Cli) -> Result<String> {
     let schema = extract_inline_request_schemas(schema)?;
     let options = cli.to_generate_options(PathBuf::new());
     let command_string = options.build_command_string();
+    let ts_enum_style = options.ts_enum_style;
 
     let output = match options.generator_type {
         GeneratorType::Endpoints => {
@@ -741,12 +776,12 @@ fn build_single_output(cli: &Cli) -> Result<String> {
         GeneratorType::MarkdownMinimal => {
             MarkdownGenerator::minimal().generate_with_command(&schema, &command_string)?
         }
-        GeneratorType::TypeScript => {
-            TypeScriptGenerator::new().generate_with_command(&schema, &command_string)?
-        }
-        GeneratorType::Zod => {
-            ZodGenerator::new().generate_with_command(&schema, &command_string)?
-        }
+        GeneratorType::TypeScript => TypeScriptGenerator::new()
+            .with_enum_style(ts_enum_style)
+            .generate_with_command(&schema, &command_string)?,
+        GeneratorType::Zod => ZodGenerator::new()
+            .with_enum_style(ts_enum_style)
+            .generate_with_command(&schema, &command_string)?,
     };
 
     Ok(output)
@@ -769,6 +804,7 @@ fn generate_angular_services(
     base_url_mode: BaseUrlMode,
     api_url_variable: &str,
     ignore_operation_id: bool,
+    ts_enum_style: TsEnumStyle,
 ) -> Result<Vec<String>> {
     let angular_generator = AngularGenerator::new()
         .with_zod_validation(with_zod)
@@ -784,7 +820,7 @@ fn generate_angular_services(
     let mut files_generated: Vec<String> = Vec::new();
     if with_zod {
         // Generate Zod schemas first
-        let zod_generator = ZodGenerator::new();
+        let zod_generator = ZodGenerator::new().with_enum_style(ts_enum_style);
         let zod_output = zod_generator.generate_with_command(schema, command_string)?;
 
         let schema_path = output_dir.join("schema.ts");
@@ -794,7 +830,7 @@ fn generate_angular_services(
         }
 
         // Generate dto.ts with query/header param types (request body types live in schema.ts)
-        let ts_generator = TypeScriptGenerator::new();
+        let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
         let mut ts_output = ts_generator.generate_with_imports(schema, command_string)?;
 
         let header_param_types = ts_generator.generate_header_param_types(schema)?;
@@ -809,7 +845,7 @@ fn generate_angular_services(
         }
     } else {
         // Generate only TypeScript interfaces
-        let ts_generator = TypeScriptGenerator::new();
+        let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
         let mut dto_output = ts_generator.generate_with_command(schema, command_string)?;
 
         let query_param_types = ts_generator.generate_query_param_types(schema)?;

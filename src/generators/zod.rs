@@ -1,3 +1,4 @@
+use crate::TsEnumStyle;
 use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
@@ -23,6 +24,7 @@ fn json_to_literal_value(value: &serde_json::Value) -> Option<LiteralValue> {
 
 pub struct ZodGenerator {
     indent_level: usize,
+    enum_style: TsEnumStyle,
 }
 
 impl Default for ZodGenerator {
@@ -33,7 +35,15 @@ impl Default for ZodGenerator {
 
 impl ZodGenerator {
     pub fn new() -> Self {
-        Self { indent_level: 0 }
+        Self {
+            indent_level: 0,
+            enum_style: TsEnumStyle::default(),
+        }
+    }
+
+    pub fn with_enum_style(mut self, enum_style: TsEnumStyle) -> Self {
+        self.enum_style = enum_style;
+        self
     }
 
     fn indent(&self) -> String {
@@ -75,6 +85,22 @@ impl ZodGenerator {
         }
 
         let schema_name = format!("{name}Schema");
+
+        // Enum declarations double as the TS type; Zod 4's z.enum() accepts them directly
+        if let Some(decl) = common::render_ts_enum_decl(name, schema, self.enum_style) {
+            output.push_str(&decl);
+            output.push('\n');
+            output.push_str(&format!("export const {schema_name} = z.enum({name});\n\n"));
+            if self.enum_style == TsEnumStyle::Enum {
+                // The enum already declares the type
+                return Ok(output);
+            }
+            output.push_str(&format!(
+                "export type {name} = z.infer<typeof {schema_name}>;\n\n"
+            ));
+            return Ok(output);
+        }
+
         output.push_str(&format!("{}export const {} = ", self.indent(), schema_name));
         let zod_value = self.schema_to_zod(schema)?;
         output.push_str(&format!("{zod_value}"));
@@ -276,6 +302,7 @@ impl Clone for ZodGenerator {
     fn clone(&self) -> Self {
         Self {
             indent_level: self.indent_level,
+            enum_style: self.enum_style,
         }
     }
 }

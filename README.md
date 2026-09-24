@@ -92,6 +92,7 @@ Exactly one required:
 - `--skip-file <NAME>` — Skip writing a specific file (repeatable)
 - `--hide-version` — Omit version from generated file headers
 - `--debug` — Verbose debug output
+- `--ts-enum-style <STYLE>` — How named enum schemas are emitted in TypeScript/Zod output: `union` (default, `"a" | "b"`), `const` (`as const` object plus a same-named type), or `enum` (TypeScript `enum`). With Zod, the schema becomes `z.enum(Name)`. Nullable enums and enums defined inline on a property stay unions
 
 ### Angular-specific options
 
