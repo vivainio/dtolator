@@ -10,30 +10,30 @@ export const ProfileSocialLinksSchema = z.object({
 export type ProfileSocialLinks = z.infer<typeof ProfileSocialLinksSchema>;
 
 export const RootAddressSchema = z.object({
-  city: z.string(),
   street: z.string(),
+  city: z.string(),
   zipCode: z.string(),
 });
 
 export type RootAddress = z.infer<typeof RootAddressSchema>;
 
 export const ProfileSchema = z.object({
-  avatar: z.unknown().nullable(),
   bio: z.string(),
+  avatar: z.unknown().nullable(),
   socialLinks: ProfileSocialLinksSchema,
 });
 
 export type Profile = z.infer<typeof ProfileSchema>;
 
 export const RootSchema = z.object({
-  address: RootAddressSchema,
-  age: z.number().int(),
-  email: z.string(),
   id: z.number().int(),
-  isActive: z.boolean(),
   name: z.string(),
-  profile: ProfileSchema,
+  email: z.string(),
+  isActive: z.boolean(),
+  age: z.number().int(),
+  address: RootAddressSchema,
   tags: z.array(z.string()),
+  profile: ProfileSchema,
 });
 
 export type Root = z.infer<typeof RootSchema>;

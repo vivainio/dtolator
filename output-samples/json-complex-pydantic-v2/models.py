@@ -13,34 +13,34 @@ class MetadataPreferencesNotifications(BaseModel):
 class OrganizationSettingsFeatures(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    advanced_reporting: bool = Field(alias="advancedReporting")
     api_access: bool = Field(alias="apiAccess")
+    advanced_reporting: bool = Field(alias="advancedReporting")
     custom_branding: Any | None = Field(alias="customBranding")
 
 class PasswordPolicy(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     min_length: int = Field(alias="minLength")
-    require_numbers: bool = Field(alias="requireNumbers")
     require_special_chars: bool = Field(alias="requireSpecialChars")
+    require_numbers: bool = Field(alias="requireNumbers")
 
 class RootStatistics(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    total_users: int = Field(alias="totalUsers")
     active_users: int = Field(alias="activeUsers")
     growth: float
-    total_users: int = Field(alias="totalUsers")
 
 class MetadataPreferences(BaseModel):
+    theme: str
     language: str
     notifications: MetadataPreferencesNotifications
-    theme: str
 
 class Security(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    password_policy: PasswordPolicy = Field(alias="passwordPolicy")
     two_factor_required: bool = Field(alias="twoFactorRequired")
+    password_policy: PasswordPolicy = Field(alias="passwordPolicy")
 
 class Metadata(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -50,24 +50,24 @@ class Metadata(BaseModel):
     preferences: MetadataPreferences
 
 class OrganizationSettings(BaseModel):
-    features: OrganizationSettingsFeatures
     security: Security
+    features: OrganizationSettingsFeatures
 
 class User(BaseModel):
-    email: str
     id: int
-    metadata: Metadata
     name: str
-    permissions: list[str]
+    email: str
     role: str
+    permissions: list[str]
+    metadata: Metadata
 
 class Organization(BaseModel):
-    industry: str
     name: str
+    industry: str
     settings: OrganizationSettings
 
 class Root(BaseModel):
+    users: list[User]
     organization: Organization
     statistics: RootStatistics
-    users: list[User]
 

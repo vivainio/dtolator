@@ -17,8 +17,8 @@
         }
       },
       "required": [
-        "avatar",
         "bio",
+        "avatar",
         "socialLinks"
       ],
       "type": "object"
@@ -71,14 +71,14 @@
         }
       },
       "required": [
-        "address",
-        "age",
-        "email",
         "id",
-        "isActive",
         "name",
-        "profile",
-        "tags"
+        "email",
+        "isActive",
+        "age",
+        "address",
+        "tags",
+        "profile"
       ],
       "type": "object"
     },
@@ -96,8 +96,8 @@
         }
       },
       "required": [
-        "city",
         "street",
+        "city",
         "zipCode"
       ],
       "type": "object"
@@ -136,14 +136,14 @@
     }
   },
   "required": [
-    "address",
-    "age",
-    "email",
     "id",
-    "isActive",
     "name",
-    "profile",
-    "tags"
+    "email",
+    "isActive",
+    "age",
+    "address",
+    "tags",
+    "profile"
   ],
   "title": "Generated from JSON",
   "type": "object"

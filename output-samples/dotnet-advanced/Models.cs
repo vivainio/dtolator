@@ -4,22 +4,34 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
+public record Metadata
+{
+    [JsonPropertyName("ipAddress")]
+    public required string IpAddress { get; set; }
+    [JsonPropertyName("userAgent")]
+    public required string UserAgent { get; set; }
+    [JsonPropertyName("country")]
+    public required string Country { get; set; }
+    [JsonPropertyName("currency")]
+    public required string Currency { get; set; }
+}
+
 public record Customer
 {
     [JsonPropertyName("customerId")]
     public required string CustomerId { get; set; }
+    [JsonPropertyName("name")]
+    public required string Name { get; set; }
     [JsonPropertyName("email")]
     public required string Email { get; set; }
-    [JsonPropertyName("isPremium")]
-    public required bool IsPremium { get; set; }
     [JsonPropertyName("joinDate")]
     public required string JoinDate { get; set; }
     [JsonPropertyName("lastPurchase")]
     public required string LastPurchase { get; set; }
+    [JsonPropertyName("isPremium")]
+    public required bool IsPremium { get; set; }
     [JsonPropertyName("loyaltyPoints")]
     public required int LoyaltyPoints { get; set; }
-    [JsonPropertyName("name")]
-    public required string Name { get; set; }
 }
 
 public record TransactionItem
@@ -34,56 +46,44 @@ public record TransactionItem
     public required int Quantity { get; set; }
 }
 
-public record Metadata
-{
-    [JsonPropertyName("country")]
-    public required string Country { get; set; }
-    [JsonPropertyName("currency")]
-    public required string Currency { get; set; }
-    [JsonPropertyName("ipAddress")]
-    public required string IpAddress { get; set; }
-    [JsonPropertyName("userAgent")]
-    public required string UserAgent { get; set; }
-}
-
 public record Transaction
 {
-    [JsonPropertyName("amount")]
-    public required double Amount { get; set; }
-    [JsonPropertyName("bigNumber")]
-    public required int BigNumber { get; set; }
-    [JsonPropertyName("customer")]
-    public required Customer Customer { get; set; }
-    [JsonPropertyName("date")]
-    public required string Date { get; set; }
-    [JsonPropertyName("isRefunded")]
-    public required bool IsRefunded { get; set; }
-    [JsonPropertyName("isVerified")]
-    public required bool IsVerified { get; set; }
-    [JsonPropertyName("items")]
-    public required List<TransactionItem> Items { get; set; }
-    [JsonPropertyName("metadata")]
-    public required Metadata Metadata { get; set; }
-    [JsonPropertyName("notes")]
-    public required object Notes { get; set; }
-    [JsonPropertyName("paymentMethod")]
-    public required string PaymentMethod { get; set; }
-    [JsonPropertyName("preciseAmount")]
-    public required double PreciseAmount { get; set; }
-    [JsonPropertyName("quantity")]
-    public required int Quantity { get; set; }
-    [JsonPropertyName("smallAmount")]
-    public required double SmallAmount { get; set; }
-    [JsonPropertyName("status")]
-    public required string Status { get; set; }
-    [JsonPropertyName("tags")]
-    public required List<string> Tags { get; set; }
-    [JsonPropertyName("timestamp")]
-    public required string Timestamp { get; set; }
     [JsonPropertyName("transactionId")]
     public required string TransactionId { get; set; }
+    [JsonPropertyName("amount")]
+    public required double Amount { get; set; }
+    [JsonPropertyName("preciseAmount")]
+    public required double PreciseAmount { get; set; }
+    [JsonPropertyName("smallAmount")]
+    public required double SmallAmount { get; set; }
+    [JsonPropertyName("quantity")]
+    public required int Quantity { get; set; }
+    [JsonPropertyName("bigNumber")]
+    public required int BigNumber { get; set; }
+    [JsonPropertyName("date")]
+    public required string Date { get; set; }
+    [JsonPropertyName("timestamp")]
+    public required string Timestamp { get; set; }
+    [JsonPropertyName("status")]
+    public required string Status { get; set; }
     [JsonPropertyName("type")]
     public required string Type { get; set; }
+    [JsonPropertyName("isVerified")]
+    public required bool IsVerified { get; set; }
+    [JsonPropertyName("isRefunded")]
+    public required bool IsRefunded { get; set; }
+    [JsonPropertyName("metadata")]
+    public required Metadata Metadata { get; set; }
+    [JsonPropertyName("tags")]
+    public required List<string> Tags { get; set; }
+    [JsonPropertyName("customer")]
+    public required Customer Customer { get; set; }
+    [JsonPropertyName("items")]
+    public required List<TransactionItem> Items { get; set; }
+    [JsonPropertyName("paymentMethod")]
+    public required string PaymentMethod { get; set; }
+    [JsonPropertyName("notes")]
+    public required object Notes { get; set; }
 }
 
 public record Root

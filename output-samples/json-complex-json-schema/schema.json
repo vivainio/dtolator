@@ -34,9 +34,9 @@
         }
       },
       "required": [
+        "theme",
         "language",
-        "notifications",
-        "theme"
+        "notifications"
       ],
       "type": "object"
     },
@@ -77,8 +77,8 @@
         }
       },
       "required": [
-        "industry",
         "name",
+        "industry",
         "settings"
       ],
       "type": "object"
@@ -94,8 +94,8 @@
         }
       },
       "required": [
-        "features",
-        "security"
+        "security",
+        "features"
       ],
       "type": "object"
     },
@@ -116,8 +116,8 @@
         }
       },
       "required": [
-        "advancedReporting",
         "apiAccess",
+        "advancedReporting",
         "customBranding"
       ],
       "type": "object"
@@ -137,8 +137,8 @@
       },
       "required": [
         "minLength",
-        "requireNumbers",
-        "requireSpecialChars"
+        "requireSpecialChars",
+        "requireNumbers"
       ],
       "type": "object"
     },
@@ -159,9 +159,9 @@
         }
       },
       "required": [
+        "users",
         "organization",
-        "statistics",
-        "users"
+        "statistics"
       ],
       "type": "object"
     },
@@ -179,9 +179,9 @@
         }
       },
       "required": [
+        "totalUsers",
         "activeUsers",
-        "growth",
-        "totalUsers"
+        "growth"
       ],
       "type": "object"
     },
@@ -196,8 +196,8 @@
         }
       },
       "required": [
-        "passwordPolicy",
-        "twoFactorRequired"
+        "twoFactorRequired",
+        "passwordPolicy"
       ],
       "type": "object"
     },
@@ -227,12 +227,12 @@
         }
       },
       "required": [
-        "email",
         "id",
-        "metadata",
         "name",
+        "email",
+        "role",
         "permissions",
-        "role"
+        "metadata"
       ],
       "type": "object"
     }
@@ -255,9 +255,9 @@
     }
   },
   "required": [
+    "users",
     "organization",
-    "statistics",
-    "users"
+    "statistics"
   ],
   "title": "Generated from JSON",
   "type": "object"
