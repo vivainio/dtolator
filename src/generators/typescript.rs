@@ -24,6 +24,7 @@ fn format_ts_enum_literal(value: &serde_json::Value) -> Option<String> {
 pub struct TypeScriptGenerator {
     indent_level: usize,
     enum_style: TsEnumStyle,
+    quicktype_order: bool,
 }
 
 impl Default for TypeScriptGenerator {
@@ -37,7 +38,15 @@ impl TypeScriptGenerator {
         Self {
             indent_level: 0,
             enum_style: TsEnumStyle::default(),
+            quicktype_order: false,
         }
+    }
+
+    /// Emit types the way quicktype does: the first schema (the root) first,
+    /// then the remaining types in alphabetical order.
+    pub fn with_quicktype_order(mut self, quicktype_order: bool) -> Self {
+        self.quicktype_order = quicktype_order;
+        self
     }
 
     pub fn with_enum_style(mut self, enum_style: TsEnumStyle) -> Self {
@@ -644,7 +653,15 @@ impl Generator for TypeScriptGenerator {
             && !schemas.is_empty()
         {
             // Sort schemas topologically
-            let sorted_names = common::topological_sort(schemas)?;
+            let sorted_names = if self.quicktype_order {
+                // Root (first schema) first, then everything else alphabetically
+                let mut names: Vec<String> = schemas.keys().skip(1).cloned().collect();
+                names.sort();
+                names.splice(0..0, schemas.keys().next().cloned());
+                names
+            } else {
+                common::topological_sort(schemas)?
+            };
 
             // Generate interfaces
             for name in sorted_names {
@@ -664,6 +681,7 @@ impl Clone for TypeScriptGenerator {
         Self {
             indent_level: self.indent_level,
             enum_style: self.enum_style,
+            quicktype_order: self.quicktype_order,
         }
     }
 }

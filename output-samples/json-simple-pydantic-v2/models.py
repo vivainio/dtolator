@@ -12,26 +12,26 @@ class ProfileSocialLinks(BaseModel):
 class RootAddress(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    city: str
     street: str
+    city: str
     zip_code: str = Field(alias="zipCode")
 
 class Profile(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    avatar: Any | None
     bio: str
+    avatar: Any | None
     social_links: ProfileSocialLinks = Field(alias="socialLinks")
 
 class Root(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    address: RootAddress
-    age: int
-    email: str
     id: int
-    is_active: bool = Field(alias="isActive")
     name: str
-    profile: Profile
+    email: str
+    is_active: bool = Field(alias="isActive")
+    age: int
+    address: RootAddress
     tags: list[str]
+    profile: Profile
 

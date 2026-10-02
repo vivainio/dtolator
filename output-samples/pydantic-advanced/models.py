@@ -6,52 +6,52 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 class MetadataPreferences(BaseModel):
-    language: str
-    notifications: bool
     theme: str
+    notifications: bool
+    language: str
 
 class Profile(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    avatar: str
-    display_name: str = Field(alias="displayName")
     first_name: str = Field(alias="firstName")
     last_name: str = Field(alias="lastName")
     middle_name: Any | None = Field(alias="middleName")
+    display_name: str = Field(alias="displayName")
+    avatar: str
+    verified: bool
     rating: float
     review_count: int = Field(alias="reviewCount")
-    verified: bool
 
 class Metadata(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    account_type: str = Field(alias="accountType")
     last_login: str = Field(alias="lastLogin")
     login_count: int = Field(alias="loginCount")
+    account_type: str = Field(alias="accountType")
     preferences: MetadataPreferences
 
 class User(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    age: int
-    bio: str
-    birth_date: str = Field(alias="birthDate")
-    email: str
-    metadata: Metadata
-    password: str
-    phone_pattern: str = Field(alias="phonePattern")
-    profile: Profile
-    registered_at: str = Field(alias="registeredAt")
-    roles: list[str]
-    score: float
-    status: str
-    tags: list[str]
-    user_id: str = Field(alias="userId")
     username: str
+    email: str
+    password: str
+    age: int
+    score: float
+    user_id: str = Field(alias="userId")
+    birth_date: str = Field(alias="birthDate")
+    registered_at: str = Field(alias="registeredAt")
+    bio: str
     website: str
+    phone_pattern: str = Field(alias="phonePattern")
+    status: str
+    roles: list[str]
+    metadata: Metadata
+    tags: list[str]
+    profile: Profile
 
 class Root(BaseModel):
     user: User

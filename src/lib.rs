@@ -111,6 +111,13 @@ pub struct GenerateOptions {
 }
 
 impl GenerateOptions {
+    /// TypeScript output generated from plain JSON lists the root type first and the
+    /// other types alphabetically (the order quicktype uses).
+    fn root_first_types(&self) -> bool {
+        matches!(self.input_type, InputType::Json)
+            && matches!(self.generator_type, GeneratorType::TypeScript)
+    }
+
     pub fn build_command_string(&self) -> String {
         let version = env!("BUILD_VERSION");
         let command_name = if self.hide_version {
@@ -238,6 +245,7 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             json_to_openapi_schema_with_root(
                 serde_json::from_str(&input_content)?,
                 &options.root_name,
+                options.root_first_types(),
             )?
         }
         InputType::JsonSchema => {
@@ -335,7 +343,9 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
             write_if_changed(&schema_path, &zod_output)?;
             written_files.push("schema.ts".to_string());
 
-            let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
+            let ts_generator = TypeScriptGenerator::new()
+                .with_enum_style(ts_enum_style)
+                .with_quicktype_order(options.root_first_types());
             let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
             let dto_path = options.output_dir.join("dto.ts");
@@ -358,7 +368,9 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 write_if_changed(&schema_path, &zod_output)?;
                 written_files.push("schema.ts".to_string());
 
-                let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
+                let ts_generator = TypeScriptGenerator::new()
+                    .with_enum_style(ts_enum_style)
+                    .with_quicktype_order(options.root_first_types());
                 let ts_output = ts_generator.generate_with_imports(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
@@ -366,7 +378,9 @@ pub fn generate(options: GenerateOptions) -> Result<()> {
                 written_files.push("dto.ts".to_string());
             } else {
                 // TypeScript only
-                let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
+                let ts_generator = TypeScriptGenerator::new()
+                    .with_enum_style(ts_enum_style)
+                    .with_quicktype_order(options.root_first_types());
                 let ts_output = ts_generator.generate_with_command(&schema, &command_string)?;
 
                 let dto_path = options.output_dir.join("dto.ts");
@@ -726,7 +740,11 @@ fn build_single_output(cli: &Cli) -> Result<String> {
     } else if let Some(json_path) = &cli.from_json {
         let input_content = std::fs::read_to_string(json_path)
             .with_context(|| format!("Failed to read JSON file: {}", json_path.display()))?;
-        json_to_openapi_schema_with_root(serde_json::from_str(&input_content)?, &cli.root)?
+        json_to_openapi_schema_with_root(
+            serde_json::from_str(&input_content)?,
+            &cli.root,
+            cli.to_generate_options(PathBuf::new()).root_first_types(),
+        )?
     } else if let Some(json_schema_path) = &cli.from_json_schema {
         let input_content = std::fs::read_to_string(json_schema_path).with_context(|| {
             format!(
@@ -778,6 +796,7 @@ fn build_single_output(cli: &Cli) -> Result<String> {
         }
         GeneratorType::TypeScript => TypeScriptGenerator::new()
             .with_enum_style(ts_enum_style)
+            .with_quicktype_order(options.root_first_types())
             .generate_with_command(&schema, &command_string)?,
         GeneratorType::Zod => ZodGenerator::new()
             .with_enum_style(ts_enum_style)
@@ -1033,8 +1052,102 @@ fn capitalize_first_letter(s: &str) -> String {
     }
 }
 
+/// JSON value that keeps object keys in source order (serde_json's `Value` sorts them
+/// unless its `preserve_order` feature is on, which would affect every generator).
+#[derive(Debug, Clone)]
+enum OrderedJson {
+    Null,
+    Bool(bool),
+    Number(serde_json::Number),
+    String(String),
+    Array(Vec<OrderedJson>),
+    Object(IndexMap<String, OrderedJson>),
+}
+
+impl<'de> Deserialize<'de> for OrderedJson {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> serde::de::Visitor<'de> for V {
+            type Value = OrderedJson;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("any JSON value")
+            }
+            fn visit_unit<E>(self) -> Result<OrderedJson, E> {
+                Ok(OrderedJson::Null)
+            }
+            fn visit_bool<E>(self, v: bool) -> Result<OrderedJson, E> {
+                Ok(OrderedJson::Bool(v))
+            }
+            fn visit_i64<E>(self, v: i64) -> Result<OrderedJson, E> {
+                Ok(OrderedJson::Number(v.into()))
+            }
+            fn visit_u64<E>(self, v: u64) -> Result<OrderedJson, E> {
+                Ok(OrderedJson::Number(v.into()))
+            }
+            fn visit_f64<E>(self, v: f64) -> Result<OrderedJson, E> {
+                Ok(serde_json::Number::from_f64(v).map_or(OrderedJson::Null, OrderedJson::Number))
+            }
+            fn visit_str<E>(self, v: &str) -> Result<OrderedJson, E> {
+                Ok(OrderedJson::String(v.to_string()))
+            }
+            fn visit_seq<A: serde::de::SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<OrderedJson, A::Error> {
+                let mut items = Vec::new();
+                while let Some(item) = seq.next_element()? {
+                    items.push(item);
+                }
+                Ok(OrderedJson::Array(items))
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<OrderedJson, A::Error> {
+                let mut entries = IndexMap::new();
+                while let Some((k, v)) = map.next_entry()? {
+                    entries.insert(k, v);
+                }
+                Ok(OrderedJson::Object(entries))
+            }
+        }
+        deserializer.deserialize_any(V)
+    }
+}
+
+/// Serializes with sorted object keys so structurally equal objects share one
+/// deduplication key regardless of source key order.
+impl Serialize for OrderedJson {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::{SerializeMap, SerializeSeq};
+        match self {
+            OrderedJson::Null => serializer.serialize_unit(),
+            OrderedJson::Bool(b) => serializer.serialize_bool(*b),
+            OrderedJson::Number(n) => n.serialize(serializer),
+            OrderedJson::String(s) => serializer.serialize_str(s),
+            OrderedJson::Array(items) => {
+                let mut seq = serializer.serialize_seq(Some(items.len()))?;
+                for item in items {
+                    seq.serialize_element(item)?;
+                }
+                seq.end()
+            }
+            OrderedJson::Object(obj) => {
+                let mut entries: Vec<_> = obj.iter().collect();
+                entries.sort_by(|a, b| a.0.cmp(b.0));
+                let mut map = serializer.serialize_map(Some(entries.len()))?;
+                for (k, v) in entries {
+                    map.serialize_entry(k, v)?;
+                }
+                map.end()
+            }
+        }
+    }
+}
+
 fn json_value_to_schema_pass1(
-    value: &serde_json::Value,
+    value: &OrderedJson,
     schemas: &mut IndexMap<String, Schema>,
     current_name: &str,
     struct_hashes: &mut StructHashMap,
@@ -1042,17 +1155,17 @@ fn json_value_to_schema_pass1(
     parent_key: Option<&str>,
 ) -> Result<Schema> {
     match value {
-        serde_json::Value::Null => Ok(Schema::null()),
-        serde_json::Value::Bool(_) => Ok(Schema::boolean()),
-        serde_json::Value::Number(n) => {
+        OrderedJson::Null => Ok(Schema::null()),
+        OrderedJson::Bool(_) => Ok(Schema::boolean()),
+        OrderedJson::Number(n) => {
             if n.is_i64() || n.is_u64() {
                 Ok(Schema::integer())
             } else {
                 Ok(Schema::number())
             }
         }
-        serde_json::Value::String(_) => Ok(Schema::string()),
-        serde_json::Value::Array(arr) => {
+        OrderedJson::String(_) => Ok(Schema::string()),
+        OrderedJson::Array(arr) => {
             if arr.is_empty() {
                 Ok(Schema::array(
                     Schema::object().schema_type("object").build(),
@@ -1087,13 +1200,13 @@ fn json_value_to_schema_pass1(
                 Ok(Schema::array(item_schema))
             }
         }
-        serde_json::Value::Object(obj) => {
+        OrderedJson::Object(obj) => {
             if obj.is_empty() {
                 return Ok(Schema::object().schema_type("object").build());
             }
 
             // Use JSON content for deduplication
-            let serialized = serde_json::to_string(obj)?;
+            let serialized = serde_json::to_string(&OrderedJson::Object(obj.clone()))?;
 
             if let Some(placeholder) = json_to_placeholder.get(&serialized) {
                 // Same structure, reuse existing schema
@@ -1109,7 +1222,7 @@ fn json_value_to_schema_pass1(
             for (key, value) in obj {
                 // Create meaningful names for nested objects
                 let property_name = match value {
-                    serde_json::Value::Object(_) => {
+                    OrderedJson::Object(_) => {
                         // For nested objects, create a meaningful type name
                         let base_name = capitalize_first_letter(key);
                         // If the key itself is meaningful, use it; otherwise derive from parent
@@ -1119,9 +1232,9 @@ fn json_value_to_schema_pass1(
                             format!("{current_name}{base_name}")
                         }
                     }
-                    serde_json::Value::Array(arr) => {
+                    OrderedJson::Array(arr) => {
                         // For arrays containing objects, create a meaningful type name for container
-                        if !arr.is_empty() && matches!(arr[0], serde_json::Value::Object(_)) {
+                        if !arr.is_empty() && matches!(arr[0], OrderedJson::Object(_)) {
                             // This is just for the array property context, actual item naming happens in array processing
                             current_name.to_string()
                         } else {
@@ -1223,8 +1336,9 @@ fn resolve_placeholders(
 }
 
 fn json_to_openapi_schema_with_root(
-    json_value: serde_json::Value,
+    json_value: OrderedJson,
     root_name: &str,
+    root_first: bool,
 ) -> Result<OpenApiSchema> {
     let mut schemas = IndexMap::new();
     let mut struct_hashes: StructHashMap = std::collections::HashMap::new();
@@ -1238,6 +1352,9 @@ fn json_to_openapi_schema_with_root(
         None,
     )?;
     schemas.insert(root_name.to_string(), root_schema);
+    if root_first && let Some(idx) = schemas.get_index_of(root_name) {
+        schemas.move_index(idx, 0);
+    }
     let json_to_final_name: std::collections::HashMap<String, String> = json_to_placeholder
         .iter()
         .map(|(json_key, placeholder)| {
