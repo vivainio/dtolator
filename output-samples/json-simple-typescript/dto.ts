@@ -7,24 +7,24 @@ export interface Root {
   email: string;
   isActive: boolean;
   age: number;
-  address: RootAddress;
+  address: Address;
   tags: string[];
   profile: Profile;
+}
+
+export interface Address {
+  street: string;
+  city: string;
+  zipCode: string;
 }
 
 export interface Profile {
   bio: string;
   avatar: unknown | null;
-  socialLinks: ProfileSocialLinks;
+  socialLinks: SocialLinks;
 }
 
-export interface ProfileSocialLinks {
+export interface SocialLinks {
   github: string;
   twitter: string;
-}
-
-export interface RootAddress {
-  street: string;
-  city: string;
-  zipCode: string;
 }

@@ -4,42 +4,29 @@
 export interface Root {
   users: User[];
   organization: Organization;
-  statistics: RootStatistics;
-}
-
-export interface Metadata {
-  createdAt: string;
-  lastLogin: string;
-  preferences: MetadataPreferences;
-}
-
-export interface MetadataPreferences {
-  theme: string;
-  language: string;
-  notifications: MetadataPreferencesNotifications;
-}
-
-export interface MetadataPreferencesNotifications {
-  email: boolean;
-  push: boolean;
-  sms: unknown | null;
+  statistics: Statistics;
 }
 
 export interface Organization {
   name: string;
   industry: string;
-  settings: OrganizationSettings;
+  settings: Settings;
 }
 
-export interface OrganizationSettings {
+export interface Settings {
   security: Security;
-  features: OrganizationSettingsFeatures;
+  features: Features;
 }
 
-export interface OrganizationSettingsFeatures {
+export interface Features {
   apiAccess: boolean;
   advancedReporting: boolean;
   customBranding: unknown | null;
+}
+
+export interface Security {
+  twoFactorRequired: boolean;
+  passwordPolicy: PasswordPolicy;
 }
 
 export interface PasswordPolicy {
@@ -48,15 +35,10 @@ export interface PasswordPolicy {
   requireNumbers: boolean;
 }
 
-export interface RootStatistics {
+export interface Statistics {
   totalUsers: number;
   activeUsers: number;
   growth: number;
-}
-
-export interface Security {
-  twoFactorRequired: boolean;
-  passwordPolicy: PasswordPolicy;
 }
 
 export interface User {
@@ -66,4 +48,22 @@ export interface User {
   role: string;
   permissions: string[];
   metadata: Metadata;
+}
+
+export interface Metadata {
+  createdAt: string;
+  lastLogin: string;
+  preferences: Preferences;
+}
+
+export interface Preferences {
+  theme: string;
+  language: string;
+  notifications: Notifications;
+}
+
+export interface Notifications {
+  email: boolean;
+  push: boolean;
+  sms: unknown | null;
 }

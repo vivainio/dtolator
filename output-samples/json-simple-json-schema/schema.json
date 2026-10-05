@@ -1,5 +1,25 @@
 {
   "$defs": {
+    "Address": {
+      "additionalProperties": false,
+      "properties": {
+        "city": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "zipCode": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "street",
+        "city",
+        "zipCode"
+      ],
+      "type": "object"
+    },
     "Profile": {
       "additionalProperties": false,
       "properties": {
@@ -13,7 +33,7 @@
           "type": "string"
         },
         "socialLinks": {
-          "$ref": "#/$defs/ProfileSocialLinks"
+          "$ref": "#/$defs/SocialLinks"
         }
       },
       "required": [
@@ -23,27 +43,11 @@
       ],
       "type": "object"
     },
-    "ProfileSocialLinks": {
-      "additionalProperties": false,
-      "properties": {
-        "github": {
-          "type": "string"
-        },
-        "twitter": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "github",
-        "twitter"
-      ],
-      "type": "object"
-    },
     "Root": {
       "additionalProperties": false,
       "properties": {
         "address": {
-          "$ref": "#/$defs/RootAddress"
+          "$ref": "#/$defs/Address"
         },
         "age": {
           "type": "integer"
@@ -82,23 +86,19 @@
       ],
       "type": "object"
     },
-    "RootAddress": {
+    "SocialLinks": {
       "additionalProperties": false,
       "properties": {
-        "city": {
+        "github": {
           "type": "string"
         },
-        "street": {
-          "type": "string"
-        },
-        "zipCode": {
+        "twitter": {
           "type": "string"
         }
       },
       "required": [
-        "street",
-        "city",
-        "zipCode"
+        "github",
+        "twitter"
       ],
       "type": "object"
     }
@@ -108,7 +108,7 @@
   "description": "Schema generated from plain JSON input",
   "properties": {
     "address": {
-      "$ref": "#/$defs/RootAddress"
+      "$ref": "#/$defs/Address"
     },
     "age": {
       "type": "integer"

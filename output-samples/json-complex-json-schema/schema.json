@@ -1,5 +1,28 @@
 {
   "$defs": {
+    "Features": {
+      "additionalProperties": false,
+      "properties": {
+        "advancedReporting": {
+          "type": "boolean"
+        },
+        "apiAccess": {
+          "type": "boolean"
+        },
+        "customBranding": {
+          "type": [
+            "null",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "apiAccess",
+        "advancedReporting",
+        "customBranding"
+      ],
+      "type": "object"
+    },
     "Metadata": {
       "additionalProperties": false,
       "properties": {
@@ -10,7 +33,7 @@
           "type": "string"
         },
         "preferences": {
-          "$ref": "#/$defs/MetadataPreferences"
+          "$ref": "#/$defs/Preferences"
         }
       },
       "required": [
@@ -20,27 +43,7 @@
       ],
       "type": "object"
     },
-    "MetadataPreferences": {
-      "additionalProperties": false,
-      "properties": {
-        "language": {
-          "type": "string"
-        },
-        "notifications": {
-          "$ref": "#/$defs/MetadataPreferencesNotifications"
-        },
-        "theme": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "theme",
-        "language",
-        "notifications"
-      ],
-      "type": "object"
-    },
-    "MetadataPreferencesNotifications": {
+    "Notifications": {
       "additionalProperties": false,
       "properties": {
         "email": {
@@ -73,52 +76,13 @@
           "type": "string"
         },
         "settings": {
-          "$ref": "#/$defs/OrganizationSettings"
+          "$ref": "#/$defs/Settings"
         }
       },
       "required": [
         "name",
         "industry",
         "settings"
-      ],
-      "type": "object"
-    },
-    "OrganizationSettings": {
-      "additionalProperties": false,
-      "properties": {
-        "features": {
-          "$ref": "#/$defs/OrganizationSettingsFeatures"
-        },
-        "security": {
-          "$ref": "#/$defs/Security"
-        }
-      },
-      "required": [
-        "security",
-        "features"
-      ],
-      "type": "object"
-    },
-    "OrganizationSettingsFeatures": {
-      "additionalProperties": false,
-      "properties": {
-        "advancedReporting": {
-          "type": "boolean"
-        },
-        "apiAccess": {
-          "type": "boolean"
-        },
-        "customBranding": {
-          "type": [
-            "null",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "apiAccess",
-        "advancedReporting",
-        "customBranding"
       ],
       "type": "object"
     },
@@ -142,6 +106,26 @@
       ],
       "type": "object"
     },
+    "Preferences": {
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "notifications": {
+          "$ref": "#/$defs/Notifications"
+        },
+        "theme": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "theme",
+        "language",
+        "notifications"
+      ],
+      "type": "object"
+    },
     "Root": {
       "additionalProperties": false,
       "properties": {
@@ -149,7 +133,7 @@
           "$ref": "#/$defs/Organization"
         },
         "statistics": {
-          "$ref": "#/$defs/RootStatistics"
+          "$ref": "#/$defs/Statistics"
         },
         "users": {
           "items": {
@@ -162,26 +146,6 @@
         "users",
         "organization",
         "statistics"
-      ],
-      "type": "object"
-    },
-    "RootStatistics": {
-      "additionalProperties": false,
-      "properties": {
-        "activeUsers": {
-          "type": "integer"
-        },
-        "growth": {
-          "type": "number"
-        },
-        "totalUsers": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "totalUsers",
-        "activeUsers",
-        "growth"
       ],
       "type": "object"
     },
@@ -198,6 +162,42 @@
       "required": [
         "twoFactorRequired",
         "passwordPolicy"
+      ],
+      "type": "object"
+    },
+    "Settings": {
+      "additionalProperties": false,
+      "properties": {
+        "features": {
+          "$ref": "#/$defs/Features"
+        },
+        "security": {
+          "$ref": "#/$defs/Security"
+        }
+      },
+      "required": [
+        "security",
+        "features"
+      ],
+      "type": "object"
+    },
+    "Statistics": {
+      "additionalProperties": false,
+      "properties": {
+        "activeUsers": {
+          "type": "integer"
+        },
+        "growth": {
+          "type": "number"
+        },
+        "totalUsers": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "totalUsers",
+        "activeUsers",
+        "growth"
       ],
       "type": "object"
     },
@@ -245,7 +245,7 @@
       "$ref": "#/$defs/Organization"
     },
     "statistics": {
-      "$ref": "#/$defs/RootStatistics"
+      "$ref": "#/$defs/Statistics"
     },
     "users": {
       "items": {
