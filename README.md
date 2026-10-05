@@ -88,7 +88,7 @@ Exactly one required:
 
 - `-o, --output <DIR>` — Write files to directory instead of stdout
 - `--output-file <FILE>` — Write the combined output to a single file (mutually exclusive with `--output`). Parent directories are created as needed. Multi-file generators (`--angular`, and the `--zod` dto.ts/schema.ts pair) require `--output <DIR>`; `--angular --output-file` is rejected.
-- `--delete-old` — After generation, delete files in the output directory that weren't just generated
+- `--delete-old` — After generation, delete regular files directly in the output directory that weren't generated or skipped in this run. Subdirectories are left untouched.
 - `--skip-file <NAME>` — Skip writing a specific file (repeatable)
 - `--hide-version` — Omit version from generated file headers
 - `--debug` — Verbose debug output
