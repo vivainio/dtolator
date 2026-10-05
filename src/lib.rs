@@ -549,7 +549,7 @@ pub struct Cli {
     #[arg(long = "ignore-operation-id")]
     pub ignore_operation_id: bool,
 
-    /// Delete obsolete files from the output directory after generation
+    /// Delete regular files directly in the output directory that were not generated or skipped in this run
     #[arg(long)]
     pub delete_old: bool,
 
@@ -1000,47 +1000,37 @@ fn write_if_changed(path: &Path, contents: &str) -> Result<bool> {
     Ok(true)
 }
 
-const GENERATED_FILES_MANIFEST: &str = ".dtolator-generated-files.json";
-
-/// Delete previously generated files in `dir` that are not in `keep`.
-///
-/// The manifest prevents `--delete-old` from treating unrelated user files as
-/// generated output. On the first manifest-enabled run there is deliberately
-/// nothing to delete.
+/// Delete regular files directly in `dir` that are not in `keep`.
 fn delete_obsolete_files(dir: &Path, keep: &[String]) -> Result<()> {
-    let manifest_path = dir.join(GENERATED_FILES_MANIFEST);
-    let previous_files: Vec<String> = match fs::read_to_string(&manifest_path) {
-        Ok(contents) => serde_json::from_str(&contents)
-            .with_context(|| format!("Failed to parse manifest: {}", manifest_path.display()))?,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
-        Err(error) => {
-            return Err(error)
-                .with_context(|| format!("Failed to read manifest: {}", manifest_path.display()));
-        }
-    };
-
-    for name in previous_files {
-        // Manifests only contain direct child filenames. Ignore malformed
-        // entries rather than allowing a manifest to delete outside `dir`.
-        let path = Path::new(&name);
-        if path.components().count() != 1 || keep.contains(&name) {
+    for entry in
+        fs::read_dir(dir).with_context(|| format!("Failed to read directory: {}", dir.display()))?
+    {
+        let entry = entry.with_context(|| format!("Failed to read entry in: {}", dir.display()))?;
+        if !entry
+            .file_type()
+            .with_context(|| format!("Failed to inspect entry: {}", entry.path().display()))?
+            .is_file()
+        {
             continue;
         }
 
-        let obsolete_path = dir.join(path);
-        if obsolete_path.is_file() {
-            fs::remove_file(&obsolete_path).with_context(|| {
-                format!(
-                    "Failed to delete obsolete file: {}",
-                    obsolete_path.display()
-                )
-            })?;
-            println!("Deleted obsolete file: {}", obsolete_path.display());
+        let name = entry.file_name();
+        if name
+            .to_str()
+            .is_some_and(|name| keep.iter().any(|kept| kept == name))
+        {
+            continue;
         }
-    }
 
-    let manifest = serde_json::to_string_pretty(keep)?;
-    write_if_changed(&manifest_path, &format!("{manifest}\n"))?;
+        let obsolete_path = entry.path();
+        fs::remove_file(&obsolete_path).with_context(|| {
+            format!(
+                "Failed to delete obsolete file: {}",
+                obsolete_path.display()
+            )
+        })?;
+        println!("Deleted obsolete file: {}", obsolete_path.display());
+    }
     Ok(())
 }
 

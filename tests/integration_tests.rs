@@ -1123,12 +1123,18 @@ fn test_cli_docs_match_golden() {
 }
 
 #[test]
-fn test_delete_old_only_removes_previously_generated_files() {
+fn test_delete_old_removes_files_not_kept_by_current_run() {
     let dir = tempfile::TempDir::new().expect("temp dir");
     let output_dir = dir.path().join("output");
     fs::create_dir_all(&output_dir).expect("create output dir");
-    let user_file = output_dir.join("notes.txt");
-    fs::write(&user_file, "keep me").expect("write user file");
+    let stale_file = output_dir.join("notes.txt");
+    fs::write(&stale_file, "stale").expect("write stale file");
+    let skipped_file = output_dir.join("preserved.txt");
+    fs::write(&skipped_file, "keep me").expect("write skipped file");
+    let nested_dir = output_dir.join("nested");
+    fs::create_dir_all(&nested_dir).expect("create nested dir");
+    let nested_file = nested_dir.join("notes.txt");
+    fs::write(&nested_file, "leave subdirectories untouched").expect("write nested file");
 
     let base_options = GenerateOptions {
         input_type: InputType::OpenApi,
@@ -1141,7 +1147,7 @@ fn test_delete_old_only_removes_previously_generated_files() {
         hide_version: true,
         root_name: "Root".to_string(),
         debug: false,
-        skip_files: Vec::new(),
+        skip_files: vec!["preserved.txt".to_string()],
         base_url_mode: dtolator::BaseUrlMode::Global,
         api_url_variable: "API_URL".to_string(),
         ignore_operation_id: false,
@@ -1151,7 +1157,13 @@ fn test_delete_old_only_removes_previously_generated_files() {
 
     generate(base_options.clone()).expect("first generation");
     assert!(output_dir.join("models.rs").is_file());
-    assert!(user_file.is_file());
+    assert!(!stale_file.exists(), "unkept files must be deleted");
+    assert!(skipped_file.is_file(), "skipped files must be preserved");
+    assert!(nested_dir.is_dir(), "subdirectories must not be removed");
+    assert!(
+        nested_file.is_file(),
+        "files inside subdirectories must not be removed"
+    );
 
     generate(GenerateOptions {
         generator_type: GeneratorType::TypeScript,
@@ -1161,5 +1173,6 @@ fn test_delete_old_only_removes_previously_generated_files() {
 
     assert!(!output_dir.join("models.rs").exists());
     assert!(output_dir.join("dto.ts").is_file());
-    assert!(user_file.is_file(), "unmanaged files must not be deleted");
+    assert!(skipped_file.is_file(), "skipped files must be preserved");
+    assert!(nested_file.is_file(), "nested files must be untouched");
 }
