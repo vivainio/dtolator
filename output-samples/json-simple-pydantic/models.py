@@ -5,11 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-class ProfileSocialLinks(BaseModel):
-    github: str
-    twitter: str
-
-class RootAddress(BaseModel):
+class Address(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
@@ -17,13 +13,17 @@ class RootAddress(BaseModel):
     city: str
     zip_code: str = Field(alias="zipCode")
 
+class SocialLinks(BaseModel):
+    github: str
+    twitter: str
+
 class Profile(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
     bio: str
     avatar: Any | None
-    social_links: ProfileSocialLinks = Field(alias="socialLinks")
+    social_links: SocialLinks = Field(alias="socialLinks")
 
 class Root(BaseModel):
     class Config:
@@ -34,7 +34,7 @@ class Root(BaseModel):
     email: str
     is_active: bool = Field(alias="isActive")
     age: int
-    address: RootAddress
+    address: Address
     tags: list[str]
     profile: Profile
 

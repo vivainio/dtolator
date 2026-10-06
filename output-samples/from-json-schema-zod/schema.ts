@@ -2,21 +2,21 @@
 // Do not modify manually
 
 import { z } from "zod";
-export const MetadataPreferencesNotificationsSchema = z.object({
-  email: z.boolean(),
-  push: z.boolean(),
-  sms: z.unknown().nullable(),
-});
-
-export type MetadataPreferencesNotifications = z.infer<typeof MetadataPreferencesNotificationsSchema>;
-
-export const OrganizationSettingsFeaturesSchema = z.object({
+export const FeaturesSchema = z.object({
   advancedReporting: z.boolean(),
   apiAccess: z.boolean(),
   customBranding: z.unknown().nullable(),
 });
 
-export type OrganizationSettingsFeatures = z.infer<typeof OrganizationSettingsFeaturesSchema>;
+export type Features = z.infer<typeof FeaturesSchema>;
+
+export const NotificationsSchema = z.object({
+  email: z.boolean(),
+  push: z.boolean(),
+  sms: z.unknown().nullable(),
+});
+
+export type Notifications = z.infer<typeof NotificationsSchema>;
 
 export const PasswordPolicySchema = z.object({
   minLength: z.number().int(),
@@ -26,21 +26,21 @@ export const PasswordPolicySchema = z.object({
 
 export type PasswordPolicy = z.infer<typeof PasswordPolicySchema>;
 
-export const RootStatisticsSchema = z.object({
+export const StatisticsSchema = z.object({
   activeUsers: z.number().int(),
   growth: z.number(),
   totalUsers: z.number().int(),
 });
 
-export type RootStatistics = z.infer<typeof RootStatisticsSchema>;
+export type Statistics = z.infer<typeof StatisticsSchema>;
 
-export const MetadataPreferencesSchema = z.object({
+export const PreferencesSchema = z.object({
   language: z.string(),
-  notifications: MetadataPreferencesNotificationsSchema,
+  notifications: NotificationsSchema,
   theme: z.string(),
 });
 
-export type MetadataPreferences = z.infer<typeof MetadataPreferencesSchema>;
+export type Preferences = z.infer<typeof PreferencesSchema>;
 
 export const SecuritySchema = z.object({
   passwordPolicy: PasswordPolicySchema,
@@ -52,17 +52,17 @@ export type Security = z.infer<typeof SecuritySchema>;
 export const MetadataSchema = z.object({
   createdAt: z.string(),
   lastLogin: z.string(),
-  preferences: MetadataPreferencesSchema,
+  preferences: PreferencesSchema,
 });
 
 export type Metadata = z.infer<typeof MetadataSchema>;
 
-export const OrganizationSettingsSchema = z.object({
-  features: OrganizationSettingsFeaturesSchema,
+export const SettingsSchema = z.object({
+  features: FeaturesSchema,
   security: SecuritySchema,
 });
 
-export type OrganizationSettings = z.infer<typeof OrganizationSettingsSchema>;
+export type Settings = z.infer<typeof SettingsSchema>;
 
 export const UserSchema = z.object({
   email: z.string(),
@@ -78,7 +78,7 @@ export type User = z.infer<typeof UserSchema>;
 export const OrganizationSchema = z.object({
   industry: z.string(),
   name: z.string(),
-  settings: OrganizationSettingsSchema,
+  settings: SettingsSchema,
 });
 
 export type Organization = z.infer<typeof OrganizationSchema>;
@@ -86,7 +86,7 @@ export type Organization = z.infer<typeof OrganizationSchema>;
 /** Schema generated from plain JSON input */
 export const RootSchema = z.object({
   organization: OrganizationSchema,
-  statistics: RootStatisticsSchema,
+  statistics: StatisticsSchema,
   users: z.array(UserSchema),
 });
 

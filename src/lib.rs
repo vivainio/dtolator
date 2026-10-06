@@ -199,6 +199,10 @@ impl GenerateOptions {
             parts.push("--debug".to_string());
         }
 
+        if matches!(self.input_type, InputType::Json) && self.root_name != "Root" {
+            parts.push(format!("--root {}", self.root_name));
+        }
+
         if self.ts_enum_style != TsEnumStyle::Union {
             parts.push(format!("--ts-enum-style {}", self.ts_enum_style.as_str()));
         }
@@ -1042,6 +1046,27 @@ fn capitalize_first_letter(s: &str) -> String {
     }
 }
 
+/// Converts a JSON key to a type name the way quicktype does: non-alphanumeric
+/// characters separate words, each word's first letter is uppercased, the rest is kept.
+fn key_to_type_name(key: &str) -> String {
+    key.split(|c: char| !c.is_alphanumeric())
+        .map(capitalize_first_letter)
+        .collect()
+}
+
+/// Type-name collision handling for plain JSON input. A first pass records how many
+/// distinct object types want each leaf name; in the second pass a contested name is
+/// prefixed with its parent type's name (as quicktype does) while an uncontested one
+/// stays as the plain key.
+#[derive(Default)]
+struct NamingCtx {
+    recording: bool,
+    leaf_counts: std::collections::HashMap<String, usize>,
+    used_names: std::collections::HashSet<String>,
+    struct_hashes: StructHashMap,
+    json_to_placeholder: JsonToPlaceholderMap,
+}
+
 /// JSON value that keeps object keys in source order (serde_json's `Value` sorts them
 /// unless its `preserve_order` feature is on, which would affect every generator).
 #[derive(Debug, Clone)]
@@ -1140,9 +1165,9 @@ fn json_value_to_schema_pass1(
     value: &OrderedJson,
     schemas: &mut IndexMap<String, Schema>,
     current_name: &str,
-    struct_hashes: &mut StructHashMap,
-    json_to_placeholder: &mut JsonToPlaceholderMap,
     parent_key: Option<&str>,
+    parent_name: &str,
+    naming: &mut NamingCtx,
 ) -> Result<Schema> {
     match value {
         OrderedJson::Null => Ok(Schema::null()),
@@ -1183,9 +1208,9 @@ fn json_value_to_schema_pass1(
                     &arr[0],
                     schemas,
                     &item_name,
-                    struct_hashes,
-                    json_to_placeholder,
                     Some(&item_name.to_lowercase()),
+                    parent_name,
+                    naming,
                 )?;
                 Ok(Schema::array(item_schema))
             }
@@ -1198,39 +1223,44 @@ fn json_value_to_schema_pass1(
             // Use JSON content for deduplication
             let serialized = serde_json::to_string(&OrderedJson::Object(obj.clone()))?;
 
-            if let Some(placeholder) = json_to_placeholder.get(&serialized) {
+            if let Some(placeholder) = naming.json_to_placeholder.get(&serialized) {
                 // Same structure, reuse existing schema
                 return Ok(Schema::reference(format!(
                     "#/components/schemas/{placeholder}"
                 )));
             }
 
+            let is_root = parent_key.is_none() && parent_name.is_empty();
+            let leaf = current_name;
+            let resolved_name = if naming.recording {
+                *naming.leaf_counts.entry(leaf.to_string()).or_insert(0) += 1;
+                leaf.to_string()
+            } else {
+                let mut name = if !is_root && naming.leaf_counts.get(leaf).copied().unwrap_or(0) > 1
+                {
+                    format!("{parent_name}{leaf}")
+                } else {
+                    leaf.to_string()
+                };
+                let base = name.clone();
+                let mut n = 2;
+                while naming.used_names.contains(&name) {
+                    name = format!("{base}{n}");
+                    n += 1;
+                }
+                naming.used_names.insert(name.clone());
+                name
+            };
+            let current_name = resolved_name.as_str();
+
             // Generate properties
             let mut properties = IndexMap::new();
             let mut required = Vec::new();
 
             for (key, value) in obj {
-                // Create meaningful names for nested objects
                 let property_name = match value {
-                    OrderedJson::Object(_) => {
-                        // For nested objects, create a meaningful type name
-                        let base_name = capitalize_first_letter(key);
-                        // If the key itself is meaningful, use it; otherwise derive from parent
-                        if base_name.len() > 2 && !base_name.ends_with("s") {
-                            base_name
-                        } else {
-                            format!("{current_name}{base_name}")
-                        }
-                    }
-                    OrderedJson::Array(arr) => {
-                        // For arrays containing objects, create a meaningful type name for container
-                        if !arr.is_empty() && matches!(arr[0], OrderedJson::Object(_)) {
-                            // This is just for the array property context, actual item naming happens in array processing
-                            current_name.to_string()
-                        } else {
-                            current_name.to_string()
-                        }
-                    }
+                    OrderedJson::Object(_) => key_to_type_name(key),
+                    OrderedJson::Array(_) => current_name.to_string(),
                     _ => capitalize_first_letter(key),
                 };
 
@@ -1238,17 +1268,19 @@ fn json_value_to_schema_pass1(
                     value,
                     schemas,
                     &property_name,
-                    struct_hashes,
-                    json_to_placeholder,
                     Some(key),
+                    current_name,
+                    naming,
                 )?;
                 properties.insert(key.clone(), property_schema);
                 required.push(key.clone());
             }
 
             let placeholder_name = current_name.to_string();
-            json_to_placeholder.insert(serialized.clone(), placeholder_name.clone());
-            struct_hashes.insert(
+            naming
+                .json_to_placeholder
+                .insert(serialized.clone(), placeholder_name.clone());
+            naming.struct_hashes.insert(
                 serialized.clone(),
                 (current_name.to_string(), required.clone(), None, vec![]),
             );
@@ -1330,25 +1362,34 @@ fn json_to_openapi_schema_with_root(
     root_name: &str,
     root_first: bool,
 ) -> Result<OpenApiSchema> {
-    let mut schemas = IndexMap::new();
-    let mut struct_hashes: StructHashMap = std::collections::HashMap::new();
-    let mut json_to_placeholder: JsonToPlaceholderMap = std::collections::HashMap::new();
-    let root_schema = json_value_to_schema_pass1(
+    let mut naming = NamingCtx {
+        recording: true,
+        ..Default::default()
+    };
+    json_value_to_schema_pass1(
         &json_value,
-        &mut schemas,
+        &mut IndexMap::new(),
         root_name,
-        &mut struct_hashes,
-        &mut json_to_placeholder,
         None,
+        "",
+        &mut naming,
     )?;
+    naming.recording = false;
+    naming.struct_hashes.clear();
+    naming.json_to_placeholder.clear();
+
+    let mut schemas = IndexMap::new();
+    let root_schema =
+        json_value_to_schema_pass1(&json_value, &mut schemas, root_name, None, "", &mut naming)?;
     schemas.insert(root_name.to_string(), root_schema);
     if root_first && let Some(idx) = schemas.get_index_of(root_name) {
         schemas.move_index(idx, 0);
     }
-    let json_to_final_name: std::collections::HashMap<String, String> = json_to_placeholder
+    let json_to_final_name: std::collections::HashMap<String, String> = naming
+        .json_to_placeholder
         .iter()
         .map(|(json_key, placeholder)| {
-            let (final_name, _, _, _) = struct_hashes.get(json_key).unwrap();
+            let (final_name, _, _, _) = naming.struct_hashes.get(json_key).unwrap();
             (placeholder.clone(), final_name.clone())
         })
         .collect();
@@ -1836,7 +1877,37 @@ fn generate_dto_name(operation_id: &Option<String>, summary: &Option<String>) ->
 
 #[cfg(test)]
 mod lib_tests {
-    use super::strip_json_comments;
+    use super::{OrderedJson, json_to_openapi_schema_with_root, strip_json_comments};
+
+    #[test]
+    fn json_type_names_follow_quicktype() {
+        let json = r#"{"Views":{"Attachments":{"A":"x"},"Mail":{"Attachments":{"B":"y"}}},
+            "Common":{"Actions":{"Ok":"o"},"Common_Words":{"Yes":"y"}},"Pages":{"X":"a"}}"#;
+        let value: OrderedJson = serde_json::from_str(json).unwrap();
+        let schema = json_to_openapi_schema_with_root(value, "Root", true).unwrap();
+        let names: Vec<_> = schema
+            .components
+            .unwrap()
+            .schemas
+            .unwrap()
+            .into_keys()
+            .collect();
+        // Contested names get the parent prefix, uncontested ones stay plain,
+        // and keys are PascalCased ("Common_Words" -> "CommonWords").
+        for expected in [
+            "ViewsAttachments",
+            "MailAttachments",
+            "CommonWords",
+            "Pages",
+            "Mail",
+        ] {
+            assert!(
+                names.contains(&expected.to_string()),
+                "{expected} in {names:?}"
+            );
+        }
+        assert!(!names.contains(&"Attachments".to_string()));
+    }
 
     #[test]
     fn strip_json_comments_preserves_comment_markers_inside_strings() {

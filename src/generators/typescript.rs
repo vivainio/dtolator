@@ -640,6 +640,38 @@ impl TypeScriptGenerator {
     }
 }
 
+impl TypeScriptGenerator {
+    fn quicktype_visit(
+        name: &str,
+        schemas: &indexmap::IndexMap<String, crate::openapi::Schema>,
+        seen: &mut std::collections::HashSet<String>,
+        out: &mut Vec<String>,
+    ) {
+        let Some(schema) = schemas.get(name) else {
+            return;
+        };
+        if !seen.insert(name.to_string()) {
+            return;
+        }
+        out.push(name.to_string());
+        if let crate::openapi::Schema::Object {
+            properties: Some(props),
+            ..
+        } = schema
+        {
+            let mut props: Vec<_> = props.iter().collect();
+            props.sort_by(|a, b| a.0.cmp(b.0));
+            for (_, prop) in props {
+                let mut deps: Vec<_> = common::collect_dependencies(prop).into_iter().collect();
+                deps.sort();
+                for dep in deps {
+                    Self::quicktype_visit(&dep, schemas, seen, out);
+                }
+            }
+        }
+    }
+}
+
 impl Generator for TypeScriptGenerator {
     fn generate_with_command(&self, schema: &OpenApiSchema, command: &str) -> Result<String> {
         let mut output = String::new();
@@ -654,10 +686,16 @@ impl Generator for TypeScriptGenerator {
         {
             // Sort schemas topologically
             let sorted_names = if self.quicktype_order {
-                // Root (first schema) first, then everything else alphabetically
-                let mut names: Vec<String> = schemas.keys().skip(1).cloned().collect();
-                names.sort();
-                names.splice(0..0, schemas.keys().next().cloned());
+                // Root first, then depth-first with each type's properties visited
+                // alphabetically (the order quicktype uses)
+                let mut names = Vec::new();
+                let mut seen = std::collections::HashSet::new();
+                if let Some(root) = schemas.keys().next() {
+                    Self::quicktype_visit(root, schemas, &mut seen, &mut names);
+                }
+                for name in schemas.keys() {
+                    Self::quicktype_visit(name, schemas, &mut seen, &mut names);
+                }
                 names
             } else {
                 common::topological_sort(schemas)?

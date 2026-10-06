@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-class MetadataPreferences(BaseModel):
+class Preferences(BaseModel):
     theme: str
     notifications: bool
     language: str
@@ -30,7 +30,7 @@ class Metadata(BaseModel):
     last_login: str = Field(alias="lastLogin")
     login_count: int = Field(alias="loginCount")
     account_type: str = Field(alias="accountType")
-    preferences: MetadataPreferences
+    preferences: Preferences
 
 class User(BaseModel):
     class Config:

@@ -5,23 +5,23 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-class ProfileSocialLinks(BaseModel):
-    github: str
-    twitter: str
-
-class RootAddress(BaseModel):
+class Address(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     street: str
     city: str
     zip_code: str = Field(alias="zipCode")
 
+class SocialLinks(BaseModel):
+    github: str
+    twitter: str
+
 class Profile(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     bio: str
     avatar: Any | None
-    social_links: ProfileSocialLinks = Field(alias="socialLinks")
+    social_links: SocialLinks = Field(alias="socialLinks")
 
 class Root(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -31,7 +31,7 @@ class Root(BaseModel):
     email: str
     is_active: bool = Field(alias="isActive")
     age: int
-    address: RootAddress
+    address: Address
     tags: list[str]
     profile: Profile
 

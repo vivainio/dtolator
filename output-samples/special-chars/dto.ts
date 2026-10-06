@@ -5,11 +5,6 @@ export interface Root {
   "user data": UserData;
 }
 
-export interface NestedObject {
-  "child-field": string;
-  "another field": string;
-}
-
 export interface UserData {
   "first-name": string;
   last_name: string;
@@ -26,4 +21,9 @@ export interface UserData {
   "123numeric": string;
   "field.with.dots": string;
   "nested-object": NestedObject;
+}
+
+export interface NestedObject {
+  "child-field": string;
+  "another field": string;
 }

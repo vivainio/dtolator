@@ -5,17 +5,17 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-class MetadataPreferencesNotifications(BaseModel):
-    email: bool
-    push: bool
-    sms: Any | None
-
-class OrganizationSettingsFeatures(BaseModel):
+class Features(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     api_access: bool = Field(alias="apiAccess")
     advanced_reporting: bool = Field(alias="advancedReporting")
     custom_branding: Any | None = Field(alias="customBranding")
+
+class Notifications(BaseModel):
+    email: bool
+    push: bool
+    sms: Any | None
 
 class PasswordPolicy(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -24,17 +24,17 @@ class PasswordPolicy(BaseModel):
     require_special_chars: bool = Field(alias="requireSpecialChars")
     require_numbers: bool = Field(alias="requireNumbers")
 
-class RootStatistics(BaseModel):
+class Statistics(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     total_users: int = Field(alias="totalUsers")
     active_users: int = Field(alias="activeUsers")
     growth: float
 
-class MetadataPreferences(BaseModel):
+class Preferences(BaseModel):
     theme: str
     language: str
-    notifications: MetadataPreferencesNotifications
+    notifications: Notifications
 
 class Security(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -47,11 +47,11 @@ class Metadata(BaseModel):
 
     created_at: str = Field(alias="createdAt")
     last_login: str = Field(alias="lastLogin")
-    preferences: MetadataPreferences
+    preferences: Preferences
 
-class OrganizationSettings(BaseModel):
+class Settings(BaseModel):
     security: Security
-    features: OrganizationSettingsFeatures
+    features: Features
 
 class User(BaseModel):
     id: int
@@ -64,10 +64,10 @@ class User(BaseModel):
 class Organization(BaseModel):
     name: str
     industry: str
-    settings: OrganizationSettings
+    settings: Settings
 
 class Root(BaseModel):
     users: list[User]
     organization: Organization
-    statistics: RootStatistics
+    statistics: Statistics
 

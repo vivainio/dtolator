@@ -5,18 +5,18 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-class MetadataPreferencesNotifications(BaseModel):
-    email: bool
-    push: bool
-    sms: Any | None
-
-class OrganizationSettingsFeatures(BaseModel):
+class Features(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
     api_access: bool = Field(alias="apiAccess")
     advanced_reporting: bool = Field(alias="advancedReporting")
     custom_branding: Any | None = Field(alias="customBranding")
+
+class Notifications(BaseModel):
+    email: bool
+    push: bool
+    sms: Any | None
 
 class PasswordPolicy(BaseModel):
     class Config:
@@ -26,7 +26,7 @@ class PasswordPolicy(BaseModel):
     require_special_chars: bool = Field(alias="requireSpecialChars")
     require_numbers: bool = Field(alias="requireNumbers")
 
-class RootStatistics(BaseModel):
+class Statistics(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
@@ -34,10 +34,10 @@ class RootStatistics(BaseModel):
     active_users: int = Field(alias="activeUsers")
     growth: float
 
-class MetadataPreferences(BaseModel):
+class Preferences(BaseModel):
     theme: str
     language: str
-    notifications: MetadataPreferencesNotifications
+    notifications: Notifications
 
 class Security(BaseModel):
     class Config:
@@ -52,11 +52,11 @@ class Metadata(BaseModel):
 
     created_at: str = Field(alias="createdAt")
     last_login: str = Field(alias="lastLogin")
-    preferences: MetadataPreferences
+    preferences: Preferences
 
-class OrganizationSettings(BaseModel):
+class Settings(BaseModel):
     security: Security
-    features: OrganizationSettingsFeatures
+    features: Features
 
 class User(BaseModel):
     id: int
@@ -69,10 +69,10 @@ class User(BaseModel):
 class Organization(BaseModel):
     name: str
     industry: str
-    settings: OrganizationSettings
+    settings: Settings
 
 class Root(BaseModel):
     users: list[User]
     organization: Organization
-    statistics: RootStatistics
+    statistics: Statistics
 
