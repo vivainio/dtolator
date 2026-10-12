@@ -25,6 +25,9 @@ pub struct TypeScriptGenerator {
     indent_level: usize,
     enum_style: TsEnumStyle,
     quicktype_order: bool,
+    /// When set (Angular output), param type docs link to the service method;
+    /// the value is the `ignore_operation_id` setting used for method names.
+    link_service_methods: Option<bool>,
 }
 
 impl Default for TypeScriptGenerator {
@@ -39,6 +42,7 @@ impl TypeScriptGenerator {
             indent_level: 0,
             enum_style: TsEnumStyle::default(),
             quicktype_order: false,
+            link_service_methods: None,
         }
     }
 
@@ -47,6 +51,32 @@ impl TypeScriptGenerator {
     pub fn with_quicktype_order(mut self, quicktype_order: bool) -> Self {
         self.quicktype_order = quicktype_order;
         self
+    }
+
+    /// Add a `{@link Class.method}` reference to the Angular service method in
+    /// the docs of generated query/header param types.
+    pub fn with_service_method_links(mut self, ignore_operation_id: bool) -> Self {
+        self.link_service_methods = Some(ignore_operation_id);
+        self
+    }
+
+    fn param_type_doc(&self, operation: &Operation, what: &str) -> String {
+        let mut doc = common::TsDocBuilder::new("");
+        match (&operation.summary, self.link_service_methods) {
+            (Some(summary), _) => {
+                doc.description(&format!("{what} parameters for {summary}"));
+            }
+            (None, Some(_)) => {
+                doc.description(&format!("{what} parameters"));
+            }
+            (None, None) => return String::new(),
+        }
+        if let Some(ignore) = self.link_service_methods {
+            let target =
+                crate::generators::angular::AngularGenerator::service_method_ref(operation, ignore);
+            doc.blank().raw(&format!("@see {{@link {target}}}"));
+        }
+        doc.build()
     }
 
     pub fn with_enum_style(mut self, enum_style: TsEnumStyle) -> Self {
@@ -440,12 +470,7 @@ impl TypeScriptGenerator {
                     && let Some(type_name) = Self::query_param_type_name(operation)
                     && generated_types.insert(type_name.clone())
                 {
-                    if let Some(summary) = &operation.summary {
-                        types.push_str(&crate::generators::common::format_jsdoc(
-                            &format!("Query parameters for {summary}"),
-                            "",
-                        ));
-                    }
+                    types.push_str(&self.param_type_doc(operation, "Query"));
 
                     let mandatory_params: Vec<&Parameter> = query_params
                         .iter()
@@ -505,12 +530,7 @@ impl TypeScriptGenerator {
                     && let Some(type_name) = Self::header_param_type_name(operation)
                     && generated_types.insert(type_name.clone())
                 {
-                    if let Some(summary) = &operation.summary {
-                        types.push_str(&crate::generators::common::format_jsdoc(
-                            &format!("Header parameters for {summary}"),
-                            "",
-                        ));
-                    }
+                    types.push_str(&self.param_type_doc(operation, "Header"));
 
                     types.push_str(&format!("export interface {type_name} {{\n"));
                     for param in &header_params {
@@ -735,6 +755,7 @@ impl Clone for TypeScriptGenerator {
             indent_level: self.indent_level,
             enum_style: self.enum_style,
             quicktype_order: self.quicktype_order,
+            link_service_methods: self.link_service_methods,
         }
     }
 }

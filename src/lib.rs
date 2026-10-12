@@ -853,7 +853,9 @@ fn generate_angular_services(
         }
 
         // Generate dto.ts with query/header param types (request body types live in schema.ts)
-        let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
+        let ts_generator = TypeScriptGenerator::new()
+            .with_enum_style(ts_enum_style)
+            .with_service_method_links(ignore_operation_id);
         let mut ts_output = ts_generator.generate_with_imports(schema, command_string)?;
 
         let header_param_types = ts_generator.generate_header_param_types(schema)?;
@@ -868,7 +870,9 @@ fn generate_angular_services(
         }
     } else {
         // Generate only TypeScript interfaces
-        let ts_generator = TypeScriptGenerator::new().with_enum_style(ts_enum_style);
+        let ts_generator = TypeScriptGenerator::new()
+            .with_enum_style(ts_enum_style)
+            .with_service_method_links(ignore_operation_id);
         let mut dto_output = ts_generator.generate_with_command(schema, command_string)?;
 
         let query_param_types = ts_generator.generate_query_param_types(schema)?;
