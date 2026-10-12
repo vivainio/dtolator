@@ -42,6 +42,12 @@ impl TestSuite {
                 command_args: vec!["--angular".to_string(), "--zod".to_string()],
                 expected_dir: "output-samples/angular/simple-sample".to_string(),
             },
+            TestCase {
+                name: "Angular OperationId Param Types".to_string(),
+                input_file: "input-files/openapi/test-operation-id-param-types.json".to_string(),
+                command_args: vec!["--angular".to_string()],
+                expected_dir: "output-samples/angular-operation-id-param-types".to_string(),
+            },
             // Angular nested tests
             TestCase {
                 name: "Angular Nested Test".to_string(),

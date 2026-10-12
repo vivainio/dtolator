@@ -1,0 +1,39 @@
+{
+  "openapi": "3.0.0",
+  "info": { "title": "Operation Id Param Types", "version": "1.0.0" },
+  "paths": {
+    "/orders": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Search all customer orders with pagination, filtering and sorting options",
+        "operationId": "searchOrders",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "X-Trace-Id", "in": "header", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "type": "string" } } } }
+          }
+        }
+      }
+    },
+    "/legacy-orders": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Get Legacy Orders",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "type": "string" } } } }
+          }
+        }
+      }
+    }
+  }
+}
