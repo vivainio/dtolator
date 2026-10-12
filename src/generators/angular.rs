@@ -455,10 +455,14 @@ impl AngularGenerator {
     }
 
     fn get_method_name(&self, operation: &Operation) -> String {
+        Self::method_name(operation, self.ignore_operation_id)
+    }
+
+    fn method_name(operation: &Operation, ignore_operation_id: bool) -> String {
         if let Some(operation_id) = operation
             .operation_id
             .as_ref()
-            .filter(|_| !self.ignore_operation_id)
+            .filter(|_| !ignore_operation_id)
         {
             // Convert PascalCase operationId to camelCase for TypeScript convention
             let mut chars = operation_id.chars();
@@ -471,6 +475,20 @@ impl AngularGenerator {
         } else {
             "unknownMethod".to_string()
         }
+    }
+
+    /// `ClassName.method` reference to the generated service method for an operation.
+    pub fn service_method_ref(operation: &Operation, ignore_operation_id: bool) -> String {
+        let tag = operation
+            .tags
+            .as_ref()
+            .and_then(|tags| tags.first())
+            .map(String::as_str)
+            .unwrap_or("Default");
+        format!(
+            "{tag}Api.{}",
+            Self::method_name(operation, ignore_operation_id)
+        )
     }
 
     fn get_method_parameters(&self, operation: &Operation) -> Result<String> {

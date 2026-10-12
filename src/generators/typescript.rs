@@ -25,6 +25,9 @@ pub struct TypeScriptGenerator {
     indent_level: usize,
     enum_style: TsEnumStyle,
     quicktype_order: bool,
+    /// When set (Angular output), param type docs link to the service method;
+    /// the value is the `ignore_operation_id` setting used for method names.
+    link_service_methods: Option<bool>,
 }
 
 impl Default for TypeScriptGenerator {
@@ -39,6 +42,7 @@ impl TypeScriptGenerator {
             indent_level: 0,
             enum_style: TsEnumStyle::default(),
             quicktype_order: false,
+            link_service_methods: None,
         }
     }
 
@@ -47,6 +51,27 @@ impl TypeScriptGenerator {
     pub fn with_quicktype_order(mut self, quicktype_order: bool) -> Self {
         self.quicktype_order = quicktype_order;
         self
+    }
+
+    /// Add a `{@link Class.method}` reference to the Angular service method in
+    /// the docs of generated query/header param types.
+    pub fn with_service_method_links(mut self, ignore_operation_id: bool) -> Self {
+        self.link_service_methods = Some(ignore_operation_id);
+        self
+    }
+
+    fn param_type_doc(&self, operation: &Operation, what: &str) -> String {
+        let text = match (self.link_service_methods, &operation.summary) {
+            (Some(ignore), _) => {
+                let target = crate::generators::angular::AngularGenerator::service_method_ref(
+                    operation, ignore,
+                );
+                format!("{what} parameters for {{@link {target}}}")
+            }
+            (None, Some(summary)) => format!("{what} parameters for {summary}"),
+            (None, None) => return String::new(),
+        };
+        common::format_jsdoc(&text, "")
     }
 
     pub fn with_enum_style(mut self, enum_style: TsEnumStyle) -> Self {
@@ -440,12 +465,7 @@ impl TypeScriptGenerator {
                     && let Some(type_name) = Self::query_param_type_name(operation)
                     && generated_types.insert(type_name.clone())
                 {
-                    if let Some(summary) = &operation.summary {
-                        types.push_str(&crate::generators::common::format_jsdoc(
-                            &format!("Query parameters for {summary}"),
-                            "",
-                        ));
-                    }
+                    types.push_str(&self.param_type_doc(operation, "Query"));
 
                     let mandatory_params: Vec<&Parameter> = query_params
                         .iter()
@@ -505,12 +525,7 @@ impl TypeScriptGenerator {
                     && let Some(type_name) = Self::header_param_type_name(operation)
                     && generated_types.insert(type_name.clone())
                 {
-                    if let Some(summary) = &operation.summary {
-                        types.push_str(&crate::generators::common::format_jsdoc(
-                            &format!("Header parameters for {summary}"),
-                            "",
-                        ));
-                    }
+                    types.push_str(&self.param_type_doc(operation, "Header"));
 
                     types.push_str(&format!("export interface {type_name} {{\n"));
                     for param in &header_params {
@@ -543,6 +558,21 @@ impl TypeScriptGenerator {
     }
 
     fn param_type_name(operation: &Operation, suffix: &str) -> Option<String> {
+        if let Some(id) = operation.operation_id.as_ref().filter(|id| !id.is_empty()) {
+            // Sanitize to a valid identifier: capitalize each alphanumeric segment
+            let pascal: String = id
+                .split(|c: char| !c.is_alphanumeric())
+                .filter(|part| !part.is_empty())
+                .map(|part| {
+                    let mut chars = part.chars();
+                    let first = chars.next().unwrap();
+                    first.to_uppercase().collect::<String>() + chars.as_str()
+                })
+                .collect();
+            if !pascal.is_empty() {
+                return Some(format!("{pascal}{suffix}"));
+            }
+        }
         operation.summary.as_ref().map(|summary| {
             let clean = summary
                 .replace("Get ", "")
@@ -720,6 +750,42 @@ impl Clone for TypeScriptGenerator {
             indent_level: self.indent_level,
             enum_style: self.enum_style,
             quicktype_order: self.quicktype_order,
+            link_service_methods: self.link_service_methods,
         }
+    }
+}
+
+#[cfg(test)]
+mod param_type_name_tests {
+    use super::TypeScriptGenerator;
+    use crate::openapi::Operation;
+
+    fn op(json: &str) -> Operation {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn prefers_operation_id_over_summary() {
+        let o = op(
+            r#"{"operationId":"listUsers","summary":"Get a very long list of all users","responses":{}}"#,
+        );
+        assert_eq!(
+            TypeScriptGenerator::query_param_type_name(&o).as_deref(),
+            Some("ListUsersQueryParams")
+        );
+    }
+
+    #[test]
+    fn sanitizes_operation_id_and_falls_back_to_summary() {
+        let o = op(r#"{"operationId":"Users_find-all","responses":{}}"#);
+        assert_eq!(
+            TypeScriptGenerator::header_param_type_name(&o).as_deref(),
+            Some("UsersFindAllHeaders")
+        );
+        let o = op(r#"{"summary":"Get Users","responses":{}}"#);
+        assert_eq!(
+            TypeScriptGenerator::query_param_type_name(&o).as_deref(),
+            Some("UsersQueryParams")
+        );
     }
 }

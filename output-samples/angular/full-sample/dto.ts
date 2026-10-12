@@ -3,31 +3,31 @@
 
 import type { ProductCategory } from "./schema";
 
-/** Query parameters for Get All Users With Pagination */
+/** Query parameters for {@link UsersApi.getAllUsersWithPagination} */
 export type AllUsersWithPaginationQueryParams = Partial<{
   page: number;
   limit: number;
 }>;
 
-/** Query parameters for Search Products With Filters */
+/** Query parameters for {@link ProductsApi.searchProductsWithFilters} */
 export type SearchProductsWithFiltersQueryParams = Partial<{
   category: ProductCategory;
   minPrice: number;
   maxPrice: number;
 }>;
 
-/** Query parameters for Get Inventory Levels */
+/** Query parameters for {@link InventoryApi.getInventoryLevels} */
 export type InventoryLevelsQueryParams = Partial<{
   lowStock: boolean;
 }>;
 
-/** Query parameters for Get Sales Analytics */
+/** Query parameters for {@link AnalyticsApi.getSalesAnalytics} */
 export type SalesAnalyticsQueryParams = Partial<{
   startDate: string;
   endDate: string;
 }>;
 
-/** Header parameters for Get All Users With Pagination */
+/** Header parameters for {@link UsersApi.getAllUsersWithPagination} */
 export interface AllUsersWithPaginationHeaders {
   "X-API-Key"?: string;
 }
