@@ -306,52 +306,32 @@ export interface Order {
   trackingNumber?: string | null;
 }
 
-/**
- * Query parameters for Get All Users With Pagination
- *
- * @see {@link UsersApi.getAllUsersWithPagination}
- */
+/** Query parameters for {@link UsersApi.getAllUsersWithPagination} */
 export type AllUsersWithPaginationQueryParams = Partial<{
   page: number;
   limit: number;
 }>;
 
-/**
- * Query parameters for Search Products With Filters
- *
- * @see {@link ProductsApi.searchProductsWithFilters}
- */
+/** Query parameters for {@link ProductsApi.searchProductsWithFilters} */
 export type SearchProductsWithFiltersQueryParams = Partial<{
   category: ProductCategory;
   minPrice: number;
   maxPrice: number;
 }>;
 
-/**
- * Query parameters for Get Inventory Levels
- *
- * @see {@link InventoryApi.getInventoryLevels}
- */
+/** Query parameters for {@link InventoryApi.getInventoryLevels} */
 export type InventoryLevelsQueryParams = Partial<{
   lowStock: boolean;
 }>;
 
-/**
- * Query parameters for Get Sales Analytics
- *
- * @see {@link AnalyticsApi.getSalesAnalytics}
- */
+/** Query parameters for {@link AnalyticsApi.getSalesAnalytics} */
 export type SalesAnalyticsQueryParams = Partial<{
   startDate: string;
   endDate: string;
 }>;
 
 
-/**
- * Header parameters for Get All Users With Pagination
- *
- * @see {@link UsersApi.getAllUsersWithPagination}
- */
+/** Header parameters for {@link UsersApi.getAllUsersWithPagination} */
 export interface AllUsersWithPaginationHeaders {
   "X-API-Key"?: string;
 }

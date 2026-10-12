@@ -61,22 +61,17 @@ impl TypeScriptGenerator {
     }
 
     fn param_type_doc(&self, operation: &Operation, what: &str) -> String {
-        let mut doc = common::TsDocBuilder::new("");
-        match (&operation.summary, self.link_service_methods) {
-            (Some(summary), _) => {
-                doc.description(&format!("{what} parameters for {summary}"));
+        let text = match (self.link_service_methods, &operation.summary) {
+            (Some(ignore), _) => {
+                let target = crate::generators::angular::AngularGenerator::service_method_ref(
+                    operation, ignore,
+                );
+                format!("{what} parameters for {{@link {target}}}")
             }
-            (None, Some(_)) => {
-                doc.description(&format!("{what} parameters"));
-            }
+            (None, Some(summary)) => format!("{what} parameters for {summary}"),
             (None, None) => return String::new(),
-        }
-        if let Some(ignore) = self.link_service_methods {
-            let target =
-                crate::generators::angular::AngularGenerator::service_method_ref(operation, ignore);
-            doc.blank().raw(&format!("@see {{@link {target}}}"));
-        }
-        doc.build()
+        };
+        common::format_jsdoc(&text, "")
     }
 
     pub fn with_enum_style(mut self, enum_style: TsEnumStyle) -> Self {
