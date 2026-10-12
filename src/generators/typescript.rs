@@ -543,6 +543,21 @@ impl TypeScriptGenerator {
     }
 
     fn param_type_name(operation: &Operation, suffix: &str) -> Option<String> {
+        if let Some(id) = operation.operation_id.as_ref().filter(|id| !id.is_empty()) {
+            // Sanitize to a valid identifier: capitalize each alphanumeric segment
+            let pascal: String = id
+                .split(|c: char| !c.is_alphanumeric())
+                .filter(|part| !part.is_empty())
+                .map(|part| {
+                    let mut chars = part.chars();
+                    let first = chars.next().unwrap();
+                    first.to_uppercase().collect::<String>() + chars.as_str()
+                })
+                .collect();
+            if !pascal.is_empty() {
+                return Some(format!("{pascal}{suffix}"));
+            }
+        }
         operation.summary.as_ref().map(|summary| {
             let clean = summary
                 .replace("Get ", "")
@@ -721,5 +736,40 @@ impl Clone for TypeScriptGenerator {
             enum_style: self.enum_style,
             quicktype_order: self.quicktype_order,
         }
+    }
+}
+
+#[cfg(test)]
+mod param_type_name_tests {
+    use super::TypeScriptGenerator;
+    use crate::openapi::Operation;
+
+    fn op(json: &str) -> Operation {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn prefers_operation_id_over_summary() {
+        let o = op(
+            r#"{"operationId":"listUsers","summary":"Get a very long list of all users","responses":{}}"#,
+        );
+        assert_eq!(
+            TypeScriptGenerator::query_param_type_name(&o).as_deref(),
+            Some("ListUsersQueryParams")
+        );
+    }
+
+    #[test]
+    fn sanitizes_operation_id_and_falls_back_to_summary() {
+        let o = op(r#"{"operationId":"Users_find-all","responses":{}}"#);
+        assert_eq!(
+            TypeScriptGenerator::header_param_type_name(&o).as_deref(),
+            Some("UsersFindAllHeaders")
+        );
+        let o = op(r#"{"summary":"Get Users","responses":{}}"#);
+        assert_eq!(
+            TypeScriptGenerator::query_param_type_name(&o).as_deref(),
+            Some("UsersQueryParams")
+        );
     }
 }
