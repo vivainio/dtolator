@@ -524,7 +524,9 @@ impl AngularGenerator {
                 let has_mandatory = query_params.iter().any(|p| p.required.unwrap_or(false));
                 let optional_marker = if has_mandatory { "" } else { "?" };
 
-                if let Some(type_name) = TypeScriptGenerator::query_param_type_name(operation) {
+                if let Some(type_name) =
+                    TypeScriptGenerator::query_param_type_name(operation, self.ignore_operation_id)
+                {
                     params.push(format!("queryParams{optional_marker}: {type_name}"));
                 } else {
                     // Fallback to inline type if no good name can be generated
@@ -571,7 +573,9 @@ impl AngularGenerator {
                 .collect();
 
             if !header_params.is_empty() {
-                if let Some(type_name) = TypeScriptGenerator::header_param_type_name(operation) {
+                if let Some(type_name) =
+                    TypeScriptGenerator::header_param_type_name(operation, self.ignore_operation_id)
+                {
                     params.push(format!("headers?: {type_name} & Record<string, string>"));
                 } else {
                     // Fallback to inline type if no good name can be generated
@@ -672,7 +676,8 @@ impl AngularGenerator {
 
             // If there are query parameters and we can generate a good type name, add it to imports
             if !query_params.is_empty()
-                && let Some(type_name) = TypeScriptGenerator::query_param_type_name(operation)
+                && let Some(type_name) =
+                    TypeScriptGenerator::query_param_type_name(operation, self.ignore_operation_id)
             {
                 service_data.imports.insert(type_name.clone());
                 service_data.query_param_types.insert(type_name);
@@ -685,7 +690,8 @@ impl AngularGenerator {
                 .collect();
 
             if !header_params.is_empty()
-                && let Some(type_name) = TypeScriptGenerator::header_param_type_name(operation)
+                && let Some(type_name) =
+                    TypeScriptGenerator::header_param_type_name(operation, self.ignore_operation_id)
             {
                 service_data.imports.insert(type_name.clone());
                 service_data.query_param_types.insert(type_name);

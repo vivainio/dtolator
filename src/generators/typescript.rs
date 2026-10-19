@@ -462,7 +462,8 @@ impl TypeScriptGenerator {
                     .collect();
 
                 if !query_params.is_empty()
-                    && let Some(type_name) = Self::query_param_type_name(operation)
+                    && let Some(type_name) =
+                        Self::query_param_type_name(operation, self.ignores_operation_id())
                     && generated_types.insert(type_name.clone())
                 {
                     types.push_str(&self.param_type_doc(operation, "Query"));
@@ -522,7 +523,8 @@ impl TypeScriptGenerator {
                     .collect();
 
                 if !header_params.is_empty()
-                    && let Some(type_name) = Self::header_param_type_name(operation)
+                    && let Some(type_name) =
+                        Self::header_param_type_name(operation, self.ignores_operation_id())
                     && generated_types.insert(type_name.clone())
                 {
                     types.push_str(&self.param_type_doc(operation, "Header"));
@@ -549,16 +551,35 @@ impl TypeScriptGenerator {
         Ok(types)
     }
 
-    pub fn query_param_type_name(operation: &Operation) -> Option<String> {
-        Self::param_type_name(operation, "QueryParams")
+    pub fn query_param_type_name(
+        operation: &Operation,
+        ignore_operation_id: bool,
+    ) -> Option<String> {
+        Self::param_type_name(operation, "QueryParams", ignore_operation_id)
     }
 
-    pub fn header_param_type_name(operation: &Operation) -> Option<String> {
-        Self::param_type_name(operation, "Headers")
+    pub fn header_param_type_name(
+        operation: &Operation,
+        ignore_operation_id: bool,
+    ) -> Option<String> {
+        Self::param_type_name(operation, "Headers", ignore_operation_id)
     }
 
-    fn param_type_name(operation: &Operation, suffix: &str) -> Option<String> {
-        if let Some(id) = operation.operation_id.as_ref().filter(|id| !id.is_empty()) {
+    /// Whether `--ignore-operation-id` is in effect (only set for Angular output).
+    fn ignores_operation_id(&self) -> bool {
+        self.link_service_methods == Some(true)
+    }
+
+    fn param_type_name(
+        operation: &Operation,
+        suffix: &str,
+        ignore_operation_id: bool,
+    ) -> Option<String> {
+        if let Some(id) = operation
+            .operation_id
+            .as_ref()
+            .filter(|id| !id.is_empty() && !ignore_operation_id)
+        {
             // Sanitize to a valid identifier: capitalize each alphanumeric segment
             let pascal: String = id
                 .split(|c: char| !c.is_alphanumeric())
@@ -581,7 +602,7 @@ impl TypeScriptGenerator {
                 .replace("Delete ", "")
                 .replace("Retrieve ", "")
                 .replace("Fetch ", "");
-            let pascal = common::to_pascal_case(&clean);
+            let pascal = common::summary_to_pascal_case(&clean);
             format!("{pascal}{suffix}")
         })
     }
@@ -770,8 +791,17 @@ mod param_type_name_tests {
             r#"{"operationId":"listUsers","summary":"Get a very long list of all users","responses":{}}"#,
         );
         assert_eq!(
-            TypeScriptGenerator::query_param_type_name(&o).as_deref(),
+            TypeScriptGenerator::query_param_type_name(&o, false).as_deref(),
             Some("ListUsersQueryParams")
+        );
+    }
+
+    #[test]
+    fn ignore_operation_id_uses_summary() {
+        let o = op(r#"{"operationId":"listUsers","summary":"Get Users","responses":{}}"#);
+        assert_eq!(
+            TypeScriptGenerator::query_param_type_name(&o, true).as_deref(),
+            Some("UsersQueryParams")
         );
     }
 
@@ -779,12 +809,12 @@ mod param_type_name_tests {
     fn sanitizes_operation_id_and_falls_back_to_summary() {
         let o = op(r#"{"operationId":"Users_find-all","responses":{}}"#);
         assert_eq!(
-            TypeScriptGenerator::header_param_type_name(&o).as_deref(),
+            TypeScriptGenerator::header_param_type_name(&o, false).as_deref(),
             Some("UsersFindAllHeaders")
         );
         let o = op(r#"{"summary":"Get Users","responses":{}}"#);
         assert_eq!(
-            TypeScriptGenerator::query_param_type_name(&o).as_deref(),
+            TypeScriptGenerator::query_param_type_name(&o, false).as_deref(),
             Some("UsersQueryParams")
         );
     }
