@@ -779,6 +779,26 @@ impl Clone for TypeScriptGenerator {
     }
 }
 
+/// Wrap a TS type in parentheses when it has a top-level `|` or `&`, so that
+/// appending `[]` applies to the whole type.
+fn paren_if_compound(ty: &str) -> String {
+    let mut depth = 0i32;
+    let mut compound = false;
+    for c in ty.chars() {
+        match c {
+            '<' | '(' | '{' | '[' => depth += 1,
+            '>' | ')' | '}' | ']' => depth -= 1,
+            '|' | '&' if depth == 0 => compound = true,
+            _ => {}
+        }
+    }
+    if compound {
+        format!("({ty})")
+    } else {
+        ty.to_string()
+    }
+}
+
 #[cfg(test)]
 mod param_type_name_tests {
     use super::TypeScriptGenerator;
@@ -820,25 +840,5 @@ mod param_type_name_tests {
             TypeScriptGenerator::query_param_type_name(&o, false).as_deref(),
             Some("UsersQueryParams")
         );
-    }
-}
-
-/// Wrap a TS type in parentheses when it has a top-level `|` or `&`, so that
-/// appending `[]` applies to the whole type.
-fn paren_if_compound(ty: &str) -> String {
-    let mut depth = 0i32;
-    let mut compound = false;
-    for c in ty.chars() {
-        match c {
-            '<' | '(' | '{' | '[' => depth += 1,
-            '>' | ')' | '}' | ']' => depth -= 1,
-            '|' | '&' if depth == 0 => compound = true,
-            _ => {}
-        }
-    }
-    if compound {
-        format!("({ty})")
-    } else {
-        ty.to_string()
     }
 }
