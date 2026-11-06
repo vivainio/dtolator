@@ -447,6 +447,12 @@ impl TestSuite {
                 expected_dir: "output-samples/nullable-oneof-typescript".to_string(),
             },
             TestCase {
+                name: "Nullable Array Items TypeScript".to_string(),
+                input_file: "input-files/openapi/test-nullable-array-items.json".to_string(),
+                command_args: vec!["--from-openapi".to_string(), "--typescript".to_string()],
+                expected_dir: "output-samples/nullable-array-items-typescript".to_string(),
+            },
+            TestCase {
                 name: "Nullable oneOf Pydantic".to_string(),
                 input_file: "input-files/openapi/test-nullable-oneof.json".to_string(),
                 command_args: vec!["--from-openapi".to_string(), "--pydantic".to_string()],
