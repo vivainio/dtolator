@@ -18,7 +18,7 @@ export interface Person {
   homeAddress: Address;
   workAddress?: Address;
   /** Contact information if available */
-  contact?: unknown | null | ContactInfo;
+  contact?: ContactInfo | null;
   /** Address used for billing */
-  billingAddress?: unknown | null | Address;
+  billingAddress?: Address | null;
 }

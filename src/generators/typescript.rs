@@ -3,8 +3,8 @@ use crate::generators::Generator;
 use crate::generators::common;
 use crate::generators::import_generator::ImportGenerator;
 use crate::openapi::{
-    AdditionalProperties, OpenApiSchema, Operation, Parameter, Schema, is_schema_nullable,
-    schema_type_str,
+    AdditionalProperties, OpenApiSchema, Operation, Parameter, Schema, SchemaType,
+    is_schema_nullable, schema_type_str,
 };
 use anyhow::Result;
 use std::collections::HashSet;
@@ -194,11 +194,7 @@ impl TypeScriptGenerator {
                     return Ok(output);
                 } else if let Some(one_of_schemas) = one_of {
                     output.push_str(&format!("export type {name} =\n"));
-                    let types: Result<Vec<String>, _> = one_of_schemas
-                        .iter()
-                        .map(|s| self.schema_to_typescript(s))
-                        .collect();
-                    let type_list = types?;
+                    let type_list = self.union_members(one_of_schemas)?;
                     for (i, type_str) in type_list.iter().enumerate() {
                         if i == 0 {
                             output.push_str(&format!("  {type_str}"));
@@ -210,11 +206,7 @@ impl TypeScriptGenerator {
                     return Ok(output);
                 } else if let Some(any_of_schemas) = any_of {
                     output.push_str(&format!("export type {name} =\n"));
-                    let types: Result<Vec<String>, _> = any_of_schemas
-                        .iter()
-                        .map(|s| self.schema_to_typescript(s))
-                        .collect();
-                    let type_list = types?;
+                    let type_list = self.union_members(any_of_schemas)?;
                     for (i, type_str) in type_list.iter().enumerate() {
                         if i == 0 {
                             output.push_str(&format!("  {type_str}"));
@@ -315,17 +307,9 @@ impl TypeScriptGenerator {
                         .collect();
                     ts_type = types?.join(" & ");
                 } else if let Some(one_of_schemas) = one_of {
-                    let types: Result<Vec<String>, _> = one_of_schemas
-                        .iter()
-                        .map(|s| self.schema_to_typescript(s))
-                        .collect();
-                    ts_type = types?.join(" | ");
+                    ts_type = self.union_members(one_of_schemas)?.join(" | ");
                 } else if let Some(any_of_schemas) = any_of {
-                    let types: Result<Vec<String>, _> = any_of_schemas
-                        .iter()
-                        .map(|s| self.schema_to_typescript(s))
-                        .collect();
-                    ts_type = types?.join(" | ");
+                    ts_type = self.union_members(any_of_schemas)?.join(" | ");
                 } else {
                     // Handle basic types
                     match schema_type_str(schema_type) {
@@ -358,7 +342,7 @@ impl TypeScriptGenerator {
                         Some("array") => {
                             if let Some(items_schema) = items {
                                 let item_type = self.schema_to_typescript(items_schema)?;
-                                ts_type = format!("{item_type}[]");
+                                ts_type = format!("{}[]", paren_if_compound(&item_type));
                             } else {
                                 ts_type = "unknown[]".to_string();
                             }
@@ -412,6 +396,25 @@ impl TypeScriptGenerator {
                 Ok(ts_type)
             }
         }
+    }
+
+    /// Convert oneOf/anyOf members to TS types, dropping `{type: "null"}` members
+    /// and re-adding a single trailing `null` so nullable unions stay precise.
+    fn union_members(&self, schemas: &[Schema]) -> Result<Vec<String>> {
+        let mut out = Vec::new();
+        let mut has_null = false;
+        for s in schemas {
+            if matches!(s, Schema::Object { schema_type: Some(SchemaType::Single(t)), .. } if t == "null")
+            {
+                has_null = true;
+            } else {
+                out.push(self.schema_to_typescript(s)?);
+            }
+        }
+        if has_null {
+            out.push("null".to_string());
+        }
+        Ok(out)
     }
 
     /// Generate dto.ts content for zod mode: only query/header param types (no request body
@@ -817,5 +820,25 @@ mod param_type_name_tests {
             TypeScriptGenerator::query_param_type_name(&o, false).as_deref(),
             Some("UsersQueryParams")
         );
+    }
+}
+
+/// Wrap a TS type in parentheses when it has a top-level `|` or `&`, so that
+/// appending `[]` applies to the whole type.
+fn paren_if_compound(ty: &str) -> String {
+    let mut depth = 0i32;
+    let mut compound = false;
+    for c in ty.chars() {
+        match c {
+            '<' | '(' | '{' | '[' => depth += 1,
+            '>' | ')' | '}' | ']' => depth -= 1,
+            '|' | '&' if depth == 0 => compound = true,
+            _ => {}
+        }
+    }
+    if compound {
+        format!("({ty})")
+    } else {
+        ty.to_string()
     }
 }
