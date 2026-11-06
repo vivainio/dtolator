@@ -11,8 +11,8 @@ export type PaginationCursor = string;
 
 /** An anyOf with null */
 export type AnyOfNullable =
-  unknown | null
-  | Address;
+  Address
+  | null;
 
 /** A oneOf without null should remain a plain union */
 export type NonNullableOneOf =
@@ -21,11 +21,11 @@ export type NonNullableOneOf =
 
 /** A oneOf with null and multiple non-null types */
 export type NullableMultiType =
-  unknown | null
-  | PaginationCursor
-  | Address;
+  PaginationCursor
+  | Address
+  | null;
 
 export interface PaginatedResponse {
-  cursor?: unknown | null | PaginationCursor;
+  cursor?: PaginationCursor | null;
   data: string[];
 }
